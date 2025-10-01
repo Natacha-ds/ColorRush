@@ -1,0 +1,7 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+This project is a SwiftUI application built in Xcode and Cursor.
+It's an app that is a color game. On each round, the app announces a color by name (e.g., “RED”) and simultaneously displays multiple colored squares. The player must tap/click any square that is NOT the announced color within the time limit. One input is evaluated per round: if the chosen square’s color ≠ announced color → Correct; otherwise or if time expires without a valid tap → Incorrect.
