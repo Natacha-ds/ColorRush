@@ -16,6 +16,8 @@ enum Difficulty: String, CaseIterable {
 struct HomeView: View {
     @State private var selectedDifficulty: Difficulty = .normal
     @State private var isGameViewPresented = false
+    @State private var isCustomizeSheetPresented = false
+    @State private var shouldStartGame = false
     @StateObject private var highScoreStore = HighScoreStore.shared
     
     var body: some View {
@@ -142,6 +144,10 @@ struct HomeView: View {
                             }
                             .pickerStyle(SegmentedPickerStyle())
                             .frame(width: 280)
+                            .onChange(of: selectedDifficulty) { _, _ in
+                                // Open customization sheet when difficulty changes
+                                isCustomizeSheetPresented = true
+                            }
                         }
                     }
                     
@@ -149,12 +155,30 @@ struct HomeView: View {
                         .frame(height: 60)
                 }
             }
-            .navigationBarHidden(true)
-            .fullScreenCover(isPresented: $isGameViewPresented) {
-                GameView(selectedDifficulty: selectedDifficulty)
+                .navigationBarHidden(true)
+                .fullScreenCover(isPresented: $isGameViewPresented) {
+                    GameView(selectedDifficulty: selectedDifficulty)
+                }
+                .overlay(
+                    // Customization sheet overlay
+                    Group {
+                        if isCustomizeSheetPresented {
+                            CustomizeModeSheet(
+                                difficulty: selectedDifficulty,
+                                isPresented: $isCustomizeSheetPresented,
+                                shouldStartGame: $shouldStartGame
+                            )
+                        }
+                    }
+                )
             }
-        }
-        .navigationViewStyle(StackNavigationViewStyle()) // Ensures portrait mode
+            .navigationViewStyle(StackNavigationViewStyle()) // Ensures portrait mode
+            .onChange(of: shouldStartGame) { _, shouldStart in
+                if shouldStart {
+                    isGameViewPresented = true
+                    shouldStartGame = false // Reset the flag
+                }
+            }
     }
     
     private var currentBestScore: String {

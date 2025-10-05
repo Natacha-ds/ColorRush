@@ -44,6 +44,7 @@ struct ScoringLedger {
 struct GameView: View {
     let selectedDifficulty: Difficulty
     @Environment(\.dismiss) private var dismiss
+    @StateObject private var customizationStore = CustomizationStore.shared
     
     // Game state
     @State private var scoringLedger = ScoringLedger()
@@ -80,6 +81,9 @@ struct GameView: View {
     private let hapticsService = HapticsService.shared
     @StateObject private var highScoreStore = HighScoreStore.shared
     
+    // Stored property for max mistakes based on difficulty and settings
+    @State private var maxMistakes: Int = 3
+    
     // Color palette
     private let colorPalette: [Color] = [.red, .blue, .green, .yellow]
     private let colorNames = ["red", "blue", "green", "yellow"]
@@ -109,31 +113,42 @@ struct GameView: View {
                     // Active Game Screen
                     VStack(spacing: 30) {
                         // Header with score and global timer
-                        HStack {
-                            Text("Score: \(scoringLedger.finalScore)")
-                                .font(.title2)
-                                .fontWeight(.bold)
+                        VStack(spacing: 8) {
+                            // Top row: Score and Back button
+                            HStack {
+                                Text("Score: \(scoringLedger.finalScore)")
+                                    .font(.title2)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.primary)
+                                
+                                Spacer()
+                                
+                                Button("Back") {
+                                    endGameSession()
+                                    dismiss()
+                                }
+                                .font(.title3)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
+                                .background(Color.gray.opacity(0.2))
                                 .foregroundColor(.primary)
-                            
-                            Spacer()
-                            
-                            Text("Time: \(Int(timeRemaining))s")
-                                .font(.title2)
-                                .fontWeight(.bold)
-                                .foregroundColor(timeRemaining <= 5 ? .red : .primary)
-                            
-                            Spacer()
-                            
-                            Button("Back") {
-                                endGameSession()
-                                dismiss()
+                                .cornerRadius(8)
                             }
-                            .font(.title3)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            .background(Color.gray.opacity(0.2))
-                            .foregroundColor(.primary)
-                            .cornerRadius(8)
+                            
+                            // Bottom row: Time and Mistakes
+                            HStack {
+                                Text("Time: \(Int(timeRemaining))s")
+                                    .font(.title3)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(timeRemaining <= 5 ? .red : .primary)
+                                
+                                Spacer()
+                                
+                                Text("Mistakes: \(mistakes)/\(maxMistakes)")
+                                    .font(.title3)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(mistakes > maxMistakes ? .red : .primary)
+                            }
                         }
                         .padding(.horizontal)
                         
@@ -269,7 +284,7 @@ struct GameView: View {
             return
         }
         
-        if mistakes >= 3 {
+        if mistakes > maxMistakes {
             endGameWithReason(.tooManyMistakes)
             return
         }
@@ -514,7 +529,21 @@ struct GameView: View {
     
     private func startGameSession() {
         isGameSessionActive = true
-        timeRemaining = 30.0
+        
+        // Use custom duration and max mistakes for Easy mode, defaults for others
+        if selectedDifficulty == .easy {
+            let storedDuration = customizationStore.getEasyDuration()
+            let storedMaxMistakes = customizationStore.getEasyMaxMistakes()
+            
+            // Safety checks for corrupted settings
+            timeRemaining = Double(storedDuration > 0 ? storedDuration : 30)
+            // If maxMistakes is 0, it means sudden death mode is explicitly set
+            // If it's negative or corrupted, default to 3
+            maxMistakes = storedMaxMistakes >= 0 ? storedMaxMistakes : 3
+        } else {
+            timeRemaining = 30.0
+            maxMistakes = 3
+        }
         
         // Start global timer
         gameTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
@@ -590,7 +619,7 @@ struct GameView: View {
             return
         }
         
-        if mistakes >= 3 {
+        if mistakes > maxMistakes {
             endGameWithReason(.tooManyMistakes)
             return
         }
@@ -610,6 +639,18 @@ struct GameView: View {
         // Check for new best score
         isNewBestScore = highScoreStore.updateBestScore(for: selectedDifficulty, score: scoringLedger.finalScore)
         
+        // Save score to leaderboard with metadata for Easy mode
+        if selectedDifficulty == .easy {
+            LeaderboardStore.shared.addScore(
+                scoringLedger.finalScore, 
+                for: selectedDifficulty,
+                durationSeconds: customizationStore.getEasyDuration(),
+                maxMistakes: customizationStore.getEasyMaxMistakes()
+            )
+        } else {
+            LeaderboardStore.shared.addScore(scoringLedger.finalScore, for: selectedDifficulty)
+        }
+        
         endGameSession()
         
         print("Game over: \(reason), Final score: \(scoringLedger.finalScore), Mistakes: \(mistakes), New best: \(isNewBestScore)")
@@ -619,7 +660,15 @@ struct GameView: View {
         // Reset all game state
         scoringLedger.reset()
         mistakes = 0
-        timeRemaining = 30.0
+        
+        // Use custom duration and max mistakes for Easy mode, defaults for others
+        if selectedDifficulty == .easy {
+            timeRemaining = Double(customizationStore.getEasyDuration())
+            maxMistakes = customizationStore.getEasyMaxMistakes()
+        } else {
+            timeRemaining = 30.0
+            maxMistakes = 3
+        }
         tiles = []
         hardModeTiles = []
         previousTiles = []
@@ -922,7 +971,7 @@ struct GameOverView: View {
     private var gameOverReason: String {
         switch endReason {
         case .tooManyMistakes:
-            return "You reached 3 mistakes."
+            return "You reached the maximum mistakes allowed."
         case .scoreBelowZero:
             return "Score fell below zero."
         default:

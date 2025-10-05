@@ -11,7 +11,7 @@ import SwiftUI
 struct ColorRushApp: App {
     var body: some Scene {
         WindowGroup {
-            HomeView()
+            MainTabView()
         }
     }
 }
