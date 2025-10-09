@@ -28,8 +28,18 @@ struct EasyModeSettings: Codable {
 }
 
 struct NormalModeSettings: Codable {
-    // Placeholder for future Normal mode customizations
-    init() {}
+    var roundTimeoutSeconds: Double
+    var maxMistakes: Int
+    
+    init() {
+        self.roundTimeoutSeconds = 1.5 // Default 1.5 seconds
+        self.maxMistakes = 3 // Default 3 mistakes
+    }
+    
+    init(roundTimeoutSeconds: Double, maxMistakes: Int) {
+        self.roundTimeoutSeconds = roundTimeoutSeconds
+        self.maxMistakes = maxMistakes
+    }
 }
 
 struct HardModeSettings: Codable {
@@ -50,6 +60,31 @@ enum EasyDuration: Int, CaseIterable, Identifiable {
         case .fifteen: return "15s"
         case .thirty: return "30s"
         case .sixty: return "60s"
+        }
+    }
+}
+
+// Round timeout options for Normal mode
+enum NormalRoundTimeout: Double, CaseIterable, Identifiable {
+    case fast = 1.2
+    case normal = 1.5
+    case slow = 1.8
+    
+    var id: Double { rawValue }
+    
+    var displayName: String {
+        switch self {
+        case .fast: return "1.2s"
+        case .normal: return "1.5s"
+        case .slow: return "1.8s"
+        }
+    }
+    
+    var description: String {
+        switch self {
+        case .fast: return "Fast (1.2s per round)"
+        case .normal: return "Normal (1.5s per round)"
+        case .slow: return "Slow (1.8s per round)"
         }
     }
 }

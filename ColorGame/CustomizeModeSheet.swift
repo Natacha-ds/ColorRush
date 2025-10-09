@@ -5,6 +5,8 @@ struct CustomizeModeSheet: View {
     @StateObject private var customizationStore = CustomizationStore.shared
     @State private var selectedDuration: Int
     @State private var selectedMaxMistakes: Int
+    @State private var selectedRoundTimeout: Double
+    @State private var selectedNormalMaxMistakes: Int
     @Binding var isPresented: Bool
     @Binding var shouldStartGame: Bool
     
@@ -12,8 +14,11 @@ struct CustomizeModeSheet: View {
         self.difficulty = difficulty
         self._isPresented = isPresented
         self._shouldStartGame = shouldStartGame
-        self._selectedDuration = State(initialValue: CustomizationStore.shared.getEasyDuration())
-        self._selectedMaxMistakes = State(initialValue: CustomizationStore.shared.getEasyMaxMistakes())
+        // Initialize with default values, will be updated in onAppear
+        self._selectedDuration = State(initialValue: 30)
+        self._selectedMaxMistakes = State(initialValue: 3)
+        self._selectedRoundTimeout = State(initialValue: 1.5)
+        self._selectedNormalMaxMistakes = State(initialValue: 3)
     }
     
     var body: some View {
@@ -82,8 +87,8 @@ struct CustomizeModeSheet: View {
                         }
                     }
                     
-                    // Normal/Hard mode placeholders
-                    if difficulty == .normal || difficulty == .hard {
+                    // Hard mode placeholder (Normal mode has its own content below)
+                    if difficulty == .hard {
                         VStack(spacing: 16) {
                             Image(systemName: "gear")
                                 .font(.system(size: 48))
@@ -98,6 +103,54 @@ struct CustomizeModeSheet: View {
                                 .foregroundColor(.secondary)
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal, 20)
+                        }
+                        .padding(.vertical, 20)
+                    }
+                    
+                    // Normal mode content
+                    if difficulty == .normal {
+                        VStack(spacing: 24) {
+                            // Round timeout picker
+                            VStack(spacing: 12) {
+                                Text("Per-Round Timeout")
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundColor(.primary)
+                                
+                                Picker("Round Timeout", selection: $selectedRoundTimeout) {
+                                    ForEach(NormalRoundTimeout.allCases) { timeout in
+                                        Text(timeout.displayName).tag(timeout.rawValue)
+                                    }
+                                }
+                                .pickerStyle(SegmentedPickerStyle())
+                                .frame(width: 240)
+                                
+                                // Description text
+                                Text(NormalRoundTimeout(rawValue: selectedRoundTimeout)?.description ?? "")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(.secondary)
+                                    .animation(.easeInOut(duration: 0.2), value: selectedRoundTimeout)
+                            }
+                            
+                            // Max mistakes picker
+                            VStack(spacing: 12) {
+                                Text("Max Mistakes")
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundColor(.primary)
+                                
+                                Picker("Max Mistakes", selection: $selectedNormalMaxMistakes) {
+                                    ForEach(MaxMistakes.allCases) { maxMistakes in
+                                        Text(maxMistakes.displayName).tag(maxMistakes.rawValue)
+                                    }
+                                }
+                                .pickerStyle(SegmentedPickerStyle())
+                                .frame(width: 240)
+                                
+                                // Description text
+                                Text(MaxMistakes(rawValue: selectedNormalMaxMistakes)?.description ?? "")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(.secondary)
+                                    .animation(.easeInOut(duration: 0.2), value: selectedNormalMaxMistakes)
+                            }
                         }
                         .padding(.vertical, 20)
                     }
@@ -118,8 +171,8 @@ struct CustomizeModeSheet: View {
                                 )
                         }
                         
-                        // Start button (only for Easy mode)
-                        if difficulty == .easy {
+                        // Start button (for Easy and Normal modes)
+                        if difficulty == .easy || difficulty == .normal {
                             Button(action: {
                                 startGame()
                             }) {
@@ -152,8 +205,13 @@ struct CustomizeModeSheet: View {
         }
         .onAppear {
             // Load current settings when sheet appears
-            selectedDuration = customizationStore.getEasyDuration()
-            selectedMaxMistakes = customizationStore.getEasyMaxMistakes()
+            if difficulty == .easy {
+                selectedDuration = customizationStore.getEasyDuration()
+                selectedMaxMistakes = customizationStore.getEasyMaxMistakes()
+            } else if difficulty == .normal {
+                selectedRoundTimeout = customizationStore.getNormalRoundTimeout()
+                selectedNormalMaxMistakes = customizationStore.getNormalMaxMistakes()
+            }
         }
     }
     
@@ -164,8 +222,12 @@ struct CustomizeModeSheet: View {
     }
     
     private func startGame() {
-        // Save both selected settings
-        customizationStore.updateEasySettings(duration: selectedDuration, maxMistakes: selectedMaxMistakes)
+        // Save selected settings based on difficulty
+        if difficulty == .easy {
+            customizationStore.updateEasySettings(duration: selectedDuration, maxMistakes: selectedMaxMistakes)
+        } else if difficulty == .normal {
+            customizationStore.updateNormalSettings(roundTimeout: selectedRoundTimeout, maxMistakes: selectedNormalMaxMistakes)
+        }
         
         // Set flag to start game
         shouldStartGame = true

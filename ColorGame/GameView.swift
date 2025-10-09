@@ -530,7 +530,7 @@ struct GameView: View {
     private func startGameSession() {
         isGameSessionActive = true
         
-        // Use custom duration and max mistakes for Easy mode, defaults for others
+        // Use custom settings based on difficulty
         if selectedDifficulty == .easy {
             let storedDuration = customizationStore.getEasyDuration()
             let storedMaxMistakes = customizationStore.getEasyMaxMistakes()
@@ -540,9 +540,20 @@ struct GameView: View {
             // If maxMistakes is 0, it means sudden death mode is explicitly set
             // If it's negative or corrupted, default to 3
             maxMistakes = storedMaxMistakes >= 0 ? storedMaxMistakes : 3
+        } else if selectedDifficulty == .normal {
+            let storedRoundTimeout = customizationStore.getNormalRoundTimeout()
+            let storedMaxMistakes = customizationStore.getNormalMaxMistakes()
+            
+            // Use custom round timeout and max mistakes for Normal mode
+            roundTimeRemaining = storedRoundTimeout > 0 ? storedRoundTimeout : 1.5
+            maxMistakes = storedMaxMistakes >= 0 ? storedMaxMistakes : 3
+            timeRemaining = 30.0 // Global timer stays 30s for Normal mode
+            
         } else {
+            // Hard mode or fallback - use defaults
             timeRemaining = 30.0
             maxMistakes = 3
+            roundTimeRemaining = 1.5
         }
         
         // Start global timer
@@ -579,7 +590,9 @@ struct GameView: View {
         // Cancel any existing round timer
         endRoundTimer()
         
-        roundTimeRemaining = 1.5
+        // Use custom round timeout from settings
+        let storedRoundTimeout = customizationStore.getNormalRoundTimeout()
+        roundTimeRemaining = storedRoundTimeout > 0 ? storedRoundTimeout : 1.5
         isRoundTimerActive = true
         
         roundTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
@@ -639,13 +652,20 @@ struct GameView: View {
         // Check for new best score
         isNewBestScore = highScoreStore.updateBestScore(for: selectedDifficulty, score: scoringLedger.finalScore)
         
-        // Save score to leaderboard with metadata for Easy mode
+        // Save score to leaderboard with metadata based on difficulty
         if selectedDifficulty == .easy {
             LeaderboardStore.shared.addScore(
                 scoringLedger.finalScore, 
                 for: selectedDifficulty,
                 durationSeconds: customizationStore.getEasyDuration(),
                 maxMistakes: customizationStore.getEasyMaxMistakes()
+            )
+        } else if selectedDifficulty == .normal {
+            LeaderboardStore.shared.addScore(
+                scoringLedger.finalScore, 
+                for: selectedDifficulty,
+                maxMistakes: customizationStore.getNormalMaxMistakes(),
+                roundTimeoutSeconds: customizationStore.getNormalRoundTimeout()
             )
         } else {
             LeaderboardStore.shared.addScore(scoringLedger.finalScore, for: selectedDifficulty)
@@ -661,13 +681,18 @@ struct GameView: View {
         scoringLedger.reset()
         mistakes = 0
         
-        // Use custom duration and max mistakes for Easy mode, defaults for others
+        // Use custom settings based on difficulty
         if selectedDifficulty == .easy {
             timeRemaining = Double(customizationStore.getEasyDuration())
             maxMistakes = customizationStore.getEasyMaxMistakes()
+        } else if selectedDifficulty == .normal {
+            roundTimeRemaining = customizationStore.getNormalRoundTimeout()
+            maxMistakes = customizationStore.getNormalMaxMistakes()
+            timeRemaining = 30.0
         } else {
             timeRemaining = 30.0
             maxMistakes = 3
+            roundTimeRemaining = 1.5
         }
         tiles = []
         hardModeTiles = []

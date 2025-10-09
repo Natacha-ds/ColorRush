@@ -54,7 +54,31 @@ class CustomizationStore: ObservableObject {
         return result
     }
     
-    // Normal mode settings (placeholder for future)
+    // Normal mode settings
+    func updateNormalRoundTimeout(_ timeout: Double) {
+        customization.normalSettings.roundTimeoutSeconds = timeout
+        saveCustomization()
+    }
+    
+    func updateNormalMaxMistakes(_ maxMistakes: Int) {
+        customization.normalSettings.maxMistakes = maxMistakes
+        saveCustomization()
+    }
+    
+    func updateNormalSettings(roundTimeout: Double, maxMistakes: Int) {
+        customization.normalSettings.roundTimeoutSeconds = roundTimeout
+        customization.normalSettings.maxMistakes = maxMistakes
+        saveCustomization()
+    }
+    
+    func getNormalRoundTimeout() -> Double {
+        return customization.normalSettings.roundTimeoutSeconds
+    }
+    
+    func getNormalMaxMistakes() -> Int {
+        return customization.normalSettings.maxMistakes
+    }
+    
     func updateNormalSettings(_ settings: NormalModeSettings) {
         customization.normalSettings = settings
         saveCustomization()
