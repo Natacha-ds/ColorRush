@@ -96,6 +96,18 @@ struct GameView: View {
     var body: some View {
         NavigationView {
             ZStack {
+                // Full screen background for all views
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color.purple.opacity(0.1),
+                        Color.pink.opacity(0.05),
+                        Color.white
+                    ]),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea(.all)
+                
                 if isGameOver {
                     // Game Over Screen
                     GameOverView(
@@ -918,145 +930,300 @@ struct GameOverView: View {
         }
     }
     
-    // MARK: - Session Complete View (Detailed Results)
+    // MARK: - Session Complete View (Figma Design)
     private var sessionCompleteView: some View {
-        VStack(spacing: 25) {
-            // Header
-            VStack(spacing: 10) {
-                Text("Session Complete")
-                    .font(.system(size: 32, weight: .bold, design: .rounded))
-                    .foregroundColor(.blue)
-                    .multilineTextAlignment(.center)
-            }
-            .padding(.top, 20)
+        ZStack {
+            // Confetti effects overlay
+            sessionCompleteConfetti
             
-            // Final Score Card
-            VStack(spacing: 15) {
-                Text("Final Score")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.secondary)
+            ScrollView {
+                VStack(spacing: 30) {
+                // Header Section
+                VStack(spacing: 15) {
+                    Text("⏰ Time's Up!")
+                        .font(.system(size: 36, weight: .bold, design: .rounded))
+                        .foregroundStyle(
+                            LinearGradient(
+                                gradient: Gradient(colors: [.purple, .blue]),
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .multilineTextAlignment(.center)
+                    
+                    Text(randomEmotionalMessage)
+                        .font(.title2)
+                        .fontWeight(.medium)
+                        .foregroundColor(.gray)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.top, 20)
                 
-                Text("\(score)")
-                    .font(.system(size: 64, weight: .bold, design: .rounded))
-                    .foregroundColor(.primary)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 30)
-            .background(
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(Color.gray.opacity(0.1))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20)
-                            .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                // Main Score Circle
+                ZStack {
+                    // Score Circle Background
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                gradient: Gradient(colors: [.purple, .pink]),
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 200, height: 200)
+                        .overlay(
+                            Circle()
+                                .stroke(Color.blue.opacity(0.3), lineWidth: 3)
+                        )
+                        .shadow(color: .black.opacity(0.1), radius: 20, x: 0, y: 10)
+                    
+                    // Sparkle animation
+                    Image(systemName: "sparkles")
+                        .font(.title2)
+                        .foregroundColor(.yellow)
+                        .offset(x: 70, y: -70)
+                        .rotationEffect(.degrees(45))
+                    
+                            VStack(spacing: 8) {
+                                // Trophy icon
+                                Text("🏆")
+                                    .font(.system(size: 40))
+                                
+                                // Score with pts
+                                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                                    Text("\(score)")
+                                        .font(.system(size: 48, weight: .bold, design: .rounded))
+                                        .foregroundColor(.yellow)
+                                    
+                                    Text("pts")
+                                        .font(.system(size: 20, weight: .medium))
+                                        .foregroundColor(.white)
+                                }
+                            }
+                }
+                
+                // Horizontal Breakdown Cards
+                HStack(spacing: 8) {
+                    // Correct Card
+                    BreakdownCard(
+                        icon: "✅",
+                        label: "Correct",
+                        count: correctAnswers,
+                        points: correctAnswers * 10,
+                        gradient: LinearGradient(
+                            gradient: Gradient(colors: [
+                                Color.green.opacity(0.6),
+                                Color.green.opacity(0.4)
+                            ]),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
                     )
-            )
-            
-            // Score Breakdown
-            VStack(spacing: 12) {
-                Text("Score Breakdown")
-                    .font(.title3)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.primary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    
+                    // Wrong Card
+                    BreakdownCard(
+                        icon: "❌",
+                        label: "Wrong",
+                        count: incorrectAnswers,
+                        points: -(incorrectAnswers * 5),
+                        gradient: LinearGradient(
+                            gradient: Gradient(colors: [
+                                Color.red.opacity(0.6),
+                                Color.red.opacity(0.4)
+                            ]),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    
+                    // Streak Card
+                    BreakdownCard(
+                        icon: "🔥",
+                        label: "Streak",
+                        count: bonusTriggers,
+                        points: bonusTriggers * 5,
+                        gradient: LinearGradient(
+                            gradient: Gradient(colors: [
+                                Color.orange.opacity(0.6),
+                                Color.orange.opacity(0.4)
+                            ]),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                }
+                .padding(.horizontal, 16)
                 
-                // Correct Answers
-                BreakdownTile(
-                    title: "Correct (×10)",
-                    count: correctAnswers,
-                    points: correctAnswers * 10,
-                    color: .green
-                )
+                // High Score Badge (if applicable)
+                if isNewHighScore {
+                    HStack {
+                        Image(systemName: "star.fill")
+                            .foregroundColor(.yellow)
+                        Text("New High Score!")
+                            .font(.title3)
+                            .fontWeight(.bold)
+                            .foregroundColor(.yellow)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 15)
+                            .fill(Color.yellow.opacity(0.2))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 15)
+                                    .stroke(Color.yellow, lineWidth: 2)
+                            )
+                    )
+                }
                 
-                // Incorrect Answers
-                BreakdownTile(
-                    title: "Incorrect (×−5)",
-                    count: incorrectAnswers,
-                    points: -(incorrectAnswers * 5),
-                    color: .red
-                )
+                Spacer()
                 
-                // Streak Bonus
-                BreakdownTile(
-                    title: "Streak Bonus (×+5 every 5)",
-                    count: bonusTriggers,
-                    points: bonusTriggers * 5,
-                    color: .orange
-                )
-            }
-            
-            // High Score Badge (if applicable)
-            if isNewHighScore {
-                HStack {
-                    Image(systemName: "star.fill")
-                        .foregroundColor(.yellow)
-                    Text("New High Score!")
-                        .font(.title3)
-                        .fontWeight(.bold)
-                        .foregroundColor(.yellow)
+                    // Action Buttons (Figma Design)
+                    sessionCompleteActionButtonsFigma
                 }
                 .padding(.horizontal, 20)
-                .padding(.vertical, 10)
-                .background(
-                    RoundedRectangle(cornerRadius: 15)
-                        .fill(Color.yellow.opacity(0.2))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 15)
-                                .stroke(Color.yellow, lineWidth: 2)
-                        )
-                )
+                .padding(.top, 20)
             }
-            
-            // Action Buttons
-            actionButtons
         }
     }
     
-    // MARK: - Game Over View (Simplified)
+    // MARK: - Game Over View (Figma Design)
     private var gameOverView: some View {
-        VStack(spacing: 30) {
-            // Header
-            VStack(spacing: 15) {
-                Text("GAME OVER")
-                    .font(.system(size: 36, weight: .bold, design: .rounded))
-                    .foregroundColor(.red)
-                    .multilineTextAlignment(.center)
+        ScrollView {
+            VStack(spacing: 30) {
+                // Header Section
+                VStack(spacing: 15) {
+                    // Skull emoji
+                    Text("💀")
+                        .font(.system(size: 50))
+                    
+                    // GAME OVER title with gradient
+                    Text("GAME OVER")
+                        .font(.system(size: 36, weight: .bold, design: .rounded))
+                        .foregroundStyle(
+                            LinearGradient(
+                                gradient: Gradient(colors: [.orange, .pink, .purple]),
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .multilineTextAlignment(.center)
+                    
+                    // Game over reason
+                    Text(gameOverReason)
+                        .font(.title3)
+                        .fontWeight(.regular)
+                        .foregroundColor(.gray)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.top, 20)
                 
-                Text(gameOverReason)
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.primary)
-                    .multilineTextAlignment(.center)
-            }
-            .padding(.top, 40)
-            
-            // Final Score (smaller)
-            VStack(spacing: 10) {
-                Text("Final Score")
-                    .font(.title3)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.secondary)
+                // Score Circle
+                ZStack {
+                    // Score Circle Background
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                gradient: Gradient(colors: [
+                                    Color(red: 0.17, green: 0.17, blue: 0.17), // #2B2B2B
+                                    Color(red: 0.24, green: 0.24, blue: 0.24)  // #3C3C3C
+                                ]),
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 200, height: 200)
+                        .overlay(
+                            Circle()
+                                .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                        )
+                        .shadow(color: .black.opacity(0.2), radius: 15, x: 0, y: 8)
+                    
+                    VStack(spacing: 8) {
+                        // Broken heart icon
+                        Text("💔")
+                            .font(.system(size: 40))
+                        
+                        // Score with pts
+                        HStack(alignment: .firstTextBaseline, spacing: 4) {
+                            Text("\(score)")
+                                .font(.system(size: 48, weight: .bold, design: .rounded))
+                                .foregroundColor(.white)
+                            
+                            Text("pts")
+                                .font(.system(size: 20, weight: .medium))
+                                .foregroundColor(.gray)
+                        }
+                    }
+                }
                 
-                Text("\(score)")
-                    .font(.system(size: 48, weight: .bold, design: .rounded))
-                    .foregroundColor(.primary)
+                Spacer()
+                
+                // Action Buttons (same as Time's Up)
+                gameOverActionButtons
             }
-            .padding(.vertical, 20)
-            .padding(.horizontal, 30)
-            .background(
-                RoundedRectangle(cornerRadius: 15)
-                    .fill(Color.gray.opacity(0.1))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 15)
-                            .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                    )
-            )
-            
-            Spacer()
-            
-            // Action Buttons
-            actionButtons
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
         }
+    }
+    
+    // MARK: - Game Over Action Buttons
+    private var gameOverActionButtons: some View {
+        VStack(spacing: 16) {
+            // Play Again (Primary)
+            Button(action: onPlayAgain) {
+                HStack(spacing: 12) {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.title3)
+                        .foregroundColor(.white)
+                    
+                    Text("Play Again")
+                        .font(.title3)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.white)
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
+                .background(
+                    RoundedRectangle(cornerRadius: 25)
+                        .fill(
+                            LinearGradient(
+                                gradient: Gradient(colors: [.blue, .purple, .pink]),
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                )
+                .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+            }
+            
+            // Back to Home (Secondary)
+            Button(action: onBackToHome) {
+                HStack(spacing: 12) {
+                    Image(systemName: "house.fill")
+                        .font(.title3)
+                        .foregroundColor(.primary)
+                    
+                    Text("Back to Home")
+                        .font(.title3)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
+                .background(
+                    RoundedRectangle(cornerRadius: 25)
+                        .fill(Color.white.opacity(0.9))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 25)
+                                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                        )
+                )
+                .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.bottom, 20)
     }
     
     // MARK: - Action Buttons (Shared)
@@ -1118,6 +1285,137 @@ struct GameOverView: View {
     private var isNewHighScore: Bool {
         return isNewBestScore
     }
+    
+    private var randomEmotionalMessage: String {
+        let messages = [
+            "Nice reflexes!",
+            "You nailed it!",
+            "You are on fire!",
+            "Well done!"
+        ]
+        return messages.randomElement() ?? "Well done!"
+    }
+    
+            // MARK: - Session Complete Confetti Effects
+            private var sessionCompleteConfetti: some View {
+                ZStack {
+                    // Confetti effects - smaller size (60-70% of original)
+                    ForEach(0..<8, id: \.self) { index in
+                        Circle()
+                            .fill(
+                                index % 2 == 0 ? 
+                                Color.pink.opacity(0.3) : 
+                                Color.blue.opacity(0.3)
+                            )
+                            .frame(width: CGFloat.random(in: 12...28)) // Reduced from 20-40 to 12-28
+                            .position(
+                                x: CGFloat.random(in: 0...UIScreen.main.bounds.width),
+                                y: CGFloat.random(in: 0...UIScreen.main.bounds.height)
+                            )
+                            .blur(radius: 2)
+                    }
+                }
+                .allowsHitTesting(false) // Allow touches to pass through
+            }
+    
+    // MARK: - Session Complete Action Buttons (Figma Design)
+    private var sessionCompleteActionButtonsFigma: some View {
+        VStack(spacing: 16) {
+            // Play Again (Primary)
+            Button(action: onPlayAgain) {
+                HStack(spacing: 12) {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.title3)
+                        .foregroundColor(.white)
+                    
+                    Text("Play Again")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 55)
+                .background(
+                    LinearGradient(
+                        gradient: Gradient(colors: [.blue, .purple]),
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .cornerRadius(27)
+                .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
+            }
+            
+            // Back to Home (Secondary)
+            Button(action: onBackToHome) {
+                HStack(spacing: 12) {
+                    Image(systemName: "house.fill")
+                        .font(.title3)
+                        .foregroundColor(.primary)
+                    
+                    Text("Back to Home")
+                        .font(.title3)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
+                .background(
+                    RoundedRectangle(cornerRadius: 25)
+                        .fill(Color.white.opacity(0.9))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 25)
+                                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                        )
+                )
+                .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+            }
+        }
+        .padding(.bottom, 30)
+    }
+    
+    // MARK: - Session Complete Action Buttons (Redesigned)
+    private var sessionCompleteActionButtons: some View {
+        VStack(spacing: 20) {
+            // Play Again (Primary)
+            Button(action: onPlayAgain) {
+                Text("Play Again")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 55)
+                    .background(
+                        LinearGradient(
+                            gradient: Gradient(colors: [.blue, .purple]),
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .cornerRadius(27)
+                    .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
+            }
+            
+            // Back to Home (Secondary)
+            Button(action: onBackToHome) {
+                Text("Back to Home")
+                    .font(.title3)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50)
+                    .background(
+                        RoundedRectangle(cornerRadius: 25)
+                            .fill(Color.clear)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 25)
+                                    .stroke(Color.gray.opacity(0.4), lineWidth: 2)
+                            )
+                    )
+            }
+        }
+        .padding(.top, 20)
+    }
 }
 
 struct BreakdownTile: View {
@@ -1163,6 +1461,99 @@ struct BreakdownTile: View {
                         .stroke(color.opacity(0.3), lineWidth: 1)
                 )
         )
+    }
+}
+
+struct SimplifiedBreakdownRow: View {
+    let icon: String
+    let label: String
+    let count: Int
+    let points: Int
+    let color: Color
+    
+    var body: some View {
+        HStack {
+            // Icon and label
+            HStack(spacing: 8) {
+                Text(icon)
+                    .font(.title2)
+                
+                Text(label)
+                    .font(.title3)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+            }
+            
+            Spacer()
+            
+            // Count
+            Text("\(count)")
+                .font(.title3)
+                .fontWeight(.bold)
+                .foregroundColor(.primary)
+                .frame(width: 30, alignment: .center)
+            
+            // Points
+            Text("\(points >= 0 ? "+" : "")\(points) pts")
+                .font(.title3)
+                .fontWeight(.bold)
+                .foregroundColor(color)
+                .frame(width: 80, alignment: .trailing)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(color.opacity(0.1))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(color.opacity(0.3), lineWidth: 1)
+                )
+        )
+    }
+}
+
+struct BreakdownCard: View {
+    let icon: String
+    let label: String
+    let count: Int
+    let points: Int
+    let gradient: LinearGradient
+    
+    var body: some View {
+        VStack(spacing: 8) {
+            // Icon and label
+            HStack(spacing: 6) {
+                Text(icon)
+                    .font(.title3)
+                    .foregroundColor(.primary)
+                
+                Text(label)
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+            
+            // Count
+            Text("\(count)")
+                .font(.system(size: 28, weight: .bold))
+                .foregroundColor(.primary)
+            
+            // Points with "pts"
+            Text("\(points >= 0 ? "+" : "")\(points) pts")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(.primary.opacity(0.8))
+        }
+        .frame(maxWidth: .infinity)
+        .frame(minHeight: 90)
+        .padding(.vertical, 16)
+        .padding(.horizontal, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(gradient)
+        )
+        .shadow(color: .black.opacity(0.05), radius: 6, x: 0, y: 3)
     }
 }
 
