@@ -7,14 +7,16 @@ struct ScoreEntry: Codable, Identifiable {
     let durationSeconds: Int?
     let maxMistakes: Int?
     let roundTimeoutSeconds: Double?
+    let confusionSpeedSeconds: Double?
     
-    init(score: Int, date: Date = Date(), durationSeconds: Int? = nil, maxMistakes: Int? = nil, roundTimeoutSeconds: Double? = nil) {
+    init(score: Int, date: Date = Date(), durationSeconds: Int? = nil, maxMistakes: Int? = nil, roundTimeoutSeconds: Double? = nil, confusionSpeedSeconds: Double? = nil) {
         self.id = UUID()
         self.score = score
         self.date = date
         self.durationSeconds = durationSeconds
         self.maxMistakes = maxMistakes
         self.roundTimeoutSeconds = roundTimeoutSeconds
+        self.confusionSpeedSeconds = confusionSpeedSeconds
     }
 }
 

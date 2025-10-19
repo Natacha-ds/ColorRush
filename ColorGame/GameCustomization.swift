@@ -43,8 +43,18 @@ struct NormalModeSettings: Codable {
 }
 
 struct HardModeSettings: Codable {
-    // Placeholder for future Hard mode customizations
-    init() {}
+    var confusionSpeedSeconds: Double
+    var maxMistakes: Int
+    
+    init() {
+        self.confusionSpeedSeconds = 1.8 // Default 1.8 seconds (Normal)
+        self.maxMistakes = 3 // Default 3 mistakes
+    }
+    
+    init(confusionSpeedSeconds: Double, maxMistakes: Int) {
+        self.confusionSpeedSeconds = confusionSpeedSeconds
+        self.maxMistakes = maxMistakes
+    }
 }
 
 // Duration options for Easy mode
@@ -113,6 +123,31 @@ enum MaxMistakes: Int, CaseIterable, Identifiable {
         case .one: return "1 mistake allowed"
         case .two: return "2 mistakes allowed"
         case .three: return "3 mistakes allowed"
+        }
+    }
+}
+
+// Confusion speed options for Hard mode
+enum HardConfusionSpeed: Double, CaseIterable, Identifiable {
+    case slow = 2.0
+    case normal = 1.8
+    case fast = 1.5
+    
+    var id: Double { rawValue }
+    
+    var displayName: String {
+        switch self {
+        case .slow: return "2.0s"
+        case .normal: return "1.8s"
+        case .fast: return "1.5s"
+        }
+    }
+    
+    var description: String {
+        switch self {
+        case .slow: return "Slow (2.0s board refresh)"
+        case .normal: return "Normal (1.8s board refresh)"
+        case .fast: return "Fast (1.5s board refresh)"
         }
     }
 }

@@ -7,6 +7,8 @@ struct CustomizeModeSheet: View {
     @State private var selectedMaxMistakes: Int
     @State private var selectedRoundTimeout: Double
     @State private var selectedNormalMaxMistakes: Int
+    @State private var selectedConfusionSpeed: Double
+    @State private var selectedHardMaxMistakes: Int
     @Binding var isPresented: Bool
     @Binding var shouldStartGame: Bool
     
@@ -19,6 +21,8 @@ struct CustomizeModeSheet: View {
         self._selectedMaxMistakes = State(initialValue: 3)
         self._selectedRoundTimeout = State(initialValue: 1.5)
         self._selectedNormalMaxMistakes = State(initialValue: 3)
+        self._selectedConfusionSpeed = State(initialValue: 1.8)
+        self._selectedHardMaxMistakes = State(initialValue: 3)
     }
     
     var body: some View {
@@ -87,22 +91,50 @@ struct CustomizeModeSheet: View {
                         }
                     }
                     
-                    // Hard mode placeholder (Normal mode has its own content below)
+                    // Hard mode content
                     if difficulty == .hard {
-                        VStack(spacing: 16) {
-                            Image(systemName: "gear")
-                                .font(.system(size: 48))
-                                .foregroundColor(.gray.opacity(0.6))
+                        VStack(spacing: 24) {
+                            // Confusion speed picker
+                            VStack(spacing: 12) {
+                                Text("Confusion Speed")
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundColor(.primary)
+                                
+                                Picker("Confusion Speed", selection: $selectedConfusionSpeed) {
+                                    ForEach(HardConfusionSpeed.allCases) { speed in
+                                        Text(speed.displayName).tag(speed.rawValue)
+                                    }
+                                }
+                                .pickerStyle(SegmentedPickerStyle())
+                                .frame(width: 240)
+                                
+                                // Description text
+                                Text(HardConfusionSpeed(rawValue: selectedConfusionSpeed)?.description ?? "")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(.secondary)
+                                    .animation(.easeInOut(duration: 0.2), value: selectedConfusionSpeed)
+                            }
                             
-                            Text("Coming Soon")
-                                .font(.system(size: 18, weight: .medium))
-                                .foregroundColor(.secondary)
-                            
-                            Text("Customization options for \(difficulty.rawValue) mode will be available in a future update.")
-                                .font(.system(size: 14))
-                                .foregroundColor(.secondary)
-                                .multilineTextAlignment(.center)
-                                .padding(.horizontal, 20)
+                            // Max mistakes picker
+                            VStack(spacing: 12) {
+                                Text("Max Mistakes")
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundColor(.primary)
+                                
+                                Picker("Max Mistakes", selection: $selectedHardMaxMistakes) {
+                                    ForEach(MaxMistakes.allCases) { maxMistakes in
+                                        Text(maxMistakes.displayName).tag(maxMistakes.rawValue)
+                                    }
+                                }
+                                .pickerStyle(SegmentedPickerStyle())
+                                .frame(width: 240)
+                                
+                                // Description text
+                                Text(MaxMistakes(rawValue: selectedHardMaxMistakes)?.description ?? "")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(.secondary)
+                                    .animation(.easeInOut(duration: 0.2), value: selectedHardMaxMistakes)
+                            }
                         }
                         .padding(.vertical, 20)
                     }
@@ -171,8 +203,8 @@ struct CustomizeModeSheet: View {
                                 )
                         }
                         
-                        // Start button (for Easy and Normal modes)
-                        if difficulty == .easy || difficulty == .normal {
+                        // Start button (for Easy, Normal, and Hard modes)
+                        if difficulty == .easy || difficulty == .normal || difficulty == .hard {
                             Button(action: {
                                 startGame()
                             }) {
@@ -211,6 +243,9 @@ struct CustomizeModeSheet: View {
             } else if difficulty == .normal {
                 selectedRoundTimeout = customizationStore.getNormalRoundTimeout()
                 selectedNormalMaxMistakes = customizationStore.getNormalMaxMistakes()
+            } else if difficulty == .hard {
+                selectedConfusionSpeed = customizationStore.getHardConfusionSpeed()
+                selectedHardMaxMistakes = customizationStore.getHardMaxMistakes()
             }
         }
     }
@@ -227,6 +262,8 @@ struct CustomizeModeSheet: View {
             customizationStore.updateEasySettings(duration: selectedDuration, maxMistakes: selectedMaxMistakes)
         } else if difficulty == .normal {
             customizationStore.updateNormalSettings(roundTimeout: selectedRoundTimeout, maxMistakes: selectedNormalMaxMistakes)
+        } else if difficulty == .hard {
+            customizationStore.updateHardSettings(confusionSpeed: selectedConfusionSpeed, maxMistakes: selectedHardMaxMistakes)
         }
         
         // Set flag to start game

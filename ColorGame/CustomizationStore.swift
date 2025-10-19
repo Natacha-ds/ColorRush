@@ -84,7 +84,31 @@ class CustomizationStore: ObservableObject {
         saveCustomization()
     }
     
-    // Hard mode settings (placeholder for future)
+    // Hard mode settings
+    func updateHardConfusionSpeed(_ confusionSpeed: Double) {
+        customization.hardSettings.confusionSpeedSeconds = confusionSpeed
+        saveCustomization()
+    }
+    
+    func updateHardMaxMistakes(_ maxMistakes: Int) {
+        customization.hardSettings.maxMistakes = maxMistakes
+        saveCustomization()
+    }
+    
+    func updateHardSettings(confusionSpeed: Double, maxMistakes: Int) {
+        customization.hardSettings.confusionSpeedSeconds = confusionSpeed
+        customization.hardSettings.maxMistakes = maxMistakes
+        saveCustomization()
+    }
+    
+    func getHardConfusionSpeed() -> Double {
+        return customization.hardSettings.confusionSpeedSeconds
+    }
+    
+    func getHardMaxMistakes() -> Int {
+        return customization.hardSettings.maxMistakes
+    }
+    
     func updateHardSettings(_ settings: HardModeSettings) {
         customization.hardSettings = settings
         saveCustomization()

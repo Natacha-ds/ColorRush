@@ -38,8 +38,8 @@ class LeaderboardStore: ObservableObject {
         }
     }
     
-    func addScore(_ score: Int, for difficulty: Difficulty, durationSeconds: Int? = nil, maxMistakes: Int? = nil, roundTimeoutSeconds: Double? = nil) {
-        let newEntry = ScoreEntry(score: score, durationSeconds: durationSeconds, maxMistakes: maxMistakes, roundTimeoutSeconds: roundTimeoutSeconds)
+    func addScore(_ score: Int, for difficulty: Difficulty, durationSeconds: Int? = nil, maxMistakes: Int? = nil, roundTimeoutSeconds: Double? = nil, confusionSpeedSeconds: Double? = nil) {
+        let newEntry = ScoreEntry(score: score, durationSeconds: durationSeconds, maxMistakes: maxMistakes, roundTimeoutSeconds: roundTimeoutSeconds, confusionSpeedSeconds: confusionSpeedSeconds)
         
         switch difficulty {
         case .easy:

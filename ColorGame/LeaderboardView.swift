@@ -71,7 +71,8 @@ struct LeaderboardView: View {
                                     difficulty: selectedDifficulty,
                                     durationSeconds: scoreEntry.durationSeconds,
                                     maxMistakes: scoreEntry.maxMistakes,
-                                    roundTimeoutSeconds: scoreEntry.roundTimeoutSeconds
+                                    roundTimeoutSeconds: scoreEntry.roundTimeoutSeconds,
+                                    confusionSpeedSeconds: scoreEntry.confusionSpeedSeconds
                                 )
                             }
                         }
@@ -96,6 +97,7 @@ struct ScoreRowView: View {
     let durationSeconds: Int?
     let maxMistakes: Int?
     let roundTimeoutSeconds: Double?
+    let confusionSpeedSeconds: Double?
     
     private var rankColor: Color {
         switch rank {
@@ -158,6 +160,19 @@ struct ScoreRowView: View {
                         .frame(width: 60)
                     
                     Text("\(String(format: "%.1f", timeout))s per round · \(mistakes) mistakes allowed")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+            
+            // Metadata for Hard mode
+            if difficulty == .hard, let confusionSpeed = confusionSpeedSeconds, let mistakes = maxMistakes {
+                HStack {
+                    Spacer()
+                        .frame(width: 60)
+                    
+                    Text("\(String(format: "%.1f", confusionSpeed))s confusion · \(mistakes) mistakes allowed")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)

@@ -68,6 +68,11 @@ struct GameView: View {
     @State private var roundTimer: Timer?
     @State private var isRoundTimerActive = false
     
+    // Confusion timer state (for Hard mode)
+    @State private var confusionTimeRemaining = 1.8
+    @State private var confusionTimer: Timer?
+    @State private var isConfusionTimerActive = false
+    
     // Game over state
     @State private var isGameOver = false
     @State private var gameEndReason: GameEndReason?
@@ -234,6 +239,9 @@ struct GameView: View {
         // End round timer immediately when tile is tapped (prevents double-counting)
         endRoundTimer()
         
+        // End confusion timer immediately when tile is tapped (Hard mode)
+        endConfusionTimer()
+        
         let isCorrect: Bool
         
         if selectedDifficulty == .hard {
@@ -337,6 +345,10 @@ struct GameView: View {
             // Start round timer for Normal mode
             if selectedDifficulty == .normal {
                 startRoundTimer()
+            }
+            // Start confusion timer for Hard mode
+            else if selectedDifficulty == .hard {
+                startConfusionTimer()
             }
         }
     }
@@ -549,11 +561,20 @@ struct GameView: View {
             maxMistakes = storedMaxMistakes >= 0 ? storedMaxMistakes : 3
             timeRemaining = 30.0 // Global timer stays 30s for Normal mode
             
+        } else if selectedDifficulty == .hard {
+            let storedConfusionSpeed = customizationStore.getHardConfusionSpeed()
+            let storedMaxMistakes = customizationStore.getHardMaxMistakes()
+            
+            // Use custom confusion speed and max mistakes for Hard mode
+            confusionTimeRemaining = storedConfusionSpeed > 0 ? storedConfusionSpeed : 1.8
+            maxMistakes = storedMaxMistakes >= 0 ? storedMaxMistakes : 3
+            timeRemaining = 30.0 // Global timer stays 30s for Hard mode
         } else {
-            // Hard mode or fallback - use defaults
+            // Fallback - use defaults
             timeRemaining = 30.0
             maxMistakes = 3
             roundTimeRemaining = 1.5
+            confusionTimeRemaining = 1.8
         }
         
         // Start global timer
@@ -577,6 +598,9 @@ struct GameView: View {
         
         // Also end round timer if active
         endRoundTimer()
+        
+        // Also end confusion timer if active
+        endConfusionTimer()
         
         print("Game session ended. Final score: \(scoringLedger.finalScore), Mistakes: \(mistakes)")
     }
@@ -608,6 +632,66 @@ struct GameView: View {
         roundTimer?.invalidate()
         roundTimer = nil
         isRoundTimerActive = false
+    }
+    
+    // MARK: - Confusion Timer (Hard mode)
+    
+    private func startConfusionTimer() {
+        // Only start confusion timer for Hard mode
+        guard selectedDifficulty == .hard else { return }
+        
+        // Cancel any existing confusion timer
+        endConfusionTimer()
+        
+        // Use custom confusion speed from settings
+        let storedConfusionSpeed = customizationStore.getHardConfusionSpeed()
+        confusionTimeRemaining = storedConfusionSpeed > 0 ? storedConfusionSpeed : 1.8
+        isConfusionTimerActive = true
+        
+        confusionTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
+            self.confusionTimeRemaining -= 0.1
+            
+            if self.confusionTimeRemaining <= 0 {
+                self.handleConfusionTimeout()
+            }
+        }
+    }
+    
+    private func endConfusionTimer() {
+        confusionTimer?.invalidate()
+        confusionTimer = nil
+        isConfusionTimerActive = false
+    }
+    
+    private func handleConfusionTimeout() {
+        // Only process confusion timeout if game is still active and not already game over
+        guard isGameActive, isGameSessionActive, !isGameOver else { return }
+        
+        // Refresh the grid while keeping the same announced color
+        if selectedDifficulty == .hard {
+            // Store previous tiles for comparison
+            previousHardModeTiles = hardModeTiles
+            
+            // Build new grid with same announced color
+            hardModeTiles = buildHardModeGrid()
+            
+            // Debug logging for Hard mode refresh
+            let tileDescriptions = hardModeTiles.map { "\($0.textLabel) on \(colorName(for: $0.backgroundColor))" }
+            print("Confusion refresh - New Hard mode grid: [\(tileDescriptions.joined(separator: ", "))]")
+            
+            // Optional: Play haptic feedback to signal refresh
+            hapticsService.lightImpact()
+        }
+        
+        // End the confusion timer
+        endConfusionTimer()
+        
+        // Start new confusion timer
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            if self.isGameSessionActive && !self.isGameOver && self.isGameActive {
+                self.startConfusionTimer()
+            }
+        }
     }
     
     private func handleRoundTimeout() {
@@ -667,6 +751,13 @@ struct GameView: View {
                 maxMistakes: customizationStore.getNormalMaxMistakes(),
                 roundTimeoutSeconds: customizationStore.getNormalRoundTimeout()
             )
+        } else if selectedDifficulty == .hard {
+            LeaderboardStore.shared.addScore(
+                scoringLedger.finalScore, 
+                for: selectedDifficulty,
+                maxMistakes: customizationStore.getHardMaxMistakes(),
+                confusionSpeedSeconds: customizationStore.getHardConfusionSpeed()
+            )
         } else {
             LeaderboardStore.shared.addScore(scoringLedger.finalScore, for: selectedDifficulty)
         }
@@ -689,10 +780,15 @@ struct GameView: View {
             roundTimeRemaining = customizationStore.getNormalRoundTimeout()
             maxMistakes = customizationStore.getNormalMaxMistakes()
             timeRemaining = 30.0
+        } else if selectedDifficulty == .hard {
+            confusionTimeRemaining = customizationStore.getHardConfusionSpeed()
+            maxMistakes = customizationStore.getHardMaxMistakes()
+            timeRemaining = 30.0
         } else {
             timeRemaining = 30.0
             maxMistakes = 3
             roundTimeRemaining = 1.5
+            confusionTimeRemaining = 1.8
         }
         tiles = []
         hardModeTiles = []
@@ -706,6 +802,10 @@ struct GameView: View {
         // Reset round timer state
         roundTimeRemaining = 1.5
         endRoundTimer()
+        
+        // Reset confusion timer state
+        confusionTimeRemaining = 1.8
+        endConfusionTimer()
         
         // Start new game session
         startGameSession()
@@ -747,6 +847,12 @@ struct GameView: View {
             roundTimer?.invalidate()
             roundTimer = nil
         }
+        
+        // Also pause confusion timer if active
+        if isConfusionTimerActive {
+            confusionTimer?.invalidate()
+            confusionTimer = nil
+        }
     }
     
     private func resumeTimer() {
@@ -774,6 +880,11 @@ struct GameView: View {
         // Resume round timer if it was active and game is still active
         if isRoundTimerActive && isGameActive && !isGameOver {
             startRoundTimer()
+        }
+        
+        // Resume confusion timer if it was active and game is still active
+        if isConfusionTimerActive && isGameActive && !isGameOver {
+            startConfusionTimer()
         }
         
         self.backgroundTime = nil
