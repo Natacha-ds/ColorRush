@@ -44,183 +44,433 @@ struct CustomizeModeSheet: View {
                     .padding(.bottom, 16)
                 
                 // Content
-                VStack(spacing: 24) {
-                    // Title
-                    Text("Customize \(difficulty.rawValue)")
-                        .font(.system(size: 24, weight: .bold, design: .rounded))
-                        .foregroundColor(.primary)
+                VStack(spacing: 32) {
+                    // Title centered with close button anchored to top-right
+                    ZStack {
+                        // Centered title
+                        Text("Customize your game")
+                            .font(.system(size: 24, weight: .semibold, design: .rounded))
+                            .foregroundColor(Color(red: 0.3, green: 0.3, blue: 0.3)) // Softer dark gray
+                        
+                        // Close button anchored to top-right
+                        HStack {
+                            Spacer()
+                            Button(action: {
+                                dismissSheet()
+                            }) {
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundColor(.secondary)
+                                    .frame(width: 32, height: 32)
+                                    .background(
+                                        Circle()
+                                            .fill(Color.gray.opacity(0.1))
+                                    )
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.top, 8)
                     
                     // Easy mode content
                     if difficulty == .easy {
-                        VStack(spacing: 24) {
+                        VStack(spacing: 40) {
                             // Duration picker
-                            VStack(spacing: 12) {
-                                Text("Duration")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(.primary)
+                            VStack(spacing: 20) {
+                                Text("⏱️ Duration")
+                                    .font(.system(size: 18, weight: .bold))
+                                    .foregroundStyle(
+                                        LinearGradient(
+                                            gradient: Gradient(colors: [.purple, .pink]),
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
                                 
-                                Picker("Duration", selection: $selectedDuration) {
+                                // Custom segmented picker for Duration
+                                HStack(spacing: 0) {
                                     ForEach(EasyDuration.allCases) { duration in
-                                        Text(duration.displayName).tag(duration.rawValue)
+                                        Button(action: {
+                                            withAnimation(.easeInOut(duration: 0.3)) {
+                                                selectedDuration = duration.rawValue
+                                            }
+                                        }) {
+                                            Text(duration.displayName)
+                                                .font(.system(size: 16, weight: .medium))
+                                                .foregroundColor(selectedDuration == duration.rawValue ? 
+                                                                 Color.purple : 
+                                                                 Color.gray)
+                                                .frame(width: 66, height: 36)
+                                                .background(
+                                                    selectedDuration == duration.rawValue ?
+                                                    RoundedRectangle(cornerRadius: 18)
+                                                        .fill(Color(red: 0.98, green: 0.98, blue: 0.99)) // #FAFAFB - slightly off-white
+                                                        .overlay(
+                                                            RoundedRectangle(cornerRadius: 18)
+                                                                .stroke(
+                                                                    LinearGradient(
+                                                                        gradient: Gradient(colors: [.blue, .pink]),
+                                                                        startPoint: .leading,
+                                                                        endPoint: .trailing
+                                                                    ),
+                                                                    lineWidth: 2
+                                                                )
+                                                        ) :
+                                                    nil
+                                                )
+                                        }
+                                        .buttonStyle(PlainButtonStyle())
                                     }
                                 }
-                                .pickerStyle(SegmentedPickerStyle())
+                                .background(
+                                    RoundedRectangle(cornerRadius: 18)
+                                        .fill(Color(red: 0.98, green: 0.98, blue: 0.99)) // #FAFAFB - slightly off-white
+                                        .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+                                )
                                 .frame(width: 200)
                             }
                             
                             // Max mistakes picker
-                            VStack(spacing: 12) {
-                                Text("Max Mistakes")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(.primary)
+                            VStack(spacing: 20) {
+                                Text("❌ Mistakes allowed")
+                                    .font(.system(size: 18, weight: .bold))
+                                    .foregroundStyle(
+                                        LinearGradient(
+                                            gradient: Gradient(colors: [.purple, .pink]),
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
                                 
-                                Picker("Max Mistakes", selection: $selectedMaxMistakes) {
+                                // Custom segmented picker for Max Mistakes
+                                HStack(spacing: 0) {
                                     ForEach(MaxMistakes.allCases) { maxMistakes in
-                                        Text(maxMistakes.displayName).tag(maxMistakes.rawValue)
+                                        Button(action: {
+                                            withAnimation(.easeInOut(duration: 0.3)) {
+                                                selectedMaxMistakes = maxMistakes.rawValue
+                                            }
+                                        }) {
+                                            Text(maxMistakes.displayName)
+                                                .font(.system(size: 16, weight: .medium))
+                                                .foregroundColor(selectedMaxMistakes == maxMistakes.rawValue ? 
+                                                                 Color.purple : 
+                                                                 Color.gray)
+                                                .frame(width: 60, height: 36)
+                                                .background(
+                                                    selectedMaxMistakes == maxMistakes.rawValue ?
+                                                    RoundedRectangle(cornerRadius: 18)
+                                                        .fill(Color(red: 0.98, green: 0.98, blue: 0.99)) // #FAFAFB - slightly off-white
+                                                        .overlay(
+                                                            RoundedRectangle(cornerRadius: 18)
+                                                                .stroke(
+                                                                    LinearGradient(
+                                                                        gradient: Gradient(colors: [.blue, .pink]),
+                                                                        startPoint: .leading,
+                                                                        endPoint: .trailing
+                                                                    ),
+                                                                    lineWidth: 2
+                                                                )
+                                                        ) :
+                                                    nil
+                                                )
+                                        }
+                                        .buttonStyle(PlainButtonStyle())
                                     }
                                 }
-                                .pickerStyle(SegmentedPickerStyle())
+                                .background(
+                                    RoundedRectangle(cornerRadius: 18)
+                                        .fill(Color(red: 0.98, green: 0.98, blue: 0.99)) // #FAFAFB - slightly off-white
+                                        .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+                                )
                                 .frame(width: 240)
-                                
-                                // Description text
-                                Text(MaxMistakes(rawValue: selectedMaxMistakes)?.description ?? "")
-                                    .font(.system(size: 12, weight: .medium))
-                                    .foregroundColor(.secondary)
-                                    .animation(.easeInOut(duration: 0.2), value: selectedMaxMistakes)
                             }
                         }
                     }
                     
                     // Hard mode content
                     if difficulty == .hard {
-                        VStack(spacing: 24) {
+                        VStack(spacing: 40) {
                             // Confusion speed picker
-                            VStack(spacing: 12) {
-                                Text("Confusion Speed")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(.primary)
+                            VStack(spacing: 20) {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("⚡️ Confusion Speed")
+                                        .font(.system(size: 18, weight: .bold))
+                                        .foregroundStyle(
+                                            LinearGradient(
+                                                gradient: Gradient(colors: [.purple, .pink]),
+                                                startPoint: .leading,
+                                                endPoint: .trailing
+                                            )
+                                        )
+                                    
+                                    Text("How fast the board changes if you don't tap")
+                                        .font(.system(size: 10, weight: .medium))
+                                        .foregroundColor(.secondary)
+                                        .multilineTextAlignment(.leading)
+                                }
                                 
-                                Picker("Confusion Speed", selection: $selectedConfusionSpeed) {
+                                // Custom segmented picker for Confusion Speed
+                                HStack(spacing: 0) {
                                     ForEach(HardConfusionSpeed.allCases) { speed in
-                                        Text(speed.displayName).tag(speed.rawValue)
+                                        Button(action: {
+                                            withAnimation(.easeInOut(duration: 0.3)) {
+                                                selectedConfusionSpeed = speed.rawValue
+                                            }
+                                        }) {
+                                            Text(speed.displayName)
+                                                .font(.system(size: 16, weight: .medium))
+                                                .foregroundColor(selectedConfusionSpeed == speed.rawValue ? 
+                                                                 Color.purple : 
+                                                                 Color.gray)
+                                                .frame(width: 80, height: 36)
+                                                .background(
+                                                    selectedConfusionSpeed == speed.rawValue ?
+                                                    RoundedRectangle(cornerRadius: 18)
+                                                        .fill(Color(red: 0.98, green: 0.98, blue: 0.99)) // #FAFAFB - slightly off-white
+                                                        .overlay(
+                                                            RoundedRectangle(cornerRadius: 18)
+                                                                .stroke(
+                                                                    LinearGradient(
+                                                                        gradient: Gradient(colors: [.blue, .pink]),
+                                                                        startPoint: .leading,
+                                                                        endPoint: .trailing
+                                                                    ),
+                                                                    lineWidth: 2
+                                                                )
+                                                        ) :
+                                                    nil
+                                                )
+                                        }
+                                        .buttonStyle(PlainButtonStyle())
                                     }
                                 }
-                                .pickerStyle(SegmentedPickerStyle())
-                                .frame(width: 240)
-                                
-                                // Description text
-                                Text(HardConfusionSpeed(rawValue: selectedConfusionSpeed)?.description ?? "")
-                                    .font(.system(size: 12, weight: .medium))
-                                    .foregroundColor(.secondary)
-                                    .animation(.easeInOut(duration: 0.2), value: selectedConfusionSpeed)
-                            }
-                            
-                            // Max mistakes picker
-                            VStack(spacing: 12) {
-                                Text("Max Mistakes")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(.primary)
-                                
-                                Picker("Max Mistakes", selection: $selectedHardMaxMistakes) {
-                                    ForEach(MaxMistakes.allCases) { maxMistakes in
-                                        Text(maxMistakes.displayName).tag(maxMistakes.rawValue)
-                                    }
-                                }
-                                .pickerStyle(SegmentedPickerStyle())
-                                .frame(width: 240)
-                                
-                                // Description text
-                                Text(MaxMistakes(rawValue: selectedHardMaxMistakes)?.description ?? "")
-                                    .font(.system(size: 12, weight: .medium))
-                                    .foregroundColor(.secondary)
-                                    .animation(.easeInOut(duration: 0.2), value: selectedHardMaxMistakes)
-                            }
-                        }
-                        .padding(.vertical, 20)
-                    }
-                    
-                    // Normal mode content
-                    if difficulty == .normal {
-                        VStack(spacing: 24) {
-                            // Round timeout picker
-                            VStack(spacing: 12) {
-                                Text("Per-Round Timeout")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(.primary)
-                                
-                                Picker("Round Timeout", selection: $selectedRoundTimeout) {
-                                    ForEach(NormalRoundTimeout.allCases) { timeout in
-                                        Text(timeout.displayName).tag(timeout.rawValue)
-                                    }
-                                }
-                                .pickerStyle(SegmentedPickerStyle())
-                                .frame(width: 240)
-                                
-                                // Description text
-                                Text(NormalRoundTimeout(rawValue: selectedRoundTimeout)?.description ?? "")
-                                    .font(.system(size: 12, weight: .medium))
-                                    .foregroundColor(.secondary)
-                                    .animation(.easeInOut(duration: 0.2), value: selectedRoundTimeout)
-                            }
-                            
-                            // Max mistakes picker
-                            VStack(spacing: 12) {
-                                Text("Max Mistakes")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(.primary)
-                                
-                                Picker("Max Mistakes", selection: $selectedNormalMaxMistakes) {
-                                    ForEach(MaxMistakes.allCases) { maxMistakes in
-                                        Text(maxMistakes.displayName).tag(maxMistakes.rawValue)
-                                    }
-                                }
-                                .pickerStyle(SegmentedPickerStyle())
-                                .frame(width: 240)
-                                
-                                // Description text
-                                Text(MaxMistakes(rawValue: selectedNormalMaxMistakes)?.description ?? "")
-                                    .font(.system(size: 12, weight: .medium))
-                                    .foregroundColor(.secondary)
-                                    .animation(.easeInOut(duration: 0.2), value: selectedNormalMaxMistakes)
-                            }
-                        }
-                        .padding(.vertical, 20)
-                    }
-                    
-                    // Action buttons
-                    HStack(spacing: 16) {
-                        // Close button
-                        Button(action: {
-                            dismissSheet()
-                        }) {
-                            Text("Close")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(.secondary)
-                                .frame(width: 100, height: 44)
                                 .background(
-                                    RoundedRectangle(cornerRadius: 22)
-                                        .fill(Color.gray.opacity(0.2))
+                                    RoundedRectangle(cornerRadius: 18)
+                                        .fill(Color(red: 0.98, green: 0.98, blue: 0.99)) // #FAFAFB - slightly off-white
+                                        .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
                                 )
-                        }
-                        
-                        // Start button (for Easy, Normal, and Hard modes)
-                        if difficulty == .easy || difficulty == .normal || difficulty == .hard {
-                            Button(action: {
-                                startGame()
-                            }) {
-                                Text("Start")
-                                    .font(.system(size: 16, weight: .bold))
-                                    .foregroundColor(.white)
-                                    .frame(width: 100, height: 44)
-                                    .background(
+                                .frame(width: 240)
+                            }
+                            
+                            // Max mistakes picker
+                            VStack(spacing: 20) {
+                                Text("❌ Mistakes allowed")
+                                    .font(.system(size: 18, weight: .bold))
+                                    .foregroundStyle(
                                         LinearGradient(
-                                            gradient: Gradient(colors: [.blue, .pink]),
+                                            gradient: Gradient(colors: [.purple, .pink]),
                                             startPoint: .leading,
                                             endPoint: .trailing
                                         )
                                     )
-                                    .cornerRadius(22)
+                                
+                                // Custom segmented picker for Max Mistakes
+                                HStack(spacing: 0) {
+                                    ForEach(MaxMistakes.allCases) { maxMistakes in
+                                        Button(action: {
+                                            withAnimation(.easeInOut(duration: 0.3)) {
+                                                selectedHardMaxMistakes = maxMistakes.rawValue
+                                            }
+                                        }) {
+                                            Text(maxMistakes.displayName)
+                                                .font(.system(size: 16, weight: .medium))
+                                                .foregroundColor(selectedHardMaxMistakes == maxMistakes.rawValue ? 
+                                                                 Color.purple : 
+                                                                 Color.gray)
+                                                .frame(width: 60, height: 36)
+                                                .background(
+                                                    selectedHardMaxMistakes == maxMistakes.rawValue ?
+                                                    RoundedRectangle(cornerRadius: 18)
+                                                        .fill(Color(red: 0.98, green: 0.98, blue: 0.99)) // #FAFAFB - slightly off-white
+                                                        .overlay(
+                                                            RoundedRectangle(cornerRadius: 18)
+                                                                .stroke(
+                                                                    LinearGradient(
+                                                                        gradient: Gradient(colors: [.blue, .pink]),
+                                                                        startPoint: .leading,
+                                                                        endPoint: .trailing
+                                                                    ),
+                                                                    lineWidth: 2
+                                                                )
+                                                        ) :
+                                                    nil
+                                                )
+                                        }
+                                        .buttonStyle(PlainButtonStyle())
+                                    }
+                                }
+                                .background(
+                                    RoundedRectangle(cornerRadius: 18)
+                                        .fill(Color(red: 0.98, green: 0.98, blue: 0.99)) // #FAFAFB - slightly off-white
+                                        .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+                                )
+                                .frame(width: 240)
                             }
+                        }
+                    }
+                    
+                    // Normal mode content
+                    if difficulty == .normal {
+                        VStack(spacing: 40) {
+                            // Round timeout picker
+                            VStack(spacing: 20) {
+                                Text("⏱️ Per-Round Timeout")
+                                    .font(.system(size: 18, weight: .bold))
+                                    .foregroundStyle(
+                                        LinearGradient(
+                                            gradient: Gradient(colors: [.purple, .pink]),
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
+                                
+                                // Custom segmented picker for Round Timeout
+                                HStack(spacing: 0) {
+                                    ForEach(NormalRoundTimeout.allCases) { timeout in
+                                        Button(action: {
+                                            withAnimation(.easeInOut(duration: 0.3)) {
+                                                selectedRoundTimeout = timeout.rawValue
+                                            }
+                                        }) {
+                                            Text(timeout.displayName)
+                                                .font(.system(size: 16, weight: .medium))
+                                                .foregroundColor(selectedRoundTimeout == timeout.rawValue ? 
+                                                                 Color.purple : 
+                                                                 Color.gray)
+                                                .frame(width: 80, height: 36)
+                                                .background(
+                                                    selectedRoundTimeout == timeout.rawValue ?
+                                                    RoundedRectangle(cornerRadius: 18)
+                                                        .fill(Color(red: 0.98, green: 0.98, blue: 0.99)) // #FAFAFB - slightly off-white
+                                                        .overlay(
+                                                            RoundedRectangle(cornerRadius: 18)
+                                                                .stroke(
+                                                                    LinearGradient(
+                                                                        gradient: Gradient(colors: [.blue, .pink]),
+                                                                        startPoint: .leading,
+                                                                        endPoint: .trailing
+                                                                    ),
+                                                                    lineWidth: 2
+                                                                )
+                                                        ) :
+                                                    nil
+                                                )
+                                        }
+                                        .buttonStyle(PlainButtonStyle())
+                                    }
+                                }
+                                .background(
+                                    RoundedRectangle(cornerRadius: 18)
+                                        .fill(Color(red: 0.98, green: 0.98, blue: 0.99)) // #FAFAFB - slightly off-white
+                                        .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+                                )
+                                .frame(width: 240)
+                            }
+                            
+                            // Max mistakes picker
+                            VStack(spacing: 20) {
+                                Text("❌ Mistakes allowed")
+                                    .font(.system(size: 18, weight: .bold))
+                                    .foregroundStyle(
+                                        LinearGradient(
+                                            gradient: Gradient(colors: [.purple, .pink]),
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
+                                
+                                // Custom segmented picker for Max Mistakes
+                                HStack(spacing: 0) {
+                                    ForEach(MaxMistakes.allCases) { maxMistakes in
+                                        Button(action: {
+                                            withAnimation(.easeInOut(duration: 0.3)) {
+                                                selectedNormalMaxMistakes = maxMistakes.rawValue
+                                            }
+                                        }) {
+                                            Text(maxMistakes.displayName)
+                                                .font(.system(size: 16, weight: .medium))
+                                                .foregroundColor(selectedNormalMaxMistakes == maxMistakes.rawValue ? 
+                                                                 Color.purple : 
+                                                                 Color.gray)
+                                                .frame(width: 60, height: 36)
+                                                .background(
+                                                    selectedNormalMaxMistakes == maxMistakes.rawValue ?
+                                                    RoundedRectangle(cornerRadius: 18)
+                                                        .fill(Color(red: 0.98, green: 0.98, blue: 0.99)) // #FAFAFB - slightly off-white
+                                                        .overlay(
+                                                            RoundedRectangle(cornerRadius: 18)
+                                                                .stroke(
+                                                                    LinearGradient(
+                                                                        gradient: Gradient(colors: [.blue, .pink]),
+                                                                        startPoint: .leading,
+                                                                        endPoint: .trailing
+                                                                    ),
+                                                                    lineWidth: 2
+                                                                )
+                                                        ) :
+                                                    nil
+                                                )
+                                        }
+                                        .buttonStyle(PlainButtonStyle())
+                                    }
+                                }
+                                .background(
+                                    RoundedRectangle(cornerRadius: 18)
+                                        .fill(Color(red: 0.98, green: 0.98, blue: 0.99)) // #FAFAFB - slightly off-white
+                                        .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+                                )
+                                .frame(width: 240)
+                            }
+                        }
+                    }
+                    
+                    // Action buttons (only for Easy mode - others use X close)
+                    if difficulty == .easy {
+                        Button(action: {
+                            startGame()
+                        }) {
+                            HStack(spacing: 10) {
+                                Text("⚡️")
+                                    .font(.system(size: 20))
+                                
+                                Text("PLAY")
+                                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                                    .foregroundColor(.white)
+                            }
+                            .frame(width: 160, height: 50)
+                            .background(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [.blue, .purple, .pink]),
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .cornerRadius(25)
+                            .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
+                        }
+                    } else {
+                        // For Normal and Hard modes, use the same gradient button design
+                        Button(action: {
+                            startGame()
+                        }) {
+                            HStack(spacing: 10) {
+                                Text("⚡️")
+                                    .font(.system(size: 20))
+                                
+                                Text("PLAY")
+                                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                                    .foregroundColor(.white)
+                            }
+                            .frame(width: 160, height: 50)
+                            .background(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [.blue, .purple, .pink]),
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .cornerRadius(25)
+                            .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
                         }
                     }
                 }
@@ -229,10 +479,10 @@ struct CustomizeModeSheet: View {
             }
             .background(
                 RoundedRectangle(cornerRadius: 20)
-                    .fill(Color(.systemBackground))
+                    .fill(Color(red: 0.98, green: 0.98, blue: 0.99)) // #FAFAFB - slightly off-white
                     .shadow(color: .black.opacity(0.1), radius: 20, x: 0, y: -5)
             )
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: 320)
             .transition(.move(edge: .bottom).combined(with: .opacity))
         }
         .onAppear {
@@ -280,4 +530,16 @@ struct CustomizeModeSheet: View {
         isPresented: .constant(true),
         shouldStartGame: .constant(false)
     )
+}
+
+// Triangle shape for tooltip caret
+struct Triangle: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.midX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        path.closeSubpath()
+        return path
+    }
 }

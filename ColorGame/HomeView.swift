@@ -39,9 +39,8 @@ struct HomeView: View {
                         
                         // Best Score Display with trophy icon
                         HStack(spacing: 8) {
-                            Image(systemName: "trophy.fill")
-                                .foregroundColor(.orange)
-                                .font(.system(size: 16, weight: .medium))
+                            Text("🏆")
+                                .font(.system(size: 16))
                             
                             Text("Best Score:")
                                 .font(.system(size: 16, weight: .medium))
@@ -61,30 +60,43 @@ struct HomeView: View {
                         .animation(.easeInOut(duration: 0.2), value: selectedDifficulty)
                         
                         Spacer()
-                            .frame(height: 40)
+                            .frame(height: 50) // Increased spacing
                     }
                     
-                    // Middle section with title and instructions
+                    // Title & Branding Area
                     VStack(spacing: 20) {
-                        // Color squares
-                        HStack(spacing: 12) {
-                            RoundedRectangle(cornerRadius: 8)
+                        // 4 Color swatches above the title
+                        HStack(spacing: 16) {
+                            RoundedRectangle(cornerRadius: 10)
                                 .fill(Color.red.opacity(0.8))
-                                .frame(width: 24, height: 24)
+                                .frame(width: 28, height: 28)
                             
-                            RoundedRectangle(cornerRadius: 8)
+                            RoundedRectangle(cornerRadius: 10)
                                 .fill(Color.blue.opacity(0.8))
-                                .frame(width: 24, height: 24)
+                                .frame(width: 28, height: 28)
                             
-                            RoundedRectangle(cornerRadius: 8)
+                            RoundedRectangle(cornerRadius: 10)
                                 .fill(Color.yellow.opacity(0.8))
-                                .frame(width: 24, height: 24)
+                                .frame(width: 28, height: 28)
+                            
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color.green.opacity(0.8))
+                                .frame(width: 28, height: 28)
                         }
                         
-                        // Game Title
+                        // Game Title with gradient
                         Text("ColorRush")
                             .font(.system(size: 48, weight: .bold, design: .rounded))
-                            .foregroundColor(.primary)
+                            .foregroundStyle(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [.purple, .pink, .blue]),
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                        
+                        Spacer()
+                            .frame(height: 25) // More space between title and instructions
                         
                         // Instructions with highlighted "DON'T"
                         VStack(spacing: 0) {
@@ -95,7 +107,7 @@ struct HomeView: View {
                                 
                                 Text("DON'T")
                                     .font(.system(size: 16, weight: .bold))
-                                    .foregroundColor(.purple)
+                                    .foregroundColor(.blue) // Changed to blue like the color square
                             }
                             
                             Text("match the announced color!")
@@ -107,47 +119,89 @@ struct HomeView: View {
                     }
                     
                     Spacer()
+                        .frame(minHeight: 40) // More balanced spacing
                     
-                    // Bottom section with Play button and difficulty
-                    VStack(spacing: 30) {
-                        // Play Button
-                        Button(action: {
-                            isGameViewPresented = true
-                        }) {
+                    // Play Button (Centered CTA)
+                    Button(action: {
+                        isGameViewPresented = true
+                    }) {
+                        HStack(spacing: 10) {
+                            Text("⚡️")
+                                .font(.system(size: 20))
+                            
                             Text("PLAY")
                                 .font(.system(size: 24, weight: .bold, design: .rounded))
                                 .foregroundColor(.white)
-                                .frame(width: 200, height: 60)
-                                .background(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [.blue, .pink]),
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
-                                .cornerRadius(30)
-                                .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
                         }
-                        .scaleEffect(isGameViewPresented ? 0.95 : 1.0)
-                        .animation(.easeInOut(duration: 0.1), value: isGameViewPresented)
+                        .frame(width: 200, height: 60)
+                        .background(
+                            LinearGradient(
+                                gradient: Gradient(colors: [.blue, .purple, .pink]),
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .cornerRadius(30)
+                        .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
+                    }
+                    .scaleEffect(isGameViewPresented ? 0.95 : 1.0)
+                    .animation(.easeInOut(duration: 0.1), value: isGameViewPresented)
+                    
+                    Spacer()
+                        .frame(minHeight: 40) // More balanced spacing
+                    
+                    // Mode Selector
+                    VStack(spacing: 15) {
+                        Text("Mode")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(.primary)
                         
-                        // Difficulty Selector
-                        VStack(spacing: 15) {
-                            Text("Difficulty")
-                                .font(.system(size: 18, weight: .semibold))
-                                .foregroundColor(.primary)
-                            
-                            Picker("Difficulty", selection: $selectedDifficulty) {
-                                ForEach(Difficulty.allCases, id: \.self) { difficulty in
-                                    Text(difficulty.rawValue).tag(difficulty)
+                        // Custom segmented picker with seamless capsule design
+                        HStack(spacing: 0) {
+                            ForEach(Difficulty.allCases, id: \.self) { difficulty in
+                                Button(action: {
+                                    withAnimation(.easeInOut(duration: 0.3)) {
+                                        selectedDifficulty = difficulty
+                                    }
+                                }) {
+                                    Text(difficulty.rawValue)
+                                        .font(.system(size: 16, weight: .medium))
+                                        .foregroundColor(selectedDifficulty == difficulty ? 
+                                                         Color.purple : 
+                                                         Color.gray)
+                                        .frame(width: 93, height: 36)
+                                        .background(
+                                            // Individual button background - only for selected state
+                                            selectedDifficulty == difficulty ?
+                                            RoundedRectangle(cornerRadius: 18)
+                                                .fill(Color.white)
+                                                .overlay(
+                                                    RoundedRectangle(cornerRadius: 18)
+                                                        .stroke(
+                                                            LinearGradient(
+                                                                gradient: Gradient(colors: [.blue, .pink]),
+                                                                startPoint: .leading,
+                                                                endPoint: .trailing
+                                                            ),
+                                                            lineWidth: 2
+                                                        )
+                                                ) :
+                                            nil
+                                        )
                                 }
+                                .buttonStyle(PlainButtonStyle())
                             }
-                            .pickerStyle(SegmentedPickerStyle())
-                            .frame(width: 280)
-                            .onChange(of: selectedDifficulty) { _, _ in
-                                // Open customization sheet when difficulty changes
-                                isCustomizeSheetPresented = true
-                            }
+                        }
+                        .background(
+                            // Single white container for all buttons
+                            RoundedRectangle(cornerRadius: 18)
+                                .fill(Color.white)
+                                .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+                        )
+                        .frame(width: 280)
+                        .onChange(of: selectedDifficulty) { _, _ in
+                            // Open customization sheet when difficulty changes
+                            isCustomizeSheetPresented = true
                         }
                     }
                     

@@ -78,6 +78,11 @@ struct GameView: View {
     @State private var gameEndReason: GameEndReason?
     @State private var isNewBestScore = false
     
+    // Tap tracking for Easy and Normal modes (prevent repetitive tapping)
+    @State private var tapCounts: [Int] = [0, 0, 0, 0] // Track taps per position (0-3)
+    @State private var consecutiveTapsOnSamePosition = 0
+    @State private var lastTappedPosition = -1
+    
     // Color repeat tracking
     @State private var recentAnnouncedColors: [Color] = []
     
@@ -264,6 +269,9 @@ struct GameView: View {
             guard index < tiles.count else { return }
             let tappedColor = tiles[index]
             isCorrect = tappedColor != announcedColor
+            
+            // Track tap patterns for Easy and Normal modes (prevent repetitive tapping)
+            trackTapPattern(index: index)
         }
         
         if isCorrect {
@@ -318,6 +326,39 @@ struct GameView: View {
         }
     }
     
+    // MARK: - Tap Pattern Tracking (Easy and Normal modes)
+    private func trackTapPattern(index: Int) {
+        // Only track for Easy and Normal modes
+        guard selectedDifficulty != .hard else { return }
+        
+        // Update tap counts
+        tapCounts[index] += 1
+        
+        // Track consecutive taps on same position
+        if index == lastTappedPosition {
+            consecutiveTapsOnSamePosition += 1
+        } else {
+            consecutiveTapsOnSamePosition = 1
+            lastTappedPosition = index
+        }
+        
+        print("Tap tracking - Position \(index): \(tapCounts[index]) total, \(consecutiveTapsOnSamePosition) consecutive")
+    }
+    
+    private func shouldPreventRepetitiveTapping() -> Bool {
+        // Only apply to Easy and Normal modes
+        guard selectedDifficulty != .hard else { return false }
+        
+        // Check if same position tapped 3 times in a row
+        return consecutiveTapsOnSamePosition >= 3
+    }
+    
+    private func resetTapTracking() {
+        tapCounts = [0, 0, 0, 0]
+        consecutiveTapsOnSamePosition = 0
+        lastTappedPosition = -1
+    }
+    
     private func startNewRound() {
         isGameActive = false
         
@@ -369,6 +410,14 @@ struct GameView: View {
         var attempts = 0
         let maxAttempts = 10 // Prevent infinite loops
         
+        // Check if we need to prevent repetitive tapping
+        let shouldPreventRepetitive = shouldPreventRepetitiveTapping()
+        let targetPosition = shouldPreventRepetitive ? lastTappedPosition : -1
+        
+        if shouldPreventRepetitive {
+            print("Anti-repetitive tapping: Placing announced color at position \(targetPosition)")
+        }
+        
         while attempts < maxAttempts {
             var grid: [Color] = []
             
@@ -387,10 +436,26 @@ struct GameView: View {
             }
             
             // Step 4: Shuffle the grid to randomize positions
-            let shuffledGrid = grid.shuffled()
+            var shuffledGrid = grid.shuffled()
             
-            // Step 5: Check if this grid is identical to the previous round
+            // Step 5: Anti-repetitive tapping logic
+            if shouldPreventRepetitive && targetPosition >= 0 && targetPosition < 4 {
+                // Ensure the announced color is at the frequently tapped position
+                if shuffledGrid[targetPosition] != announcedColor {
+                    // Find where the announced color is and swap it
+                    if let announcedIndex = shuffledGrid.firstIndex(of: announcedColor) {
+                        shuffledGrid.swapAt(announcedIndex, targetPosition)
+                    }
+                }
+            }
+            
+            // Step 6: Check if this grid is identical to the previous round
             if shuffledGrid != previousTiles {
+                // Reset tap tracking after successful intervention
+                if shouldPreventRepetitive {
+                    resetTapTracking()
+                    print("Reset tap tracking after anti-repetitive intervention")
+                }
                 return shuffledGrid
             }
             
@@ -412,7 +477,19 @@ struct GameView: View {
             fallbackGrid.append(colorPalette.randomElement() ?? .red)
         }
         
-        return fallbackGrid.shuffled()
+        var finalGrid = fallbackGrid.shuffled()
+        
+        // Apply anti-repetitive logic to fallback as well
+        if shouldPreventRepetitive && targetPosition >= 0 && targetPosition < 4 {
+            if finalGrid[targetPosition] != announcedColor {
+                if let announcedIndex = finalGrid.firstIndex(of: announcedColor) {
+                    finalGrid.swapAt(announcedIndex, targetPosition)
+                }
+            }
+            resetTapTracking()
+        }
+        
+        return finalGrid
     }
     
     private func buildHardModeGrid() -> [Tile] {
@@ -588,6 +665,9 @@ struct GameView: View {
             roundTimeRemaining = 1.5
             confusionTimeRemaining = 1.8
         }
+        
+        // Reset tap tracking for new game session
+        resetTapTracking()
         
         // Start global timer
         gameTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
