@@ -133,48 +133,61 @@ struct GameView: View {
                     )
                 } else {
                     // Active Game Screen
-                    VStack(spacing: 30) {
-                        // Header with score and global timer
-                        VStack(spacing: 8) {
-                            // Top row: Score and Back button
-                            HStack {
-                                Text("Score: \(scoringLedger.finalScore)")
-                                    .font(.title2)
-                                    .fontWeight(.bold)
+                    VStack(spacing: 0) {
+                        // Top header with back button
+                        HStack {
+                            Button(action: {
+                                endGameSession()
+                                dismiss()
+                            }) {
+                                Image(systemName: "chevron.left")
+                                    .font(.system(size: 18, weight: .medium))
                                     .foregroundColor(.primary)
-                                
-                                Spacer()
-                                
-                                Button("Back") {
-                                    endGameSession()
-                                    dismiss()
-                                }
-                                .font(.title3)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 8)
-                                .background(Color.gray.opacity(0.2))
-                                .foregroundColor(.primary)
-                                .cornerRadius(8)
+                                    .frame(width: 32, height: 32)
+                                    .background(
+                                        Circle()
+                                            .fill(Color.white.opacity(0.8))
+                                            .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                                    )
                             }
                             
-                            // Bottom row: Time and Mistakes
-                            HStack {
-                                Text("Time: \(Int(timeRemaining))s")
-                                    .font(.title3)
-                                    .fontWeight(.semibold)
-                                    .foregroundColor(timeRemaining <= 5 ? .red : .primary)
-                                
-                                Spacer()
-                                
-                                Text("Mistakes: \(mistakes)/\(maxMistakes)")
-                                    .font(.title3)
-                                    .fontWeight(.semibold)
-                                    .foregroundColor(mistakes > maxMistakes ? .red : .primary)
-                            }
+                            Spacer()
                         }
-                        .padding(.horizontal)
+                        .padding(.horizontal, 20)
+                        .padding(.top, 10)
+                        
+                        // Score and Mistakes row
+                        HStack {
+                            Text("🏆 Score: \(scoringLedger.finalScore)")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .foregroundColor(.primary)
+                            
+                            Spacer()
+                            
+                            Text("💔 Mistakes: \(mistakes)/\(maxMistakes)")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .foregroundColor(mistakes > maxMistakes ? .red : .primary)
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 20)
                         
                         Spacer()
+                        
+                        // Large centered timer
+                        VStack(spacing: 8) {
+                            Text("\(Int(timeRemaining))s")
+                                .font(.system(size: 64, weight: .bold, design: .rounded))
+                                .foregroundColor(timeRemaining <= 5 ? .red : .primary)
+                                .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                            
+                            Text("Time Remaining")
+                                .font(.title3)
+                                .fontWeight(.medium)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.bottom, 30)
                         
                         // Round Progress Bar (Normal mode only)
                         if selectedDifficulty == .normal {
@@ -200,7 +213,7 @@ struct GameView: View {
                                 .frame(height: 8)
                                 .padding(.horizontal, 40)
                             }
-                            .padding(.bottom, 10)
+                            .padding(.bottom, 20)
                         }
                         
                         // 2x2 Grid
@@ -224,6 +237,7 @@ struct GameView: View {
                                 }
                             }
                         }
+                        .padding(.bottom, 40)
                         
                         Spacer()
                     }
