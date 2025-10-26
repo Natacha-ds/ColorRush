@@ -18,7 +18,9 @@ struct HomeView: View {
     @State private var isGameViewPresented = false
     @State private var isCustomizeSheetPresented = false
     @State private var shouldStartGame = false
+    @State private var isLevelSystemSelectionPresented = false
     @StateObject private var highScoreStore = HighScoreStore.shared
+    @StateObject private var customizationStore = CustomizationStore.shared
     
     var body: some View {
         NavigationView {
@@ -32,10 +34,37 @@ struct HomeView: View {
                 .ignoresSafeArea()
                 
                 VStack(spacing: 0) {
-                    // Top section with Best Score
+                    // Top section with Old/New Toggle and Best Score
                     VStack(spacing: 0) {
                         Spacer()
                             .frame(height: 60)
+                        
+                        // Old/New System Toggle
+                        HStack(spacing: 8) {
+                            Text("Old")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(customizationStore.isLevelSystemEnabled ? .gray : .primary)
+                            
+                            Toggle("", isOn: $customizationStore.isLevelSystemEnabled)
+                                .toggleStyle(SwitchToggleStyle(tint: .purple))
+                                .onChange(of: customizationStore.isLevelSystemEnabled) { _, newValue in
+                                    customizationStore.setLevelSystemEnabled(newValue)
+                                }
+                            
+                            Text("New")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(customizationStore.isLevelSystemEnabled ? .primary : .gray)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(
+                            Capsule()
+                                .fill(Color.white)
+                                .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                        )
+                        
+                        Spacer()
+                            .frame(height: 20)
                         
                         // Best Score Display with trophy icon
                         HStack(spacing: 8) {
@@ -123,13 +152,17 @@ struct HomeView: View {
                     
                     // Play Button (Centered CTA)
                     Button(action: {
-                        isGameViewPresented = true
+                        if customizationStore.isLevelSystemEnabled {
+                            isLevelSystemSelectionPresented = true
+                        } else {
+                            isGameViewPresented = true
+                        }
                     }) {
                         HStack(spacing: 10) {
                             Text("⚡️")
                                 .font(.system(size: 20))
                             
-                            Text("PLAY")
+                            Text(customizationStore.isLevelSystemEnabled ? "Play now" : "PLAY")
                                 .font(.system(size: 24, weight: .bold, design: .rounded))
                                 .foregroundColor(.white)
                         }
@@ -150,58 +183,60 @@ struct HomeView: View {
                     Spacer()
                         .frame(minHeight: 40) // More balanced spacing
                     
-                    // Mode Selector
-                    VStack(spacing: 15) {
-                        Text("Mode")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(.primary)
-                        
-                        // Custom segmented picker with seamless capsule design
-                        HStack(spacing: 0) {
-                            ForEach(Difficulty.allCases, id: \.self) { difficulty in
-                                Button(action: {
-                                    withAnimation(.easeInOut(duration: 0.3)) {
-                                        selectedDifficulty = difficulty
+                    // Mode Selector (only show in old system)
+                    if !customizationStore.isLevelSystemEnabled {
+                        VStack(spacing: 15) {
+                            Text("Mode")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundColor(.primary)
+                            
+                            // Custom segmented picker with seamless capsule design
+                            HStack(spacing: 0) {
+                                ForEach(Difficulty.allCases, id: \.self) { difficulty in
+                                    Button(action: {
+                                        withAnimation(.easeInOut(duration: 0.3)) {
+                                            selectedDifficulty = difficulty
+                                        }
+                                    }) {
+                                        Text(difficulty.rawValue)
+                                            .font(.system(size: 16, weight: .medium))
+                                            .foregroundColor(selectedDifficulty == difficulty ? 
+                                                             Color.purple : 
+                                                             Color.gray)
+                                            .frame(width: 93, height: 36)
+                                            .background(
+                                                // Individual button background - only for selected state
+                                                selectedDifficulty == difficulty ?
+                                                RoundedRectangle(cornerRadius: 18)
+                                                    .fill(Color.white)
+                                                    .overlay(
+                                                        RoundedRectangle(cornerRadius: 18)
+                                                            .stroke(
+                                                                LinearGradient(
+                                                                    gradient: Gradient(colors: [.blue, .pink]),
+                                                                    startPoint: .leading,
+                                                                    endPoint: .trailing
+                                                                ),
+                                                                lineWidth: 2
+                                                            )
+                                                    ) :
+                                                nil
+                                            )
                                     }
-                                }) {
-                                    Text(difficulty.rawValue)
-                                        .font(.system(size: 16, weight: .medium))
-                                        .foregroundColor(selectedDifficulty == difficulty ? 
-                                                         Color.purple : 
-                                                         Color.gray)
-                                        .frame(width: 93, height: 36)
-                                        .background(
-                                            // Individual button background - only for selected state
-                                            selectedDifficulty == difficulty ?
-                                            RoundedRectangle(cornerRadius: 18)
-                                                .fill(Color.white)
-                                                .overlay(
-                                                    RoundedRectangle(cornerRadius: 18)
-                                                        .stroke(
-                                                            LinearGradient(
-                                                                gradient: Gradient(colors: [.blue, .pink]),
-                                                                startPoint: .leading,
-                                                                endPoint: .trailing
-                                                            ),
-                                                            lineWidth: 2
-                                                        )
-                                                ) :
-                                            nil
-                                        )
+                                    .buttonStyle(PlainButtonStyle())
                                 }
-                                .buttonStyle(PlainButtonStyle())
                             }
-                        }
-                        .background(
-                            // Single white container for all buttons
-                            RoundedRectangle(cornerRadius: 18)
-                                .fill(Color.white)
-                                .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
-                        )
-                        .frame(width: 280)
-                        .onChange(of: selectedDifficulty) { _, _ in
-                            // Open customization sheet when difficulty changes
-                            isCustomizeSheetPresented = true
+                            .background(
+                                // Single white container for all buttons
+                                RoundedRectangle(cornerRadius: 18)
+                                    .fill(Color.white)
+                                    .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+                            )
+                            .frame(width: 280)
+                            .onChange(of: selectedDifficulty) { _, _ in
+                                // Open customization sheet when difficulty changes
+                                isCustomizeSheetPresented = true
+                            }
                         }
                     }
                     
@@ -212,6 +247,9 @@ struct HomeView: View {
                 .navigationBarHidden(true)
                 .fullScreenCover(isPresented: $isGameViewPresented) {
                     GameView(selectedDifficulty: selectedDifficulty)
+                }
+                .fullScreenCover(isPresented: $isLevelSystemSelectionPresented) {
+                    LevelSystemSelectionView(isPresented: $isLevelSystemSelectionPresented)
                 }
                 .overlay(
                     // Customization sheet overlay

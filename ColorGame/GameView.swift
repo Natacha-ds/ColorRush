@@ -1685,7 +1685,6 @@ struct HardModeTile: View {
                 .shadow(color: .black.opacity(0.2), radius: 5, x: 0, y: 3)
         }
         .buttonStyle(PlainButtonStyle())
-        .cursor(.pointingHand)
     }
 }
 
@@ -1701,7 +1700,6 @@ struct ColorTile: View {
                 .shadow(color: .black.opacity(0.2), radius: 5, x: 0, y: 3)
         }
         .buttonStyle(PlainButtonStyle())
-        .cursor(.pointingHand)
     }
 }
 

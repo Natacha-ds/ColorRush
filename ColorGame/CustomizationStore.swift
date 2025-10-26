@@ -6,12 +6,15 @@ class CustomizationStore: ObservableObject {
     
     private let userDefaults = UserDefaults.standard
     private let customizationKey = "game.customization"
+    private let levelSystemEnabledKey = "level.system.enabled"
     
     @Published var customization: GameCustomization
+    @Published var isLevelSystemEnabled: Bool = false
     
     private init() {
         self.customization = GameCustomization()
         self.customization = loadCustomization()
+        self.isLevelSystemEnabled = loadLevelSystemEnabled()
     }
     
     private func loadCustomization() -> GameCustomization {
@@ -22,10 +25,26 @@ class CustomizationStore: ObservableObject {
         return customization
     }
     
+    private func loadLevelSystemEnabled() -> Bool {
+        return userDefaults.bool(forKey: levelSystemEnabledKey)
+    }
+    
     private func saveCustomization() {
         if let data = try? JSONEncoder().encode(customization) {
             userDefaults.set(data, forKey: customizationKey)
         }
+    }
+    
+    // MARK: - Level System Feature Flag
+    
+    func toggleLevelSystem() {
+        isLevelSystemEnabled.toggle()
+        userDefaults.set(isLevelSystemEnabled, forKey: levelSystemEnabledKey)
+    }
+    
+    func setLevelSystemEnabled(_ enabled: Bool) {
+        isLevelSystemEnabled = enabled
+        userDefaults.set(enabled, forKey: levelSystemEnabledKey)
     }
     
     // Easy mode settings
