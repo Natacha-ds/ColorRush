@@ -18,7 +18,7 @@ struct EasyModeSettings: Codable {
     
     init() {
         self.durationSeconds = 30 // Default 30 seconds
-        self.maxMistakes = 3 // Default 3 mistakes
+        self.maxMistakes = 2 // Default 2 mistakes
     }
     
     init(durationSeconds: Int, maxMistakes: Int) {
@@ -33,7 +33,7 @@ struct NormalModeSettings: Codable {
     
     init() {
         self.roundTimeoutSeconds = 1.5 // Default 1.5 seconds
-        self.maxMistakes = 3 // Default 3 mistakes
+        self.maxMistakes = 2 // Default 2 mistakes
     }
     
     init(roundTimeoutSeconds: Double, maxMistakes: Int) {
@@ -48,7 +48,7 @@ struct HardModeSettings: Codable {
     
     init() {
         self.confusionSpeedSeconds = 1.8 // Default 1.8 seconds (Normal)
-        self.maxMistakes = 3 // Default 3 mistakes
+        self.maxMistakes = 2 // Default 2 mistakes
     }
     
     init(confusionSpeedSeconds: Double, maxMistakes: Int) {
@@ -104,7 +104,6 @@ enum MaxMistakes: Int, CaseIterable, Identifiable {
     case zero = 0
     case one = 1
     case two = 2
-    case three = 3
     
     var id: Int { rawValue }
     
@@ -113,7 +112,6 @@ enum MaxMistakes: Int, CaseIterable, Identifiable {
         case .zero: return "0"
         case .one: return "1"
         case .two: return "2"
-        case .three: return "3"
         }
     }
     
@@ -122,7 +120,6 @@ enum MaxMistakes: Int, CaseIterable, Identifiable {
         case .zero: return "Sudden Death (0 mistakes)"
         case .one: return "1 mistake allowed"
         case .two: return "2 mistakes allowed"
-        case .three: return "3 mistakes allowed"
         }
     }
 }

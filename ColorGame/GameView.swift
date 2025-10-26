@@ -92,7 +92,7 @@ struct GameView: View {
     @StateObject private var highScoreStore = HighScoreStore.shared
     
     // Stored property for max mistakes based on difficulty and settings
-    @State private var maxMistakes: Int = 3
+    @State private var maxMistakes: Int = 2
     
     // Color palette
     private let colorPalette: [Color] = [.red, .blue, .green, .yellow]
@@ -654,14 +654,14 @@ struct GameView: View {
             timeRemaining = Double(storedDuration > 0 ? storedDuration : 30)
             // If maxMistakes is 0, it means sudden death mode is explicitly set
             // If it's negative or corrupted, default to 3
-            maxMistakes = storedMaxMistakes >= 0 ? storedMaxMistakes : 3
+                    maxMistakes = storedMaxMistakes >= 0 ? storedMaxMistakes : 2
         } else if selectedDifficulty == .normal {
             let storedRoundTimeout = customizationStore.getNormalRoundTimeout()
             let storedMaxMistakes = customizationStore.getNormalMaxMistakes()
             
             // Use custom round timeout and max mistakes for Normal mode
             roundTimeRemaining = storedRoundTimeout > 0 ? storedRoundTimeout : 1.5
-            maxMistakes = storedMaxMistakes >= 0 ? storedMaxMistakes : 3
+                    maxMistakes = storedMaxMistakes >= 0 ? storedMaxMistakes : 2
             timeRemaining = 30.0 // Global timer stays 30s for Normal mode
             
         } else if selectedDifficulty == .hard {
@@ -670,12 +670,12 @@ struct GameView: View {
             
             // Use custom confusion speed and max mistakes for Hard mode
             confusionTimeRemaining = storedConfusionSpeed > 0 ? storedConfusionSpeed : 1.8
-            maxMistakes = storedMaxMistakes >= 0 ? storedMaxMistakes : 3
+                    maxMistakes = storedMaxMistakes >= 0 ? storedMaxMistakes : 2
             timeRemaining = 30.0 // Global timer stays 30s for Hard mode
         } else {
             // Fallback - use defaults
             timeRemaining = 30.0
-            maxMistakes = 3
+                    maxMistakes = 2
             roundTimeRemaining = 1.5
             confusionTimeRemaining = 1.8
         }
@@ -892,7 +892,7 @@ struct GameView: View {
             timeRemaining = 30.0
         } else {
             timeRemaining = 30.0
-            maxMistakes = 3
+                    maxMistakes = 2
             roundTimeRemaining = 1.5
             confusionTimeRemaining = 1.8
         }
@@ -1009,6 +1009,31 @@ struct GameOverView: View {
     let onBackToHome: () -> Void
     let onPlayAgain: () -> Void
     
+    // Store the emotional message to prevent it from changing
+    private let emotionalMessage: String
+    
+    init(score: Int, mistakes: Int, correctAnswers: Int, incorrectAnswers: Int, maxStreak: Int, bonusTriggers: Int, endReason: GameEndReason?, isNewBestScore: Bool, onBackToHome: @escaping () -> Void, onPlayAgain: @escaping () -> Void) {
+        self.score = score
+        self.mistakes = mistakes
+        self.correctAnswers = correctAnswers
+        self.incorrectAnswers = incorrectAnswers
+        self.maxStreak = maxStreak
+        self.bonusTriggers = bonusTriggers
+        self.endReason = endReason
+        self.isNewBestScore = isNewBestScore
+        self.onBackToHome = onBackToHome
+        self.onPlayAgain = onPlayAgain
+        
+        // Generate the emotional message once during initialization
+        let messages = [
+            "Nice reflexes!",
+            "You nailed it!",
+            "You are on fire!",
+            "Well done!"
+        ]
+        self.emotionalMessage = messages.randomElement() ?? "Well done!"
+    }
+    
     var body: some View {
         ScrollView {
             VStack(spacing: 25) {
@@ -1045,7 +1070,7 @@ struct GameOverView: View {
                         )
                         .multilineTextAlignment(.center)
                     
-                    Text(randomEmotionalMessage)
+                    Text(emotionalMessage)
                         .font(.title2)
                         .fontWeight(.medium)
                         .foregroundColor(.gray)
@@ -1380,15 +1405,6 @@ struct GameOverView: View {
         return isNewBestScore
     }
     
-    private var randomEmotionalMessage: String {
-        let messages = [
-            "Nice reflexes!",
-            "You nailed it!",
-            "You are on fire!",
-            "Well done!"
-        ]
-        return messages.randomElement() ?? "Well done!"
-    }
     
             // MARK: - Session Complete Confetti Effects
             private var sessionCompleteConfetti: some View {
@@ -1669,6 +1685,7 @@ struct HardModeTile: View {
                 .shadow(color: .black.opacity(0.2), radius: 5, x: 0, y: 3)
         }
         .buttonStyle(PlainButtonStyle())
+        .cursor(.pointingHand)
     }
 }
 
@@ -1684,6 +1701,7 @@ struct ColorTile: View {
                 .shadow(color: .black.opacity(0.2), radius: 5, x: 0, y: 3)
         }
         .buttonStyle(PlainButtonStyle())
+        .cursor(.pointingHand)
     }
 }
 
