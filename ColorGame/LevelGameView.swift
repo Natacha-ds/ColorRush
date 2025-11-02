@@ -1,5 +1,11 @@
 import SwiftUI
 
+enum LevelFailureReason {
+    case negativeScore
+    case maxMistakes
+    case insufficientScore
+}
+
 struct LevelGameView: View {
     @ObservedObject var levelRun: LevelRun
     @Environment(\.dismiss) private var dismiss
@@ -7,8 +13,10 @@ struct LevelGameView: View {
     
     // Game state
     @State private var announcedColor: Color = .red
-    @State private var tiles: [Color] = []
+    @State private var tiles: [Color] = [] // For Color Only mode
+    @State private var tilesWithText: [Tile] = [] // For Color + Text mode
     @State private var previousTiles: [Color] = []
+    @State private var previousTilesWithText: [Tile] = []
     @State private var showingErrorFlash = false
     @State private var isGameActive = false
     
@@ -26,6 +34,7 @@ struct LevelGameView: View {
     // Game over state
     @State private var isLevelComplete = false
     @State private var isLevelFailed = false
+    @State private var failedReason: LevelFailureReason = .insufficientScore
     
     // Color repeat tracking
     @State private var recentAnnouncedColors: [Color] = []
@@ -71,10 +80,15 @@ struct LevelGameView: View {
                 } else if isLevelFailed {
                     LevelFailedView(
                         levelRun: levelRun,
+                        failedReason: failedReason,
                         onRetry: {
                             startNewLevel()
                         },
                         onBackToHome: {
+                            // Reset everything when going back to home after game over
+                            levelRun.resetRunStats()
+                            levelRun.currentLevel = 1
+                            levelRun.isActive = false
                             dismiss()
                         }
                     )
@@ -177,8 +191,9 @@ struct LevelGameView: View {
                         }
                         .padding(.bottom, 30)
                         
-                        // Round Progress Bar (if level has time limit)
-                        if let levelConfig = levelRun.currentLevelConfig, levelConfig.hasTimeLimit {
+                        // Round Progress Bar (if level has time limit and is not non-punitive refresh)
+                        if let levelConfig = levelRun.currentLevelConfig, 
+                           levelConfig.hasTimeLimit && !levelConfig.isNonPunitiveRefresh {
                             VStack(spacing: 8) {
                                 Text("Round Time")
                                     .font(.caption)
@@ -207,12 +222,22 @@ struct LevelGameView: View {
                         // 2x2 Grid
                         VStack(spacing: 20) {
                             HStack(spacing: 20) {
-                                ColorTile(color: tiles.count > 0 ? tiles[0] : .gray, action: { handleTileTap(0) })
-                                ColorTile(color: tiles.count > 1 ? tiles[1] : .gray, action: { handleTileTap(1) })
+                                if levelRun.gameType == .colorOnly {
+                                    ColorTile(color: tiles.count > 0 ? tiles[0] : .gray, action: { handleTileTap(0) })
+                                    ColorTile(color: tiles.count > 1 ? tiles[1] : .gray, action: { handleTileTap(1) })
+                                } else {
+                                    ColorAndTextTile(tile: tilesWithText.count > 0 ? tilesWithText[0] : Tile(backgroundColor: .gray, textLabel: "gray"), action: { handleTileTap(0) })
+                                    ColorAndTextTile(tile: tilesWithText.count > 1 ? tilesWithText[1] : Tile(backgroundColor: .gray, textLabel: "gray"), action: { handleTileTap(1) })
+                                }
                             }
                             HStack(spacing: 20) {
-                                ColorTile(color: tiles.count > 2 ? tiles[2] : .gray, action: { handleTileTap(2) })
-                                ColorTile(color: tiles.count > 3 ? tiles[3] : .gray, action: { handleTileTap(3) })
+                                if levelRun.gameType == .colorOnly {
+                                    ColorTile(color: tiles.count > 2 ? tiles[2] : .gray, action: { handleTileTap(2) })
+                                    ColorTile(color: tiles.count > 3 ? tiles[3] : .gray, action: { handleTileTap(3) })
+                                } else {
+                                    ColorAndTextTile(tile: tilesWithText.count > 2 ? tilesWithText[2] : Tile(backgroundColor: .gray, textLabel: "gray"), action: { handleTileTap(2) })
+                                    ColorAndTextTile(tile: tilesWithText.count > 3 ? tilesWithText[3] : Tile(backgroundColor: .gray, textLabel: "gray"), action: { handleTileTap(3) })
+                                }
                             }
                         }
                         .padding(.bottom, 40)
@@ -249,11 +274,28 @@ struct LevelGameView: View {
         endRoundTimer()
         
         let isCorrect: Bool
-        guard index < tiles.count else { return }
-        let tappedColor = tiles[index]
-        isCorrect = tappedColor != announcedColor
+        let tappedBackgroundColor: Color
         
-        print("Tile tapped: \(colorName(for: tappedColor)), Announced: \(colorName(for: announcedColor)), Correct: \(isCorrect)")
+        if levelRun.gameType == .colorOnly {
+            // Color Only mode: correctness depends ONLY on background color
+            guard index < tiles.count else { return }
+            tappedBackgroundColor = tiles[index]
+            isCorrect = tappedBackgroundColor != announcedColor
+        } else {
+            // Color + Text mode: correctness depends on BOTH background color AND text label
+            guard index < tilesWithText.count else { return }
+            let tappedTile = tilesWithText[index]
+            tappedBackgroundColor = tappedTile.backgroundColor
+            let announcedColorName = colorName(for: announcedColor)
+            
+            // Wrong if background matches OR text label matches
+            // Correct only if BOTH background ≠ announced AND text ≠ announced
+            let backgroundMatches = tappedTile.backgroundColor == announcedColor
+            let textMatches = tappedTile.textLabel.lowercased() == announcedColorName.lowercased()
+            isCorrect = !backgroundMatches && !textMatches
+        }
+        
+        print("Tile tapped: \(colorName(for: tappedBackgroundColor)), Announced: \(colorName(for: announcedColor)), Correct: \(isCorrect)")
         
         if isCorrect {
             // Correct tap
@@ -285,9 +327,17 @@ struct LevelGameView: View {
         // Only check for failure conditions during gameplay
         // Level completion is checked when timer runs out
         
-        // Check if too many mistakes
+        // Check if total cumulative score is negative (game over)
+        if levelRun.globalScore < 0 {
+            isLevelFailed = true
+            failedReason = .negativeScore
+            return
+        }
+        
+        // Check if run-wide mistakes exceed tolerance (e.g., Easy: 6th mistake triggers game over)
         if levelRun.mistakes > levelRun.mistakeTolerance.maxMistakes {
             isLevelFailed = true
+            failedReason = .maxMistakes
             return
         }
     }
@@ -323,7 +373,11 @@ struct LevelGameView: View {
         isGameActive = false
         
         // Store previous tiles for comparison
-        previousTiles = tiles
+        if levelRun.gameType == .colorOnly {
+            previousTiles = tiles
+        } else {
+            previousTilesWithText = tilesWithText
+        }
         
         // Select random announced color with repeat prevention
         announcedColor = selectAnnouncedColor()
@@ -332,10 +386,15 @@ struct LevelGameView: View {
         updateRecentColors(announcedColor)
         
         // Speak the announced color
-        speechService.speak(colorName(for: announcedColor))
+        let colorNameString = colorName(for: announcedColor)
+        speechService.speak(colorNameString)
         
-        // Build valid grid
-        tiles = buildValidGrid()
+        // Build valid grid based on game type
+        if levelRun.gameType == .colorOnly {
+            tiles = buildValidGrid()
+        } else {
+            tilesWithText = buildValidGridWithText()
+        }
         
         // Enable game after a brief delay
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -384,6 +443,78 @@ struct LevelGameView: View {
         return [announcedColor, colorPalette.randomElement() ?? .blue, colorPalette.randomElement() ?? .green, colorPalette.randomElement() ?? .yellow].shuffled()
     }
     
+    private func buildValidGridWithText() -> [Tile] {
+        var attempts = 0
+        let maxAttempts = 10
+        let announcedColorName = colorName(for: announcedColor)
+        let colorNames = colorPalette.map { colorName(for: $0) }
+        
+        while attempts < maxAttempts {
+            var grid: [Tile] = []
+            
+            // Requirement 1: At least one tile with background = announced color (wrong by background)
+            // This tile can have any text label
+            let wrongByBackgroundLabel = colorNames.randomElement() ?? "red"
+            grid.append(Tile(backgroundColor: announcedColor, textLabel: wrongByBackgroundLabel))
+            
+            // Requirement 2: At least one tile with text label = announced color name (wrong by text)
+            // This tile must have background ≠ announced color
+            let nonAnnouncedColors = colorPalette.filter { $0 != announcedColor }
+            if let wrongByTextColor = nonAnnouncedColors.randomElement() {
+                grid.append(Tile(backgroundColor: wrongByTextColor, textLabel: announcedColorName))
+            }
+            
+            // Requirement 3: At least one tile that is correct (both background ≠ announced AND text ≠ announced)
+            let correctColor = nonAnnouncedColors.randomElement() ?? colorPalette.first ?? .blue
+            let correctColorName = colorName(for: correctColor)
+            let nonMatchingLabels = colorNames.filter { $0.lowercased() != announcedColorName.lowercased() && $0.lowercased() != correctColorName.lowercased() }
+            let correctLabel = nonMatchingLabels.randomElement() ?? colorNames.first { $0.lowercased() != announcedColorName.lowercased() } ?? "red"
+            grid.append(Tile(backgroundColor: correctColor, textLabel: correctLabel))
+            
+            // Fill remaining slots randomly (ensuring we have 4 tiles total)
+            while grid.count < 4 {
+                let randomColor = colorPalette.randomElement() ?? .red
+                let randomLabel = colorNames.randomElement() ?? "red"
+                grid.append(Tile(backgroundColor: randomColor, textLabel: randomLabel))
+            }
+            
+            // Validate that we have all three required tile types
+            let hasWrongByBackground = grid.contains { $0.backgroundColor == announcedColor }
+            let hasWrongByText = grid.contains { $0.textLabel.lowercased() == announcedColorName.lowercased() && $0.backgroundColor != announcedColor }
+            let hasCorrectTile = grid.contains { tile in
+                tile.backgroundColor != announcedColor && tile.textLabel.lowercased() != announcedColorName.lowercased()
+            }
+            
+            if hasWrongByBackground && hasWrongByText && hasCorrectTile {
+                // Shuffle the grid
+                var shuffledGrid = grid.shuffled()
+                
+                // Check if different from previous round
+                if shuffledGrid != previousTilesWithText {
+                    return shuffledGrid
+                }
+            }
+            
+            attempts += 1
+        }
+        
+        // Fallback: ensure all three types exist
+        var fallbackGrid: [Tile] = []
+        // Wrong by background
+        fallbackGrid.append(Tile(backgroundColor: announcedColor, textLabel: "blue"))
+        // Wrong by text
+        let fallbackWrongByTextColor = colorPalette.first { $0 != announcedColor } ?? .blue
+        fallbackGrid.append(Tile(backgroundColor: fallbackWrongByTextColor, textLabel: announcedColorName))
+        // Correct tile
+        let fallbackCorrectColor = colorPalette.first { $0 != announcedColor && $0 != fallbackWrongByTextColor } ?? .green
+        fallbackGrid.append(Tile(backgroundColor: fallbackCorrectColor, textLabel: "red"))
+        // Fill 4th slot
+        let fallbackColor4 = colorPalette.randomElement() ?? .yellow
+        fallbackGrid.append(Tile(backgroundColor: fallbackColor4, textLabel: colorNames.randomElement() ?? "yellow"))
+        
+        return fallbackGrid.shuffled()
+    }
+    
     private func startRoundTimer(timeLimit: Double) {
         endRoundTimer()
         roundTimeRemaining = timeLimit
@@ -407,16 +538,24 @@ struct LevelGameView: View {
     private func handleRoundTimeout() {
         guard isGameActive, isGameSessionActive, !isLevelComplete, !isLevelFailed else { return }
         
-        levelRun.addTimeout()
-        hapticsService.heavyImpact()
-        showErrorFlash()
-        
-        endRoundTimer()
-        checkLevelStatus()
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            if self.isGameSessionActive && !self.isLevelComplete && !self.isLevelFailed {
-                self.startNewRound()
+        // Check if this is a non-punitive refresh level (9-10)
+        if let levelConfig = levelRun.currentLevelConfig, levelConfig.isNonPunitiveRefresh {
+            // Non-punitive refresh: just refresh the board, no penalty
+            endRoundTimer()
+            startNewRound()
+        } else {
+            // Regular timeout: apply penalty
+            levelRun.addTimeout()
+            hapticsService.heavyImpact()
+            showErrorFlash()
+            
+            endRoundTimer()
+            checkLevelStatus()
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                if self.isGameSessionActive && !self.isLevelComplete && !self.isLevelFailed {
+                    self.startNewRound()
+                }
             }
         }
     }
@@ -431,6 +570,7 @@ struct LevelGameView: View {
             isLevelComplete = true
         } else {
             isLevelFailed = true
+            failedReason = .insufficientScore
         }
     }
     
@@ -667,24 +807,45 @@ struct LevelCompleteView: View {
 // MARK: - Level Failed View
 struct LevelFailedView: View {
     @ObservedObject var levelRun: LevelRun
+    let failedReason: LevelFailureReason
     let onRetry: () -> Void
     let onBackToHome: () -> Void
+    
+    // Check if this is a run-ending failure (no retry allowed)
+    private var isRunEndingFailure: Bool {
+        return failedReason == .maxMistakes || failedReason == .negativeScore
+    }
     
     var body: some View {
         VStack(spacing: 30) {
             Text("💔")
                 .font(.system(size: 60))
             
-            Text("Level \(levelRun.currentLevel) Failed")
+            Text(isRunEndingFailure ? "Game Over" : "Level \(levelRun.currentLevel) Failed")
                 .font(.system(size: 28, weight: .bold))
                 .foregroundColor(.primary)
                 .multilineTextAlignment(.center)
             
-            // Score to reach
-            if let levelConfig = levelRun.currentLevelConfig {
-                Text("Score to reach: \(levelConfig.requiredScore) points")
+            // Show different message based on failure reason
+            switch failedReason {
+            case .negativeScore:
+                Text("You lost because your total score dropped below zero!")
                     .font(.system(size: 16, weight: .medium))
                     .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 20)
+            case .maxMistakes:
+                Text("You reached the maximum number of mistakes.")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 20)
+            case .insufficientScore:
+                if let levelConfig = levelRun.currentLevelConfig {
+                    Text("Score to reach: \(levelConfig.requiredScore) points")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.secondary)
+                }
             }
             
             // Your score (most visible)
@@ -712,14 +873,17 @@ struct LevelFailedView: View {
                 .foregroundColor(.secondary)
             
             VStack(spacing: 16) {
-                Button(action: onRetry) {
-                    Text("Try Again")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 50)
-                        .background(Color.red)
-                        .cornerRadius(25)
+                // Only show "Try Again" for non-run-ending failures
+                if !isRunEndingFailure {
+                    Button(action: onRetry) {
+                        Text("Try Again")
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 50)
+                            .background(Color.red)
+                            .cornerRadius(25)
+                    }
                 }
                 
                 Button(action: onBackToHome) {
@@ -739,6 +903,40 @@ struct LevelFailedView: View {
             .padding(.horizontal, 40)
         }
         .padding()
+    }
+}
+
+// MARK: - Color And Text Tile View
+struct ColorAndTextTile: View {
+    let tile: Tile
+    let action: () -> Void
+    
+    // Helper to determine text color for contrast
+    private func textColor(for backgroundColor: Color) -> Color {
+        // Simple luminance-based contrast
+        // Red, blue, green backgrounds -> white text
+        // Yellow background -> black text
+        if backgroundColor == .yellow {
+            return .black
+        }
+        return .white
+    }
+    
+    var body: some View {
+        Button(action: action) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(tile.backgroundColor)
+                    .frame(width: 120, height: 120)
+                    .shadow(color: .black.opacity(0.2), radius: 5, x: 0, y: 3)
+                
+                Text(tile.textLabel.uppercased())
+                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                    .foregroundColor(textColor(for: tile.backgroundColor))
+                    .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 1)
+            }
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 }
 

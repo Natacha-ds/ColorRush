@@ -45,16 +45,16 @@ enum MistakeTolerance: String, CaseIterable, Identifiable {
     
     var maxMistakes: Int {
         switch self {
-        case .easy: return 2
-        case .normal: return 1
+        case .easy: return 5
+        case .normal: return 3
         case .hard: return 0
         }
     }
     
     var description: String {
         switch self {
-        case .easy: return "2 mistakes allowed"
-        case .normal: return "1 mistake allowed"
+        case .easy: return "5 mistakes allowed"
+        case .normal: return "3 mistakes allowed"
         case .hard: return "No mistakes allowed"
         }
     }
@@ -117,9 +117,13 @@ class LevelRun: ObservableObject {
     
     // Scoring
     @Published var currentScore: Int = 0
-    @Published var mistakes: Int = 0
+    @Published var mistakes: Int = 0 // Run-wide mistakes (cumulative across all levels)
     @Published var timeouts: Int = 0
     @Published var perfectLevels: [Int] = [] // Track which levels were completed perfectly
+    
+    // Level-specific tracking for perfect bonus calculation
+    @Published var levelMistakes: Int = 0
+    @Published var levelTimeouts: Int = 0
     
     // Level progression tracking
     @Published var completedLevels: [Int] = []
@@ -146,7 +150,7 @@ class LevelRun: ObservableObject {
     }
     
     var isPerfectLevel: Bool {
-        return mistakes == 0 && timeouts == 0
+        return levelMistakes == 0 && levelTimeouts == 0
     }
     
     var shouldShowDevTools: Bool {
@@ -189,9 +193,9 @@ class LevelRun: ObservableObject {
     }
     
     func startLevel() {
-        // Reset level-specific stats and score
-        mistakes = 0
-        timeouts = 0
+        // Reset level-specific stats and score (mistakes remain cumulative)
+        levelMistakes = 0
+        levelTimeouts = 0
         currentScore = 0 // Each level starts with 0 points
     }
     
@@ -226,8 +230,10 @@ class LevelRun: ObservableObject {
     func resetRunStats() {
         currentScore = 0
         globalScore = 0 // Reset global score for new run
-        mistakes = 0
+        mistakes = 0 // Reset run-wide mistakes
         timeouts = 0
+        levelMistakes = 0
+        levelTimeouts = 0
         perfectLevels = []
         completedLevels = []
         failedLevels = []
@@ -235,9 +241,10 @@ class LevelRun: ObservableObject {
     }
     
     func resetLevelStats() {
-        mistakes = 0
-        timeouts = 0
+        levelMistakes = 0
+        levelTimeouts = 0
         currentScore = 0 // Reset level score to 0 when retrying
+        // Note: mistakes and timeouts are NOT reset here (run-wide)
     }
     
     func addCorrectAnswer() {
@@ -249,13 +256,15 @@ class LevelRun: ObservableObject {
     func addWrongAnswer() {
         currentScore -= 10
         globalScore -= 10
-        mistakes += 1
+        mistakes += 1 // Run-wide mistake counter
+        levelMistakes += 1 // Level-specific mistake counter
     }
     
     func addTimeout() {
         currentScore -= 5
         globalScore -= 5
-        timeouts += 1
+        timeouts += 1 // Run-wide timeout counter
+        levelTimeouts += 1 // Level-specific timeout counter
     }
     
     func getCurrentLevelScore() -> Int {

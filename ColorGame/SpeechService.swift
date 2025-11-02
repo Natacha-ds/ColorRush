@@ -12,6 +12,11 @@ class SpeechService {
     private let synthesizer = AVSpeechSynthesizer()
     
     func speak(_ text: String) {
+        // Stop any ongoing speech before starting new one
+        if synthesizer.isSpeaking {
+            synthesizer.stopSpeaking(at: .immediate)
+        }
+        
         let utterance = AVSpeechUtterance(string: text)
         utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
         utterance.rate = 0.5 // Slightly slower for clarity
