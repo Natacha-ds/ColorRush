@@ -989,7 +989,7 @@ struct LevelCompleteView: View {
                                 .font(.system(size: 40, weight: .black))
                                 .foregroundColor(.white)
                             Text("/\(levelConfig.requiredScore)")
-                                .font(.system(size: 10, weight: .semibold))
+                                .font(.system(size: 12, weight: .bold))
                                 .foregroundColor(.white.opacity(0.9))
                         }
                         .padding(.horizontal, 20)
@@ -1257,7 +1257,7 @@ struct LevelFailedView: View {
                                 .font(.system(size: 40, weight: .black))
                                 .foregroundColor(.white)
                             Text("/\(levelConfig.requiredScore)")
-                                .font(.system(size: 10, weight: .semibold))
+                                .font(.system(size: 12, weight: .bold))
                                 .foregroundColor(.white.opacity(0.9))
                         }
                         .padding(.horizontal, 20)
