@@ -611,7 +611,10 @@ struct LevelGameView: View {
         // Check if level was completed successfully
         guard let levelConfig = levelRun.currentLevelConfig else { return }
         
-        if levelRun.getCurrentLevelScore() >= levelConfig.requiredScore {
+        // Check if score (including perfect bonus) meets requirement
+        let scoreWithBonus = levelRun.getCurrentLevelScore() + levelRun.getPerfectBonus()
+        
+        if scoreWithBonus >= levelConfig.requiredScore {
             isLevelComplete = true
         } else {
             // Level failed due to insufficient score - count as 1 mistake (1 life)
@@ -782,7 +785,9 @@ struct LevelCompleteView: View {
     }
     
     private var mistakesPenalty: Int {
-        return levelRun.levelMistakes * -10
+        // Only show mistakes that resulted in point deductions (wrong taps)
+        // Exclude mistakes from insufficient score (no point deduction)
+        return levelRun.levelMistakesFromWrongTaps * -10
     }
     
     private var timeoutsPenalty: Int {
@@ -1064,7 +1069,9 @@ struct LevelFailedView: View {
     
     // Calculate mistakes penalty
     private var mistakesPenalty: Int {
-        return levelRun.levelMistakes * -10
+        // Only show mistakes that resulted in point deductions (wrong taps)
+        // Exclude mistakes from insufficient score (no point deduction)
+        return levelRun.levelMistakesFromWrongTaps * -10
     }
     
     // Calculate timeouts penalty

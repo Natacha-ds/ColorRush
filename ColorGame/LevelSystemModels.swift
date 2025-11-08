@@ -118,12 +118,14 @@ class LevelRun: ObservableObject {
     // Scoring
     @Published var currentScore: Int = 0 // Level score (can go negative due to penalties)
     @Published var levelPositivePoints: Int = 0 // Positive points earned this level (to be added to globalScore on completion)
+    @Published var levelPenalties: Int = 0 // Penalties from current level attempt (to be removed from globalScore on retry)
     @Published var mistakes: Int = 0 // Run-wide mistakes (cumulative across all levels)
     @Published var timeouts: Int = 0
     @Published var perfectLevels: [Int] = [] // Track which levels were completed perfectly
     
     // Level-specific tracking for perfect bonus calculation
-    @Published var levelMistakes: Int = 0
+    @Published var levelMistakes: Int = 0 // All mistakes (wrong taps + insufficient score)
+    @Published var levelMistakesFromWrongTaps: Int = 0 // Only mistakes from wrong taps (with point deductions)
     @Published var levelTimeouts: Int = 0
     @Published var levelCorrectAnswers: Int = 0 // Track correct answers for score breakdown
     
@@ -186,10 +188,12 @@ class LevelRun: ObservableObject {
     func startLevel() {
         // Reset level-specific stats and score (mistakes remain cumulative)
         levelMistakes = 0
+        levelMistakesFromWrongTaps = 0
         levelTimeouts = 0
         levelCorrectAnswers = 0
         currentScore = 0 // Each level starts with 0 points
         levelPositivePoints = 0 // Reset positive points tracker
+        levelPenalties = 0 // Reset penalties tracker
     }
     
     func completeLevel() {
@@ -231,10 +235,12 @@ class LevelRun: ObservableObject {
     func resetRunStats() {
         currentScore = 0
         levelPositivePoints = 0
+        levelPenalties = 0
         globalScore = 0 // Reset global score for new run
         mistakes = 0 // Reset run-wide mistakes
         timeouts = 0
         levelMistakes = 0
+        levelMistakesFromWrongTaps = 0
         levelTimeouts = 0
         levelCorrectAnswers = 0
         perfectLevels = []
@@ -244,14 +250,19 @@ class LevelRun: ObservableObject {
     }
     
     func resetLevelStats() {
+        // Remove penalties from failed attempt from globalScore
+        globalScore += levelPenalties // Add back the penalties that were subtracted
+        
         levelMistakes = 0
+        levelMistakesFromWrongTaps = 0
         levelTimeouts = 0
         levelCorrectAnswers = 0
         currentScore = 0 // Reset level score to 0 when retrying
         levelPositivePoints = 0 // Reset positive points tracker when retrying
+        levelPenalties = 0 // Reset penalties tracker
         // Note: mistakes and timeouts are NOT reset here (run-wide)
-        // Note: globalScore is NOT reset here - previous attempt's penalties remain,
-        // but positive points from failed attempt are discarded (never added to globalScore)
+        // Note: Positive points from failed attempt are discarded (never added to globalScore)
+        // Note: Penalties from failed attempt are now removed from globalScore
     }
     
     func addCorrectAnswer() {
@@ -267,14 +278,17 @@ class LevelRun: ObservableObject {
         // Penalties apply immediately to both currentScore and globalScore
         currentScore -= 10
         globalScore -= 10
+        levelPenalties += 10 // Track penalty for potential retry removal
         mistakes += 1 // Run-wide mistake counter
-        levelMistakes += 1 // Level-specific mistake counter
+        levelMistakes += 1 // Level-specific mistake counter (all mistakes)
+        levelMistakesFromWrongTaps += 1 // Only wrong-tap mistakes (for stat block display)
     }
     
     func addTimeout() {
         // Penalties apply immediately to both currentScore and globalScore
         currentScore -= 5
         globalScore -= 5
+        levelPenalties += 5 // Track penalty for potential retry removal
         timeouts += 1 // Run-wide timeout counter
         levelTimeouts += 1 // Level-specific timeout counter
     }
