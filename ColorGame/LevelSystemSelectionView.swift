@@ -119,12 +119,20 @@ struct LevelSystemSelectionView: View {
                     .padding(.bottom, 60)
                 }
             }
+            #if !os(macOS)
             .navigationBarHidden(true)
             .fullScreenCover(isPresented: $isGameViewPresented) {
                 LevelGameView(levelRun: levelRun)
             }
+            #else
+            .sheet(isPresented: $isGameViewPresented) {
+                LevelGameView(levelRun: levelRun)
+            }
+            #endif
         }
+        #if !os(macOS)
         .navigationViewStyle(StackNavigationViewStyle())
+        #endif
     }
     
     // MARK: - Game Type Selection View

@@ -6,6 +6,11 @@
 //
 
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#elseif os(macOS)
+import AppKit
+#endif
 
 enum GameEndReason {
     case timeUp
@@ -251,7 +256,9 @@ struct GameView: View {
                     }
                 }
             }
+            #if !os(macOS)
             .navigationBarHidden(true)
+            #endif
             .onAppear {
                 startGameSession()
                 setupBackgroundNotifications()
@@ -261,7 +268,9 @@ struct GameView: View {
                 removeBackgroundNotifications()
             }
         }
+        #if !os(macOS)
         .navigationViewStyle(StackNavigationViewStyle())
+        #endif
     }
     
     private func handleTileTap(_ index: Int) {
@@ -842,31 +851,17 @@ struct GameView: View {
         // Check for new best score
         isNewBestScore = highScoreStore.updateBestScore(for: selectedDifficulty, score: scoringLedger.finalScore)
         
-        // Save score to leaderboard with metadata based on difficulty
-        if selectedDifficulty == .easy {
-            LeaderboardStore.shared.addScore(
-                scoringLedger.finalScore, 
-                for: selectedDifficulty,
-                durationSeconds: customizationStore.getEasyDuration(),
-                maxMistakes: customizationStore.getEasyMaxMistakes()
-            )
-        } else if selectedDifficulty == .normal {
-            LeaderboardStore.shared.addScore(
-                scoringLedger.finalScore, 
-                for: selectedDifficulty,
-                maxMistakes: customizationStore.getNormalMaxMistakes(),
-                roundTimeoutSeconds: customizationStore.getNormalRoundTimeout()
-            )
-        } else if selectedDifficulty == .hard {
-            LeaderboardStore.shared.addScore(
-                scoringLedger.finalScore, 
-                for: selectedDifficulty,
-                maxMistakes: customizationStore.getHardMaxMistakes(),
-                confusionSpeedSeconds: customizationStore.getHardConfusionSpeed()
-            )
-        } else {
-            LeaderboardStore.shared.addScore(scoringLedger.finalScore, for: selectedDifficulty)
+        // Save score to leaderboard (map Difficulty to MistakeTolerance)
+        let mistakeTolerance: MistakeTolerance
+        switch selectedDifficulty {
+        case .easy:
+            mistakeTolerance = .easy
+        case .normal:
+            mistakeTolerance = .normal
+        case .hard:
+            mistakeTolerance = .hard
         }
+        LeaderboardStore.shared.addScore(scoringLedger.finalScore, for: mistakeTolerance)
         
         endGameSession()
         
@@ -920,6 +915,7 @@ struct GameView: View {
     // MARK: - Background/Foreground Handling
     
     private func setupBackgroundNotifications() {
+        #if canImport(UIKit)
         NotificationCenter.default.addObserver(
             forName: UIApplication.willResignActiveNotification,
             object: nil,
@@ -935,11 +931,33 @@ struct GameView: View {
         ) { _ in
             self.resumeTimer()
         }
+        #elseif os(macOS)
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.willResignActiveNotification,
+            object: nil,
+            queue: .main
+        ) { _ in
+            self.pauseTimer()
+        }
+        
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.didBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { _ in
+            self.resumeTimer()
+        }
+        #endif
     }
     
     private func removeBackgroundNotifications() {
+        #if canImport(UIKit)
         NotificationCenter.default.removeObserver(self, name: UIApplication.willResignActiveNotification, object: nil)
         NotificationCenter.default.removeObserver(self, name: UIApplication.didBecomeActiveNotification, object: nil)
+        #elseif os(macOS)
+        NotificationCenter.default.removeObserver(self, name: NSApplication.willResignActiveNotification, object: nil)
+        NotificationCenter.default.removeObserver(self, name: NSApplication.didBecomeActiveNotification, object: nil)
+        #endif
     }
     
     private func pauseTimer() {
@@ -1408,24 +1426,26 @@ struct GameOverView: View {
     
             // MARK: - Session Complete Confetti Effects
             private var sessionCompleteConfetti: some View {
-                ZStack {
-                    // Confetti effects - smaller size (60-70% of original)
-                    ForEach(0..<8, id: \.self) { index in
-                        Circle()
-                            .fill(
-                                index % 2 == 0 ? 
-                                Color.pink.opacity(0.3) : 
-                                Color.blue.opacity(0.3)
-                            )
-                            .frame(width: CGFloat.random(in: 12...28)) // Reduced from 20-40 to 12-28
-                            .position(
-                                x: CGFloat.random(in: 0...UIScreen.main.bounds.width),
-                                y: CGFloat.random(in: 0...UIScreen.main.bounds.height)
-                            )
-                            .blur(radius: 2)
+                GeometryReader { geometry in
+                    ZStack {
+                        // Confetti effects - smaller size (60-70% of original)
+                        ForEach(0..<8, id: \.self) { index in
+                            Circle()
+                                .fill(
+                                    index % 2 == 0 ? 
+                                    Color.pink.opacity(0.3) : 
+                                    Color.blue.opacity(0.3)
+                                )
+                                .frame(width: CGFloat.random(in: 12...28)) // Reduced from 20-40 to 12-28
+                                .position(
+                                    x: CGFloat.random(in: 0...geometry.size.width),
+                                    y: CGFloat.random(in: 0...geometry.size.height)
+                                )
+                                .blur(radius: 2)
+                        }
                     }
+                    .allowsHitTesting(false) // Allow touches to pass through
                 }
-                .allowsHitTesting(false) // Allow touches to pass through
             }
     
     // MARK: - Session Complete Action Buttons (Figma Design)

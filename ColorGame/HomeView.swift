@@ -244,6 +244,7 @@ struct HomeView: View {
                         .frame(height: 60)
                 }
             }
+                #if !os(macOS)
                 .navigationBarHidden(true)
                 .fullScreenCover(isPresented: $isGameViewPresented) {
                     GameView(selectedDifficulty: selectedDifficulty)
@@ -251,6 +252,14 @@ struct HomeView: View {
                 .fullScreenCover(isPresented: $isLevelSystemSelectionPresented) {
                     LevelSystemSelectionView(isPresented: $isLevelSystemSelectionPresented)
                 }
+                #else
+                .sheet(isPresented: $isGameViewPresented) {
+                    GameView(selectedDifficulty: selectedDifficulty)
+                }
+                .sheet(isPresented: $isLevelSystemSelectionPresented) {
+                    LevelSystemSelectionView(isPresented: $isLevelSystemSelectionPresented)
+                }
+                #endif
                 .overlay(
                     // Customization sheet overlay
                     Group {
@@ -264,7 +273,9 @@ struct HomeView: View {
                     }
                 )
             }
+            #if !os(macOS)
             .navigationViewStyle(StackNavigationViewStyle()) // Ensures portrait mode
+            #endif
             .onChange(of: shouldStartGame) { _, shouldStart in
                 if shouldStart {
                     isGameViewPresented = true

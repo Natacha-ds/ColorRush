@@ -116,7 +116,8 @@ class LevelRun: ObservableObject {
     @Published var isCompleted: Bool = false
     
     // Scoring
-    @Published var currentScore: Int = 0
+    @Published var currentScore: Int = 0 // Level score (can go negative due to penalties)
+    @Published var levelPositivePoints: Int = 0 // Positive points earned this level (to be added to globalScore on completion)
     @Published var mistakes: Int = 0 // Run-wide mistakes (cumulative across all levels)
     @Published var timeouts: Int = 0
     @Published var perfectLevels: [Int] = [] // Track which levels were completed perfectly
@@ -124,6 +125,7 @@ class LevelRun: ObservableObject {
     // Level-specific tracking for perfect bonus calculation
     @Published var levelMistakes: Int = 0
     @Published var levelTimeouts: Int = 0
+    @Published var levelCorrectAnswers: Int = 0 // Track correct answers for score breakdown
     
     // Level progression tracking
     @Published var completedLevels: [Int] = []
@@ -164,23 +166,12 @@ class LevelRun: ObservableObject {
         print("dev_skip_level: Level \(currentLevel)")
         
         // Award minimum passing score (no perfect bonus)
+        // Set both currentScore and levelPositivePoints to required score
         currentScore = levelConfig.requiredScore
-        globalScore += levelConfig.requiredScore
+        levelPositivePoints = levelConfig.requiredScore
         
-        // Store the level score
-        levelScores[currentLevel] = currentScore
-        
-        // Mark level as completed (not perfect)
-        completedLevels.append(currentLevel)
-        
-        // Check if run is complete
-        if currentLevel >= config.getTotalLevels() {
-            isCompleted = true
-            isActive = false
-        } else {
-            currentLevel += 1
-            startLevel()
-        }
+        // Use completeLevel() to properly add points to globalScore
+        completeLevel()
     }
     
     func startRun(gameType: GameType, mistakeTolerance: MistakeTolerance) {
@@ -196,11 +187,21 @@ class LevelRun: ObservableObject {
         // Reset level-specific stats and score (mistakes remain cumulative)
         levelMistakes = 0
         levelTimeouts = 0
+        levelCorrectAnswers = 0
         currentScore = 0 // Each level starts with 0 points
+        levelPositivePoints = 0 // Reset positive points tracker
     }
     
     func completeLevel() {
         guard let levelConfig = currentLevelConfig else { return }
+        
+        // Add level's positive points to globalScore only when level completes successfully
+        globalScore += levelPositivePoints
+        
+        // Add perfect bonus if applicable
+        if isPerfectLevel, let bonus = levelConfig.perfectBonus {
+            globalScore += bonus
+        }
         
         // Store the level score (currentScore is already the level score since we reset it to 0)
         levelScores[currentLevel] = currentScore
@@ -229,11 +230,13 @@ class LevelRun: ObservableObject {
     
     func resetRunStats() {
         currentScore = 0
+        levelPositivePoints = 0
         globalScore = 0 // Reset global score for new run
         mistakes = 0 // Reset run-wide mistakes
         timeouts = 0
         levelMistakes = 0
         levelTimeouts = 0
+        levelCorrectAnswers = 0
         perfectLevels = []
         completedLevels = []
         failedLevels = []
@@ -243,17 +246,25 @@ class LevelRun: ObservableObject {
     func resetLevelStats() {
         levelMistakes = 0
         levelTimeouts = 0
+        levelCorrectAnswers = 0
         currentScore = 0 // Reset level score to 0 when retrying
+        levelPositivePoints = 0 // Reset positive points tracker when retrying
         // Note: mistakes and timeouts are NOT reset here (run-wide)
+        // Note: globalScore is NOT reset here - previous attempt's penalties remain,
+        // but positive points from failed attempt are discarded (never added to globalScore)
     }
     
     func addCorrectAnswer() {
         guard let levelConfig = currentLevelConfig else { return }
+        // Add to currentScore and track positive points (will be added to globalScore on level completion)
         currentScore += levelConfig.pointsPerRound
-        globalScore += levelConfig.pointsPerRound
+        levelPositivePoints += levelConfig.pointsPerRound
+        levelCorrectAnswers += 1 // Track for score breakdown
+        // Note: globalScore is NOT updated here - only on level completion
     }
     
     func addWrongAnswer() {
+        // Penalties apply immediately to both currentScore and globalScore
         currentScore -= 10
         globalScore -= 10
         mistakes += 1 // Run-wide mistake counter
@@ -261,6 +272,7 @@ class LevelRun: ObservableObject {
     }
     
     func addTimeout() {
+        // Penalties apply immediately to both currentScore and globalScore
         currentScore -= 5
         globalScore -= 5
         timeouts += 1 // Run-wide timeout counter

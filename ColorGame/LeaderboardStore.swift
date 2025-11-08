@@ -13,8 +13,26 @@ class LeaderboardStore: ObservableObject {
     @Published var normalScores: [ScoreEntry] = []
     @Published var hardScores: [ScoreEntry] = []
     
+    private let resetKey = "leaderboard.reset.done"
+    
     private init() {
+        // Reset leaderboard once (clear legacy data)
+        if !userDefaults.bool(forKey: resetKey) {
+            resetLeaderboard()
+            userDefaults.set(true, forKey: resetKey)
+        }
         loadScores()
+    }
+    
+    func resetLeaderboard() {
+        // Clear all leaderboard data
+        userDefaults.removeObject(forKey: easyKey)
+        userDefaults.removeObject(forKey: normalKey)
+        userDefaults.removeObject(forKey: hardKey)
+        easyScores = []
+        normalScores = []
+        hardScores = []
+        userDefaults.synchronize()
     }
     
     private func loadScores() {
@@ -28,45 +46,45 @@ class LeaderboardStore: ObservableObject {
               let scores = try? JSONDecoder().decode([ScoreEntry].self, from: data) else {
             return []
         }
-        return scores.sorted(by: >) // Sort descending
+        return Array(scores.sorted(by: >).prefix(5)) // Keep only top 5
     }
     
     private func saveScores(_ scores: [ScoreEntry], forKey key: String) {
-        let sortedScores = scores.sorted(by: >)
+        let sortedScores = Array(scores.sorted(by: >).prefix(5)) // Keep only top 5
         if let data = try? JSONEncoder().encode(sortedScores) {
             userDefaults.set(data, forKey: key)
         }
     }
     
-    func addScore(_ score: Int, for difficulty: Difficulty, durationSeconds: Int? = nil, maxMistakes: Int? = nil, roundTimeoutSeconds: Double? = nil, confusionSpeedSeconds: Double? = nil) {
-        let newEntry = ScoreEntry(score: score, durationSeconds: durationSeconds, maxMistakes: maxMistakes, roundTimeoutSeconds: roundTimeoutSeconds, confusionSpeedSeconds: confusionSpeedSeconds)
+    func addScore(_ score: Int, for mistakeTolerance: MistakeTolerance) {
+        let newEntry = ScoreEntry(score: score)
         
-        switch difficulty {
+        switch mistakeTolerance {
         case .easy:
             easyScores.append(newEntry)
-            easyScores = Array(easyScores.sorted(by: >).prefix(10))
+            easyScores = Array(easyScores.sorted(by: >).prefix(5)) // Keep only top 5
             saveScores(easyScores, forKey: easyKey)
         case .normal:
             normalScores.append(newEntry)
-            normalScores = Array(normalScores.sorted(by: >).prefix(10))
+            normalScores = Array(normalScores.sorted(by: >).prefix(5)) // Keep only top 5
             saveScores(normalScores, forKey: normalKey)
         case .hard:
             hardScores.append(newEntry)
-            hardScores = Array(hardScores.sorted(by: >).prefix(10))
+            hardScores = Array(hardScores.sorted(by: >).prefix(5)) // Keep only top 5
             saveScores(hardScores, forKey: hardKey)
         }
     }
     
-    func getScores(for difficulty: Difficulty) -> [ScoreEntry] {
-        switch difficulty {
+    func getScores(for mistakeTolerance: MistakeTolerance) -> [ScoreEntry] {
+        switch mistakeTolerance {
         case .easy: return easyScores
         case .normal: return normalScores
         case .hard: return hardScores
         }
     }
     
-    func getBestScore(for difficulty: Difficulty) -> Int {
-        let scores = getScores(for: difficulty)
+    func getBestScore(for mistakeTolerance: MistakeTolerance) -> Int {
+        let scores = getScores(for: mistakeTolerance)
         return scores.first?.score ?? 0
     }
 }
