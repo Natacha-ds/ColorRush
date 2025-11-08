@@ -41,6 +41,10 @@ struct LevelGameView: View {
     @State private var isLevelFailed = false
     @State private var failedReason: LevelFailureReason = .insufficientScore
     
+    // Streak animation state
+    @State private var showStreakAnimation = false
+    @State private var streakBonusAmount = 0
+    
     // Color repeat tracking
     @State private var recentAnnouncedColors: [Color] = []
     
@@ -125,173 +129,185 @@ struct LevelGameView: View {
                     }
                 } else {
                     // Active Game Screen
-                    VStack(spacing: 0) {
-                        // Top header with back button
-                        HStack {
-                            Button(action: {
-                                endGameSession()
-                                dismiss()
-                            }) {
-                                Image(systemName: "chevron.left")
-                                    .font(.system(size: 18, weight: .medium))
-                                    .foregroundColor(.primary)
-                                    .frame(width: 32, height: 32)
-                                    .background(
-                                        Circle()
-                                            .fill(Color.white.opacity(0.8))
-                                            .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
-                                    )
-                            }
-                            
-                            Spacer()
-                            
-                            // Dev-only skip button
-                            if levelRun.shouldShowDevTools && !levelRun.isCompleted {
+                    ZStack {
+                        VStack(spacing: 0) {
+                            // Top header with back button
+                            HStack {
                                 Button(action: {
-                                    levelRun.skipToNextLevel()
-                                    startNewLevel()
+                                    endGameSession()
+                                    dismiss()
                                 }) {
-                                    Text("🔧 Skip")
-                                        .font(.system(size: 12, weight: .medium))
-                                        .foregroundColor(.orange)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 6)
+                                    Image(systemName: "chevron.left")
+                                        .font(.system(size: 18, weight: .medium))
+                                        .foregroundColor(.primary)
+                                        .frame(width: 32, height: 32)
                                         .background(
-                                            RoundedRectangle(cornerRadius: 12)
-                                                .fill(Color.orange.opacity(0.1))
-                                                .overlay(
-                                                    RoundedRectangle(cornerRadius: 12)
-                                                        .stroke(Color.orange.opacity(0.3), lineWidth: 1)
-                                                )
+                                            Circle()
+                                                .fill(Color.white.opacity(0.8))
+                                                .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
                                         )
                                 }
-                            }
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.top, 10)
-                        
-                        // Top bar: Score/Target on left, Lives on right
-                        HStack {
-                            // Top left: Score and Target
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Score: \(levelRun.currentScore)")
-                                    .font(.title3)
-                                    .fontWeight(.semibold)
-                                    .foregroundColor(.primary)
                                 
-                                if let levelConfig = levelRun.currentLevelConfig {
-                                    Text("Target: \(levelConfig.requiredScore)")
-                                        .font(.title3)
-                                        .fontWeight(.semibold)
-                                        .foregroundColor(.secondary)
+                                Spacer()
+                                
+                                // Dev-only skip button
+                                if levelRun.shouldShowDevTools && !levelRun.isCompleted {
+                                    Button(action: {
+                                        levelRun.skipToNextLevel()
+                                        startNewLevel()
+                                    }) {
+                                        Text("🔧 Skip")
+                                            .font(.system(size: 12, weight: .medium))
+                                            .foregroundColor(.orange)
+                                            .padding(.horizontal, 12)
+                                            .padding(.vertical, 6)
+                                            .background(
+                                                RoundedRectangle(cornerRadius: 12)
+                                                    .fill(Color.orange.opacity(0.1))
+                                                    .overlay(
+                                                        RoundedRectangle(cornerRadius: 12)
+                                                            .stroke(Color.orange.opacity(0.3), lineWidth: 1)
+                                                    )
+                                            )
+                                    }
                                 }
                             }
+                            .padding(.horizontal, 20)
+                            .padding(.top, 10)
+                            
+                            // Top bar: Score/Target on left, Lives on right
+                            HStack {
+                                // Top left: Score and Target
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Score: \(levelRun.currentScore)")
+                                        .font(.title3)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(.primary)
+                                    
+                                    if let levelConfig = levelRun.currentLevelConfig {
+                                        Text("Target: \(levelConfig.requiredScore)")
+                                            .font(.title3)
+                                            .fontWeight(.semibold)
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+                                
+                                Spacer()
+                                
+                                // Top right: Heart icon with remaining lives (increased by 30%)
+                                HStack(spacing: 6) {
+                                    Image("Heart")
+                                        .resizable()
+                                        .scaledToFit()
+                                        .frame(width: 26, height: 26)
+                                    Text("\(max(0, levelRun.mistakeTolerance.maxMistakes - levelRun.mistakes))")
+                                        .font(.title3)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(.primary)
+                                }
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.top, 20)
+                            
+                            // Center: Level X title (styled like Level Complete, without icon)
+                            Text("Level \(levelRun.currentLevel)")
+                                .font(.system(size: 32, weight: .bold))
+                                .foregroundStyle(
+                                    LinearGradient(
+                                        gradient: Gradient(colors: [.purple, .pink]),
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .padding(.top, 16) // Reduced by 20% (from 20 to 16)
                             
                             Spacer()
                             
-                            // Top right: Heart icon with remaining lives (increased by 30%)
-                            HStack(spacing: 6) {
-                                Image("Heart")
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 26, height: 26)
-                                Text("\(max(0, levelRun.mistakeTolerance.maxMistakes - levelRun.mistakes))")
-                                    .font(.title3)
-                                    .fontWeight(.semibold)
-                                    .foregroundColor(.primary)
-                            }
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.top, 20)
-                        
-                        // Center: Level X title (styled like Level Complete, without icon)
-                        Text("Level \(levelRun.currentLevel)")
-                            .font(.system(size: 32, weight: .bold))
-                            .foregroundStyle(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [.purple, .pink]),
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .padding(.top, 16) // Reduced by 20% (from 20 to 16)
-                        
-                        Spacer()
-                        
-                        // Timer
-                        VStack(spacing: 8) {
-                            Text("\(Int(timeRemaining.rounded(.up)))s")
-                                .font(.system(size: 64, weight: .bold, design: .rounded))
-                                .foregroundColor(timeRemaining <= 5 ? .red : .primary)
-                                .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
-                            
-                            Text("Time Remaining")
-                                .font(.title3)
-                                .fontWeight(.medium)
-                                .foregroundColor(.secondary)
-                        }
-                        .padding(.bottom, 30)
-                        
-                        // Round Progress Bar (if level has time limit and is not non-punitive refresh)
-                        if let levelConfig = levelRun.currentLevelConfig, 
-                           levelConfig.hasTimeLimit && !levelConfig.isNonPunitiveRefresh {
+                            // Timer
                             VStack(spacing: 8) {
-                                Text("Round Time")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
+                                Text("\(Int(timeRemaining.rounded(.up)))s")
+                                    .font(.system(size: 64, weight: .bold, design: .rounded))
+                                    .foregroundColor(timeRemaining <= 5 ? .red : .primary)
+                                    .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
                                 
-                                GeometryReader { geometry in
-                                    ZStack(alignment: .leading) {
-                                        // Background bar
-                                        RoundedRectangle(cornerRadius: 4)
-                                            .fill(Color.gray.opacity(0.3))
-                                            .frame(height: 8)
-                                        
-                                        // Progress bar
-                                        RoundedRectangle(cornerRadius: 4)
-                                            .fill(roundTimeRemaining > (levelConfig.timePerResponse ?? 1.0) * 0.3 ? Color.green : Color.red)
-                                            .frame(width: geometry.size.width * (roundTimeRemaining / (levelConfig.timePerResponse ?? 1.0)), height: 8)
-                                            .animation(.linear(duration: 0.1), value: roundTimeRemaining)
+                                Text("Time Remaining")
+                                    .font(.title3)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(.bottom, 30)
+                            
+                            // Round Progress Bar (if level has time limit and is not non-punitive refresh)
+                            if let levelConfig = levelRun.currentLevelConfig, 
+                               levelConfig.hasTimeLimit && !levelConfig.isNonPunitiveRefresh {
+                                VStack(spacing: 8) {
+                                    Text("Round Time")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                    
+                                    GeometryReader { geometry in
+                                        ZStack(alignment: .leading) {
+                                            // Background bar
+                                            RoundedRectangle(cornerRadius: 4)
+                                                .fill(Color.gray.opacity(0.3))
+                                                .frame(height: 8)
+                                            
+                                            // Progress bar
+                                            RoundedRectangle(cornerRadius: 4)
+                                                .fill(roundTimeRemaining > (levelConfig.timePerResponse ?? 1.0) * 0.3 ? Color.green : Color.red)
+                                                .frame(width: geometry.size.width * (roundTimeRemaining / (levelConfig.timePerResponse ?? 1.0)), height: 8)
+                                                .animation(.linear(duration: 0.1), value: roundTimeRemaining)
+                                        }
+                                    }
+                                    .frame(height: 8)
+                                    .padding(.horizontal, 40)
+                                }
+                                .padding(.bottom, 20)
+                            }
+                            
+                            // 2x2 Grid
+                            VStack(spacing: 20) {
+                                HStack(spacing: 20) {
+                                    if levelRun.gameType == .colorOnly {
+                                        ColorTile(color: tiles.count > 0 ? tiles[0] : .gray, action: { handleTileTap(0) })
+                                        ColorTile(color: tiles.count > 1 ? tiles[1] : .gray, action: { handleTileTap(1) })
+                                    } else {
+                                        ColorAndTextTile(tile: tilesWithText.count > 0 ? tilesWithText[0] : Tile(backgroundColor: .gray, textLabel: "gray"), action: { handleTileTap(0) })
+                                        ColorAndTextTile(tile: tilesWithText.count > 1 ? tilesWithText[1] : Tile(backgroundColor: .gray, textLabel: "gray"), action: { handleTileTap(1) })
                                     }
                                 }
-                                .frame(height: 8)
-                                .padding(.horizontal, 40)
-                            }
-                            .padding(.bottom, 20)
-                        }
-                        
-                        // 2x2 Grid
-                        VStack(spacing: 20) {
-                            HStack(spacing: 20) {
-                                if levelRun.gameType == .colorOnly {
-                                    ColorTile(color: tiles.count > 0 ? tiles[0] : .gray, action: { handleTileTap(0) })
-                                    ColorTile(color: tiles.count > 1 ? tiles[1] : .gray, action: { handleTileTap(1) })
-                                } else {
-                                    ColorAndTextTile(tile: tilesWithText.count > 0 ? tilesWithText[0] : Tile(backgroundColor: .gray, textLabel: "gray"), action: { handleTileTap(0) })
-                                    ColorAndTextTile(tile: tilesWithText.count > 1 ? tilesWithText[1] : Tile(backgroundColor: .gray, textLabel: "gray"), action: { handleTileTap(1) })
+                                HStack(spacing: 20) {
+                                    if levelRun.gameType == .colorOnly {
+                                        ColorTile(color: tiles.count > 2 ? tiles[2] : .gray, action: { handleTileTap(2) })
+                                        ColorTile(color: tiles.count > 3 ? tiles[3] : .gray, action: { handleTileTap(3) })
+                                    } else {
+                                        ColorAndTextTile(tile: tilesWithText.count > 2 ? tilesWithText[2] : Tile(backgroundColor: .gray, textLabel: "gray"), action: { handleTileTap(2) })
+                                        ColorAndTextTile(tile: tilesWithText.count > 3 ? tilesWithText[3] : Tile(backgroundColor: .gray, textLabel: "gray"), action: { handleTileTap(3) })
+                                    }
                                 }
                             }
-                            HStack(spacing: 20) {
-                                if levelRun.gameType == .colorOnly {
-                                    ColorTile(color: tiles.count > 2 ? tiles[2] : .gray, action: { handleTileTap(2) })
-                                    ColorTile(color: tiles.count > 3 ? tiles[3] : .gray, action: { handleTileTap(3) })
-                                } else {
-                                    ColorAndTextTile(tile: tilesWithText.count > 2 ? tilesWithText[2] : Tile(backgroundColor: .gray, textLabel: "gray"), action: { handleTileTap(2) })
-                                    ColorAndTextTile(tile: tilesWithText.count > 3 ? tilesWithText[3] : Tile(backgroundColor: .gray, textLabel: "gray"), action: { handleTileTap(3) })
-                                }
-                            }
+                            .padding(.bottom, 40)
+                            
+                            Spacer()
                         }
-                        .padding(.bottom, 40)
+                        .padding()
                         
-                        Spacer()
-                    }
-                    .padding()
-                    
-                    // Error flash overlay
-                    if showingErrorFlash {
-                        Color.red.opacity(0.3)
-                            .ignoresSafeArea()
-                            .transition(.opacity)
+                        // Error flash overlay
+                        if showingErrorFlash {
+                            Color.red.opacity(0.3)
+                                .ignoresSafeArea()
+                                .transition(.opacity)
+                        }
+                        
+                        // Streak animation overlay
+                        if showStreakAnimation {
+                            StreakAnimationView(bonusAmount: streakBonusAmount)
+                                .transition(.asymmetric(
+                                    insertion: .scale.combined(with: .opacity),
+                                    removal: .opacity
+                                ))
+                                .zIndex(1000)
+                        }
                     }
                 }
             }
@@ -305,6 +321,20 @@ struct LevelGameView: View {
             .onDisappear {
                 endGameSession()
                 removeBackgroundNotifications()
+            }
+            .onChange(of: levelRun.lastBonusEarned) { newValue in
+                if newValue > 0 {
+                    streakBonusAmount = newValue
+                    showStreakAnimation = true
+                    // Reset the trigger after a short delay
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        levelRun.lastBonusEarned = 0
+                    }
+                    // Hide animation after fade out completes (1.8 seconds total: 1.5s visible + 0.3s fade)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
+                        showStreakAnimation = false
+                    }
+                }
             }
         }
         #if !os(macOS)
@@ -774,6 +804,62 @@ struct LevelGameView: View {
     }
 }
 
+// MARK: - Streak Animation View
+struct StreakAnimationView: View {
+    let bonusAmount: Int
+    @State private var scale: CGFloat = 0.5
+    @State private var opacity: Double = 0.0
+    
+    var body: some View {
+        VStack {
+            Spacer()
+                .frame(height: 200) // Position below the level title
+            
+            HStack(spacing: 8) {
+                Text("🔥")
+                    .font(.system(size: 32))
+                
+                Text("Streak +\(bonusAmount) pt")
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .foregroundColor(.white)
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 16)
+            .background(
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color.orange.opacity(0.9),
+                        Color.red.opacity(0.9)
+                    ]),
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .cornerRadius(20)
+            .shadow(color: .black.opacity(0.3), radius: 10, x: 0, y: 5)
+            .scaleEffect(scale)
+            .opacity(opacity)
+            .onAppear {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+                    scale = 1.0
+                    opacity = 1.0
+                }
+                
+                // Fade out after 1.5 seconds
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    withAnimation(.easeOut(duration: 0.3)) {
+                        opacity = 0.0
+                        scale = 0.8
+                    }
+                }
+            }
+            
+            Spacer()
+        }
+        .allowsHitTesting(false) // Don't block touches
+    }
+}
+
 // MARK: - Level Complete View
 struct LevelCompleteView: View {
     @ObservedObject var levelRun: LevelRun
@@ -788,7 +874,7 @@ struct LevelCompleteView: View {
     
     // Score breakdown components
     private var correctAnswersPoints: Int {
-        return levelRun.levelPositivePoints
+        return levelRun.levelBasePoints // Only base points from correct answers, excluding bonuses
     }
     
     private var mistakesPenalty: Int {
@@ -1092,8 +1178,8 @@ struct LevelFailedView: View {
     
     // Display value for correct answers (points, not count)
     private var correctAnswersDisplayValue: String {
-        // Calculate points from correct answers
-        let points = levelRun.levelPositivePoints
+        // Calculate points from correct answers (base points only, excluding bonuses)
+        let points = levelRun.levelBasePoints
         return points > 0 ? "+\(points)" : "0"
     }
     

@@ -118,6 +118,7 @@ class LevelRun: ObservableObject {
     // Scoring
     @Published var currentScore: Int = 0 // Level score (can go negative due to penalties)
     @Published var levelPositivePoints: Int = 0 // Positive points earned this level (to be added to globalScore on completion)
+    @Published var levelBasePoints: Int = 0 // Base points from correct answers only (excluding bonuses, for display)
     @Published var levelPenalties: Int = 0 // Penalties from current level attempt (to be removed from globalScore on retry)
     @Published var mistakes: Int = 0 // Run-wide mistakes (cumulative across all levels)
     @Published var timeouts: Int = 0
@@ -132,6 +133,7 @@ class LevelRun: ObservableObject {
     // Streak tracking for dynamic bonuses
     @Published var currentStreak: Int = 0 // Current consecutive correct answers in this level
     @Published var levelStreakBonuses: Int = 0 // Total streak bonuses earned this level (cumulative)
+    @Published var lastBonusEarned: Int = 0 // Last bonus earned (for animation trigger, resets after display)
     
     // Level progression tracking
     @Published var completedLevels: [Int] = []
@@ -188,6 +190,7 @@ class LevelRun: ObservableObject {
         // Set both currentScore and levelPositivePoints to required score
         currentScore = levelConfig.requiredScore
         levelPositivePoints = levelConfig.requiredScore
+        levelBasePoints = levelConfig.requiredScore // Also set base points for display
         
         // Use completeLevel() to properly add points to globalScore
         completeLevel()
@@ -210,9 +213,11 @@ class LevelRun: ObservableObject {
         levelCorrectAnswers = 0
         currentScore = 0 // Each level starts with 0 points
         levelPositivePoints = 0 // Reset positive points tracker
+        levelBasePoints = 0 // Reset base points tracker
         levelPenalties = 0 // Reset penalties tracker
         currentStreak = 0 // Reset streak for new level
         levelStreakBonuses = 0 // Reset streak bonuses for new level
+        lastBonusEarned = 0 // Reset bonus animation trigger
     }
     
     func completeLevel() {
@@ -246,6 +251,7 @@ class LevelRun: ObservableObject {
     func resetRunStats() {
         currentScore = 0
         levelPositivePoints = 0
+        levelBasePoints = 0
         levelPenalties = 0
         globalScore = 0 // Reset global score for new run
         mistakes = 0 // Reset run-wide mistakes
@@ -256,6 +262,7 @@ class LevelRun: ObservableObject {
         levelCorrectAnswers = 0
         currentStreak = 0
         levelStreakBonuses = 0
+        lastBonusEarned = 0
         perfectLevels = []
         completedLevels = []
         failedLevels = []
@@ -272,9 +279,11 @@ class LevelRun: ObservableObject {
         levelCorrectAnswers = 0
         currentScore = 0 // Reset level score to 0 when retrying
         levelPositivePoints = 0 // Reset positive points tracker when retrying
+        levelBasePoints = 0 // Reset base points tracker when retrying
         levelPenalties = 0 // Reset penalties tracker
         currentStreak = 0 // Reset streak when retrying
         levelStreakBonuses = 0 // Reset streak bonuses when retrying
+        lastBonusEarned = 0 // Reset bonus animation trigger
         // Note: mistakes and timeouts are NOT reset here (run-wide)
         // Note: Positive points from failed attempt are discarded (never added to globalScore)
         // Note: Penalties from failed attempt are now removed from globalScore
@@ -287,9 +296,10 @@ class LevelRun: ObservableObject {
         currentStreak += 1
         levelCorrectAnswers += 1 // Track for score breakdown
         
-        // Add base points
+        // Add base points (without bonuses)
         currentScore += levelConfig.pointsPerRound
         levelPositivePoints += levelConfig.pointsPerRound
+        levelBasePoints += levelConfig.pointsPerRound // Track base points separately for display
         
         // Check for streak bonus milestones (10, 20, 30)
         // Calculate the total bonus that should be applied at this streak level
@@ -300,10 +310,12 @@ class LevelRun: ObservableObject {
         let bonusEarned = totalBonusAtThisStreak - bonusAlreadyAdded
         
         if bonusEarned > 0 {
-            // Award streak bonus incrementally
+            // Award streak bonus incrementally (add to levelPositivePoints but NOT to levelBasePoints)
             currentScore += bonusEarned
             levelPositivePoints += bonusEarned
             levelStreakBonuses += bonusEarned
+            // Trigger animation by setting lastBonusEarned
+            lastBonusEarned = bonusEarned
         }
         
         // Note: globalScore is NOT updated here - only on level completion
