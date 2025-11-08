@@ -170,41 +170,51 @@ struct LevelGameView: View {
                         .padding(.horizontal, 20)
                         .padding(.top, 10)
                         
-                        // Level info and score
+                        // Top bar: Score/Target on left, Lives on right
                         HStack {
-                            Text("Level \(levelRun.currentLevel)")
-                                .font(.title2)
-                                .fontWeight(.bold)
-                                .foregroundColor(.primary)
+                            // Top left: Score and Target
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Score: \(levelRun.currentScore)")
+                                    .font(.title3)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.primary)
+                                
+                                if let levelConfig = levelRun.currentLevelConfig {
+                                    Text("Target: \(levelConfig.requiredScore)")
+                                        .font(.title3)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
                             
                             Spacer()
                             
-                            Text("Score: \(levelRun.currentScore)")
-                                .font(.title2)
-                                .fontWeight(.bold)
-                                .foregroundColor(.primary)
+                            // Top right: Heart icon with remaining lives (increased by 30%)
+                            HStack(spacing: 6) {
+                                Image("Heart")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 26, height: 26)
+                                Text("\(max(0, levelRun.mistakeTolerance.maxMistakes - levelRun.mistakes))")
+                                    .font(.title3)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.primary)
+                            }
                         }
                         .padding(.horizontal, 20)
                         .padding(.top, 20)
                         
-                        // Mistakes counter
-                        HStack {
-                            Text("Mistakes: \(levelRun.mistakes)/\(levelRun.mistakeTolerance.maxMistakes)")
-                                .font(.title3)
-                                .fontWeight(.medium)
-                                .foregroundColor(levelRun.mistakes >= levelRun.mistakeTolerance.maxMistakes ? .red : .primary)
-                            
-                            Spacer()
-                            
-                            if let levelConfig = levelRun.currentLevelConfig {
-                                Text("Target: \(levelConfig.requiredScore)")
-                                    .font(.title3)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.top, 10)
+                        // Center: Level X title (styled like Level Complete, without icon)
+                        Text("Level \(levelRun.currentLevel)")
+                            .font(.system(size: 32, weight: .bold))
+                            .foregroundStyle(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [.purple, .pink]),
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .padding(.top, 16) // Reduced by 20% (from 20 to 16)
                         
                         Spacer()
                         
