@@ -123,11 +123,15 @@ class LevelRun: ObservableObject {
     @Published var timeouts: Int = 0
     @Published var perfectLevels: [Int] = [] // Track which levels were completed perfectly
     
-    // Level-specific tracking for perfect bonus calculation
+    // Level-specific tracking
     @Published var levelMistakes: Int = 0 // All mistakes (wrong taps + insufficient score)
     @Published var levelMistakesFromWrongTaps: Int = 0 // Only mistakes from wrong taps (with point deductions)
     @Published var levelTimeouts: Int = 0
     @Published var levelCorrectAnswers: Int = 0 // Track correct answers for score breakdown
+    
+    // Streak tracking for dynamic bonuses
+    @Published var currentStreak: Int = 0 // Current consecutive correct answers in this level
+    @Published var levelStreakBonuses: Int = 0 // Total streak bonuses earned this level (cumulative)
     
     // Level progression tracking
     @Published var completedLevels: [Int] = []
@@ -153,8 +157,21 @@ class LevelRun: ObservableObject {
         return currentScore >= levelConfig.requiredScore
     }
     
+    // Deprecated: Perfect level check (no longer used for bonuses)
     var isPerfectLevel: Bool {
         return levelMistakes == 0 && levelTimeouts == 0
+    }
+    
+    // Calculate streak bonus for current streak count
+    private func calculateStreakBonus(for streak: Int) -> Int {
+        if streak >= 30 {
+            return 80
+        } else if streak >= 20 {
+            return 50
+        } else if streak >= 10 {
+            return 20
+        }
+        return 0
     }
     
     var shouldShowDevTools: Bool {
@@ -194,27 +211,21 @@ class LevelRun: ObservableObject {
         currentScore = 0 // Each level starts with 0 points
         levelPositivePoints = 0 // Reset positive points tracker
         levelPenalties = 0 // Reset penalties tracker
+        currentStreak = 0 // Reset streak for new level
+        levelStreakBonuses = 0 // Reset streak bonuses for new level
     }
     
     func completeLevel() {
         guard let levelConfig = currentLevelConfig else { return }
         
         // Add level's positive points to globalScore only when level completes successfully
+        // Note: levelPositivePoints already includes streak bonuses, so we don't add levelStreakBonuses separately
         globalScore += levelPositivePoints
-        
-        // Add perfect bonus if applicable
-        if isPerfectLevel, let bonus = levelConfig.perfectBonus {
-            globalScore += bonus
-        }
         
         // Store the level score (currentScore is already the level score since we reset it to 0)
         levelScores[currentLevel] = currentScore
         
         completedLevels.append(currentLevel)
-        
-        if isPerfectLevel {
-            perfectLevels.append(currentLevel)
-        }
         
         // Check if run is complete
         if currentLevel >= config.getTotalLevels() {
@@ -243,6 +254,8 @@ class LevelRun: ObservableObject {
         levelMistakesFromWrongTaps = 0
         levelTimeouts = 0
         levelCorrectAnswers = 0
+        currentStreak = 0
+        levelStreakBonuses = 0
         perfectLevels = []
         completedLevels = []
         failedLevels = []
@@ -260,6 +273,8 @@ class LevelRun: ObservableObject {
         currentScore = 0 // Reset level score to 0 when retrying
         levelPositivePoints = 0 // Reset positive points tracker when retrying
         levelPenalties = 0 // Reset penalties tracker
+        currentStreak = 0 // Reset streak when retrying
+        levelStreakBonuses = 0 // Reset streak bonuses when retrying
         // Note: mistakes and timeouts are NOT reset here (run-wide)
         // Note: Positive points from failed attempt are discarded (never added to globalScore)
         // Note: Penalties from failed attempt are now removed from globalScore
@@ -267,14 +282,37 @@ class LevelRun: ObservableObject {
     
     func addCorrectAnswer() {
         guard let levelConfig = currentLevelConfig else { return }
-        // Add to currentScore and track positive points (will be added to globalScore on level completion)
+        
+        // Increment streak
+        currentStreak += 1
+        levelCorrectAnswers += 1 // Track for score breakdown
+        
+        // Add base points
         currentScore += levelConfig.pointsPerRound
         levelPositivePoints += levelConfig.pointsPerRound
-        levelCorrectAnswers += 1 // Track for score breakdown
+        
+        // Check for streak bonus milestones (10, 20, 30)
+        // Calculate the total bonus that should be applied at this streak level
+        let totalBonusAtThisStreak = calculateStreakBonus(for: currentStreak)
+        // Calculate how much bonus we've already added (from previous milestones)
+        let bonusAlreadyAdded = levelStreakBonuses
+        // Calculate the incremental bonus to add now
+        let bonusEarned = totalBonusAtThisStreak - bonusAlreadyAdded
+        
+        if bonusEarned > 0 {
+            // Award streak bonus incrementally
+            currentScore += bonusEarned
+            levelPositivePoints += bonusEarned
+            levelStreakBonuses += bonusEarned
+        }
+        
         // Note: globalScore is NOT updated here - only on level completion
     }
     
     func addWrongAnswer() {
+        // Reset streak on wrong answer
+        currentStreak = 0
+        
         // Penalties apply immediately to both currentScore and globalScore
         currentScore -= 10
         globalScore -= 10
@@ -285,6 +323,9 @@ class LevelRun: ObservableObject {
     }
     
     func addTimeout() {
+        // Reset streak on timeout (missed round)
+        currentStreak = 0
+        
         // Penalties apply immediately to both currentScore and globalScore
         currentScore -= 5
         globalScore -= 5
@@ -297,10 +338,14 @@ class LevelRun: ObservableObject {
         return currentScore // currentScore is already the level score
     }
     
+    // Deprecated: Perfect bonus (replaced by streak bonuses)
     func getPerfectBonus() -> Int {
-        guard let levelConfig = currentLevelConfig,
-              let bonus = levelConfig.perfectBonus,
-              isPerfectLevel else { return 0 }
-        return bonus
+        // No longer used - streak bonuses are awarded during gameplay
+        return 0
+    }
+    
+    // Get total streak bonuses earned this level
+    func getLevelStreakBonuses() -> Int {
+        return levelStreakBonuses
     }
 }

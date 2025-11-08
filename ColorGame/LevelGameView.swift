@@ -621,10 +621,8 @@ struct LevelGameView: View {
         // Check if level was completed successfully
         guard let levelConfig = levelRun.currentLevelConfig else { return }
         
-        // Check if score (including perfect bonus) meets requirement
-        let scoreWithBonus = levelRun.getCurrentLevelScore() + levelRun.getPerfectBonus()
-        
-        if scoreWithBonus >= levelConfig.requiredScore {
+        // Check if score meets requirement (streak bonuses are already included in currentScore)
+        if levelRun.getCurrentLevelScore() >= levelConfig.requiredScore {
             isLevelComplete = true
         } else {
             // Level failed due to insufficient score - count as 1 mistake (1 life)
@@ -782,11 +780,10 @@ struct LevelCompleteView: View {
     let onNextLevel: () -> Void
     let onBackToHome: () -> Void
     
-    // Calculate final score including bonus
+    // Calculate final score (streak bonuses are already included in currentScore)
     private var finalLevelScore: Int {
-        // currentScore already includes all points and penalties
-        // Add bonus if perfect
-        return levelRun.getCurrentLevelScore() + levelRun.getPerfectBonus()
+        // currentScore already includes all points, penalties, and streak bonuses
+        return levelRun.getCurrentLevelScore()
     }
     
     // Score breakdown components
@@ -800,6 +797,12 @@ struct LevelCompleteView: View {
         return levelRun.levelMistakesFromWrongTaps * -10
     }
     
+    // Display value for correct answers (points, not count)
+    private var correctAnswersDisplayValue: String {
+        let points = correctAnswersPoints
+        return points > 0 ? "+\(points)" : "0"
+    }
+    
     private var timeoutsPenalty: Int {
         return levelRun.levelTimeouts * -5
     }
@@ -807,11 +810,8 @@ struct LevelCompleteView: View {
     // Computed property for total score including current level's positive points
     // (before completeLevel() adds them to globalScore)
     private var totalScoreWithCurrentLevel: Int {
-        // Include current level's positive points that haven't been added to globalScore yet
-        var total = levelRun.globalScore + levelRun.levelPositivePoints
-        // Include perfect bonus if applicable
-        total += levelRun.getPerfectBonus()
-        return total
+        // levelPositivePoints already includes streak bonuses, so we don't need to add them separately
+        return levelRun.globalScore + levelRun.levelPositivePoints
     }
     
     // Calculate remaining lives
@@ -819,9 +819,9 @@ struct LevelCompleteView: View {
         return max(0, levelRun.mistakeTolerance.maxMistakes - levelRun.mistakes)
     }
     
-    // Check if we should show bonus stat block (levels 3-10)
+    // Check if we should show bonus stat block (all levels 1-10)
     private var shouldShowBonus: Bool {
-        return levelRun.currentLevel >= 3 && levelRun.currentLevel <= 10
+        return levelRun.currentLevel >= 1 && levelRun.currentLevel <= 10
     }
     
     // Check if we should show missed stat block (levels 3-8)
@@ -874,9 +874,9 @@ struct LevelCompleteView: View {
                 .padding(.trailing, 20)
                 .padding(.top, 10)
                 
-                // Title: Cup + "Level X Complete!" - increased by 15% again
+                // Title: Crown + "Level X Complete!" - increased by 15% again
                 HStack(spacing: 8) {
-                    Image("Cup")
+                    Image("Crown")
                         .resizable()
                         .scaledToFit()
                         .frame(width: 53, height: 53)
@@ -926,10 +926,10 @@ struct LevelCompleteView: View {
                 
                 // 4 Stat Blocks in a row
                 HStack(spacing: 12) {
-                    // Diams - Correct (always shown) - show count - icon +20% more
+                    // Cup - Correct (always shown) - show points - icon +20% more
                     StatBlock(
-                        iconName: "Diams",
-                        value: "\(levelRun.levelCorrectAnswers)",
+                        iconName: "Cup",
+                        value: correctAnswersDisplayValue,
                         color: .green,
                         backgroundColor: Color(hex: "F0FDF4"),
                         strokeColor: Color(hex: "B9F8CF"),
@@ -950,7 +950,7 @@ struct LevelCompleteView: View {
                     if shouldShowBonus {
                         StatBlock(
                             iconName: "Stars",
-                            value: levelRun.isPerfectLevel && levelRun.getPerfectBonus() > 0 ? "+\(levelRun.getPerfectBonus())" : "0",
+                            value: levelRun.getLevelStreakBonuses() > 0 ? "+\(levelRun.getLevelStreakBonuses())" : "0",
                             color: .orange,
                             backgroundColor: Color(hex: "FFF7ED"),
                             strokeColor: Color(hex: "FFD6A7"),
@@ -1052,9 +1052,9 @@ struct LevelFailedView: View {
     let onRetry: () -> Void
     let onBackToHome: () -> Void
     
-    // Check if we should show bonus stat block (levels 3-10)
+    // Check if we should show bonus stat block (all levels 1-10)
     private var shouldShowBonus: Bool {
-        return levelRun.currentLevel >= 3 && levelRun.currentLevel <= 10
+        return levelRun.currentLevel >= 1 && levelRun.currentLevel <= 10
     }
     
     // Check if we should show missed stat block (levels 3-8)
@@ -1069,12 +1069,13 @@ struct LevelFailedView: View {
     
     // Computed property for total score including current level's positive points
     private var totalScoreWithCurrentLevel: Int {
+        // levelPositivePoints already includes streak bonuses, so we don't need to add them separately
         return levelRun.globalScore + levelRun.levelPositivePoints
     }
     
-    // Final level score including bonus if applicable
+    // Final level score (streak bonuses are already included in currentScore)
     private var finalLevelScore: Int {
-        return levelRun.getCurrentLevelScore() + levelRun.getPerfectBonus()
+        return levelRun.getCurrentLevelScore()
     }
     
     // Calculate mistakes penalty
@@ -1087,6 +1088,13 @@ struct LevelFailedView: View {
     // Calculate timeouts penalty
     private var timeoutsPenalty: Int {
         return levelRun.levelTimeouts * -5
+    }
+    
+    // Display value for correct answers (points, not count)
+    private var correctAnswersDisplayValue: String {
+        // Calculate points from correct answers
+        let points = levelRun.levelPositivePoints
+        return points > 0 ? "+\(points)" : "0"
     }
     
     var body: some View {
@@ -1186,10 +1194,10 @@ struct LevelFailedView: View {
             
                 // 4 Stat Blocks in a row - same as Complete view
                 HStack(spacing: 12) {
-                    // Diams - Correct (always shown) - show count - icon +20% more
+                    // Cup - Correct (always shown) - show points - icon +20% more
                     StatBlock(
-                        iconName: "Diams",
-                        value: "\(levelRun.levelCorrectAnswers)",
+                        iconName: "Cup",
+                        value: correctAnswersDisplayValue,
                         color: .green,
                         backgroundColor: Color(hex: "F0FDF4"),
                         strokeColor: Color(hex: "B9F8CF"),
@@ -1210,7 +1218,7 @@ struct LevelFailedView: View {
                     if shouldShowBonus {
                         StatBlock(
                             iconName: "Stars",
-                            value: levelRun.isPerfectLevel && levelRun.getPerfectBonus() > 0 ? "+\(levelRun.getPerfectBonus())" : "0",
+                            value: levelRun.getLevelStreakBonuses() > 0 ? "+\(levelRun.getLevelStreakBonuses())" : "0",
                             color: .orange,
                             backgroundColor: Color(hex: "FFF7ED"),
                             strokeColor: Color(hex: "FFD6A7"),
