@@ -58,17 +58,11 @@ struct LevelGameView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                // Full screen background
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color.purple.opacity(0.1),
-                        Color.pink.opacity(0.05),
-                        Color.white
-                    ]),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea(.all)
+                // Full screen background - use level-specific image for each level
+                Image("Level\(levelRun.currentLevel)")
+                    .resizable()
+                    .scaledToFill()
+                    .ignoresSafeArea(.all)
                 
                 if isLevelComplete {
                     LevelCompleteView(

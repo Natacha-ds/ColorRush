@@ -87,4 +87,10 @@ class LeaderboardStore: ObservableObject {
         let scores = getScores(for: mistakeTolerance)
         return scores.first?.score ?? 0
     }
+    
+    // Get the overall best score across all difficulty levels
+    func getOverallBestScore() -> Int {
+        let allScores = easyScores + normalScores + hardScores
+        return allScores.max(by: { $0.score < $1.score })?.score ?? 0
+    }
 }

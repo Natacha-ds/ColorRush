@@ -19,7 +19,7 @@ struct HomeView: View {
     @State private var isCustomizeSheetPresented = false
     @State private var shouldStartGame = false
     @State private var isLevelSystemSelectionPresented = false
-    @StateObject private var highScoreStore = HighScoreStore.shared
+    @StateObject private var leaderboardStore = LeaderboardStore.shared
     @StateObject private var customizationStore = CustomizationStore.shared
     
     var body: some View {
@@ -285,7 +285,7 @@ struct HomeView: View {
     }
     
     private var currentBestScore: String {
-        let score = highScoreStore.getBestScore(for: selectedDifficulty)
+        let score = leaderboardStore.getOverallBestScore()
         return score > 0 ? "\(score)" : "—"
     }
 }
