@@ -45,6 +45,9 @@ struct LevelGameView: View {
     @State private var showStreakAnimation = false
     @State private var streakBonusAmount = 0
     
+    // Level intro pop-in state
+    @State private var showLevelIntro = false
+    
     // Color repeat tracking
     @State private var recentAnnouncedColors: [Color] = []
     
@@ -293,16 +296,28 @@ struct LevelGameView: View {
                                 .transition(.opacity)
                         }
                         
-                        // Streak animation overlay
-                        if showStreakAnimation {
-                            StreakAnimationView(bonusAmount: streakBonusAmount)
-                                .transition(.asymmetric(
-                                    insertion: .scale.combined(with: .opacity),
-                                    removal: .opacity
-                                ))
-                                .zIndex(1000)
-                        }
+                    // Streak animation overlay
+                    if showStreakAnimation {
+                        StreakAnimationView(bonusAmount: streakBonusAmount)
+                            .transition(.asymmetric(
+                                insertion: .scale.combined(with: .opacity),
+                                removal: .opacity
+                            ))
+                            .zIndex(1000)
                     }
+                    
+                    // Level intro pop-in overlay
+                    if showLevelIntro {
+                        LevelIntroView(
+                            levelRun: levelRun,
+                            onDismiss: {
+                                dismissLevelIntroAndStart()
+                            }
+                        )
+                        .zIndex(2000)
+                        .transition(.opacity)
+                    }
+                }
                 }
             }
             #if !os(macOS)
@@ -424,8 +439,34 @@ struct LevelGameView: View {
     private func startLevel() {
         guard let levelConfig = levelRun.currentLevelConfig else { return }
         
+        // Show level intro pop-in first
+        showLevelIntro = true
+        
+        // Auto-dismiss after 3 seconds
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+            if self.showLevelIntro {
+                self.dismissLevelIntroAndStart()
+            }
+        }
+    }
+    
+    private func dismissLevelIntroAndStart() {
+        showLevelIntro = false
+        
+        guard let levelConfig = levelRun.currentLevelConfig else { return }
+        
         isGameSessionActive = true
+        isGameActive = false
+        
+        // Reset level-specific stats
+        levelRun.startLevel()
+        
+        // Reset timers
         timeRemaining = Double(levelConfig.durationSeconds)
+        roundTimeRemaining = 0
+        
+        // Reset color tracking
+        recentAnnouncedColors = []
         
         // Start global timer
         gameTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
@@ -795,6 +836,145 @@ struct LevelGameView: View {
         }
         
         self.backgroundTime = nil
+    }
+}
+
+// MARK: - Level Intro View
+struct LevelIntroView: View {
+    @ObservedObject var levelRun: LevelRun
+    let onDismiss: () -> Void
+    
+    private var levelDescription: String {
+        guard let levelConfig = levelRun.currentLevelConfig else { return "" }
+        
+        // Special case for Levels 1 and 2
+        if levelRun.currentLevel == 1 || levelRun.currentLevel == 2 {
+            return "Warm-up level"
+        }
+        
+        // Special case for Levels 9 and 10
+        if levelRun.currentLevel == 9 || levelRun.currentLevel == 10 {
+            return "Colors will change every second"
+        }
+        
+        var description = ""
+        
+        if levelConfig.hasTimeLimit {
+            if levelConfig.isNonPunitiveRefresh {
+                description = "Colors change every second, but no points are lost if you don't tap."
+            } else {
+                let timeLimit = String(format: "%.1f", levelConfig.timePerResponse ?? 0)
+                description = "You have \(timeLimit)s to tap fast or lose 5 pts!"
+            }
+        } else {
+            description = "No time limit per answer. Take your time!"
+        }
+        
+        return description
+    }
+    
+    var body: some View {
+        ZStack {
+            // Semi-transparent background
+            Color.black.opacity(0.5)
+                .ignoresSafeArea()
+            
+            VStack(spacing: 0) {
+                // Three stars at the top - middle star larger and elevated
+                ZStack(alignment: .bottom) {
+                    // Side stars aligned horizontally
+                    HStack(spacing: 8) {
+                        Image("Mediumstar")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 40, height: 40)
+                        
+                        Spacer()
+                            .frame(width: 60) // Space for middle star
+                        
+                        Image("Mediumstar")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 40, height: 40)
+                    }
+                    
+                    // Middle star - larger and slightly higher
+                    Image("Bigstar")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 70, height: 70)
+                        .offset(y: -8) // Slightly elevated
+                }
+                .frame(height: 70)
+                .padding(.bottom, 16)
+                
+                // Pop-in card with light pink background
+                ZStack(alignment: .topTrailing) {
+                    VStack(spacing: 20) {
+                        // "Targeted score" text - split into two lines, extra bold, 30% larger, minimal spacing
+                        VStack(spacing: -3) { // Negative spacing to bring lines closer (10% reduction from 0)
+                            Text("Targeted")
+                                .font(.system(size: 30, weight: .black)) // 23 * 1.3 = 29.9 ≈ 30, extra bold
+                                .foregroundColor(Color(hex: "E60076"))
+                            
+                            Text("score")
+                                .font(.system(size: 30, weight: .black))
+                                .foregroundColor(Color(hex: "E60076"))
+                        }
+                        .padding(.top, 8)
+                    
+                    // Score container with light pink background - reduced height by 15%
+                    if let levelConfig = levelRun.currentLevelConfig {
+                        Text("\(levelConfig.requiredScore)")
+                            .font(.system(size: 48, weight: .bold))
+                            .foregroundColor(Color(hex: "E60076"))
+                            .frame(minWidth: 120)
+                            .padding(.horizontal, 24)
+                            .padding(.vertical, 10) // Reduced by 15% (12 * 0.85 = 10.2 ≈ 10)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color(hex: "FFC9C9"))
+                                    .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
+                            )
+                    }
+                    
+                    // Level description with bomb icon - 20% larger, text horizontally aligned with icon
+                    if !levelDescription.isEmpty {
+                        HStack(alignment: .center, spacing: 8) {
+                            Image("Bomb")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 29, height: 29) // 24 * 1.2 = 28.8 ≈ 29
+                            
+                            Text(levelDescription)
+                                .font(.system(size: 14, weight: .regular))
+                                .foregroundColor(.primary)
+                                .multilineTextAlignment(.leading)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 8)
+                    }
+                    }
+                    
+                    // Close button (X) - simple icon, fully top-right corner, reduced size
+                    Button(action: onDismiss) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 18, weight: .semibold)) // Reduced by 10% (20 * 0.9 = 18)
+                            .foregroundColor(.gray)
+                    }
+                    .offset(x: 8, y: -8) // Move further right and up to be fully in corner
+                }
+                .padding(24)
+                .frame(width: 224) // Reduced by 30% (320 * 0.7 = 224)
+                .background(
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(Color(hex: "FEF2F2"))
+                        .shadow(color: .black.opacity(0.2), radius: 20, x: 0, y: 10)
+                )
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
     }
 }
 
