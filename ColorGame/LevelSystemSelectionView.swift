@@ -1,11 +1,15 @@
 import SwiftUI
 
 struct LevelSystemSelectionView: View {
-    @StateObject private var levelRun = LevelRun()
+    @StateObject private var levelRun: LevelRun = {
+        let run = LevelRun()
+        run.mistakeTolerance = .easy
+        return run
+    }()
     @State private var currentStep: SelectionStep = .gameType
     @State private var isGameViewPresented = false
     @State private var selectedGameType: GameType?
-    @State private var selectedMistakeTolerance: MistakeTolerance?
+    @State private var selectedMistakeTolerance: MistakeTolerance? = .easy // Pre-select Easy
     @Binding var isPresented: Bool
     
     enum SelectionStep {
@@ -105,7 +109,7 @@ struct LevelSystemSelectionView: View {
                                 .frame(height: 55)
                                 .background(
                                     LinearGradient(
-                                        gradient: Gradient(colors: [.blue, .purple, .pink]),
+                                        gradient: Gradient(colors: canStartGame ? [.blue, .purple, .pink] : [.gray, .gray.opacity(0.7)]),
                                         startPoint: .leading,
                                         endPoint: .trailing
                                     )
@@ -113,6 +117,7 @@ struct LevelSystemSelectionView: View {
                                 .cornerRadius(27)
                                 .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
                             }
+                            .disabled(!canStartGame)
                         }
                     }
                     .padding(.horizontal, 40)
@@ -121,6 +126,7 @@ struct LevelSystemSelectionView: View {
             }
             #if !os(macOS)
             .navigationBarHidden(true)
+            .navigationBarBackButtonHidden(true)
             .fullScreenCover(isPresented: $isGameViewPresented) {
                 LevelGameView(levelRun: levelRun)
             }
@@ -247,12 +253,29 @@ struct LevelSystemSelectionView: View {
     private func nextStep() {
         withAnimation(.easeInOut(duration: 0.3)) {
             currentStep = .mistakeTolerance
+            // Ensure Easy is selected when arriving at this step
+            if selectedMistakeTolerance == nil {
+                selectedMistakeTolerance = .easy
+                levelRun.mistakeTolerance = .easy
+            }
         }
     }
     
     private func startLevelRun() {
-        levelRun.startRun(gameType: levelRun.gameType, mistakeTolerance: levelRun.mistakeTolerance)
+        // Validate that both selections are made
+        guard let gameType = selectedGameType,
+              let mistakeTolerance = selectedMistakeTolerance else {
+            // Should not happen with pre-selection, but safety check
+            return
+        }
+        
+        levelRun.startRun(gameType: gameType, mistakeTolerance: mistakeTolerance)
         isGameViewPresented = true
+    }
+    
+    // Computed property to check if game can start
+    private var canStartGame: Bool {
+        return selectedGameType != nil && selectedMistakeTolerance != nil
     }
 }
 
