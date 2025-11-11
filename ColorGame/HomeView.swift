@@ -19,6 +19,7 @@ struct HomeView: View {
     @State private var isCustomizeSheetPresented = false
     @State private var shouldStartGame = false
     @State private var isLevelSystemSelectionPresented = false
+    @State private var isRulesViewPresented = false
     @StateObject private var leaderboardStore = LeaderboardStore.shared
     @StateObject private var customizationStore = CustomizationStore.shared
     
@@ -252,12 +253,23 @@ struct HomeView: View {
                 .fullScreenCover(isPresented: $isLevelSystemSelectionPresented) {
                     LevelSystemSelectionView(isPresented: $isLevelSystemSelectionPresented)
                 }
+                .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("SwitchToLeaderboard"))) { _ in
+                    // Dismiss the selection view if it's presented
+                    isLevelSystemSelectionPresented = false
+                    // Switch to leaderboard tab (handled by MainTabView)
+                }
+                .fullScreenCover(isPresented: $isRulesViewPresented) {
+                    RulesView(isPresented: $isRulesViewPresented)
+                }
                 #else
                 .sheet(isPresented: $isGameViewPresented) {
                     GameView(selectedDifficulty: selectedDifficulty)
                 }
                 .sheet(isPresented: $isLevelSystemSelectionPresented) {
                     LevelSystemSelectionView(isPresented: $isLevelSystemSelectionPresented)
+                }
+                .sheet(isPresented: $isRulesViewPresented) {
+                    RulesView(isPresented: $isRulesViewPresented)
                 }
                 #endif
                 .overlay(

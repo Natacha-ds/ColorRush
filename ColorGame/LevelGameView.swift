@@ -15,6 +15,7 @@ struct LevelGameView: View {
     @ObservedObject var levelRun: LevelRun
     @Environment(\.dismiss) private var dismiss
     @StateObject private var customizationStore = CustomizationStore.shared
+    @State private var showFinalWinView = false
     
     // Game state
     @State private var announcedColor: Color = .red
@@ -68,23 +69,57 @@ struct LevelGameView: View {
                     .ignoresSafeArea(.all)
                 
                 if isLevelComplete {
-                    LevelCompleteView(
-                        levelRun: levelRun,
-                        onNextLevel: {
-                            levelRun.completeLevel()
-                            if levelRun.isCompleted {
-                                // Save score to leaderboard when run completes
+                    // Check if this is the final level (10) - show special win screen
+                    if levelRun.currentLevel == 10 {
+                        FinalWinView(
+                            levelRun: levelRun,
+                            onPlayHarder: {
+                                // Complete the level and save score
+                                levelRun.completeLevel()
                                 LeaderboardStore.shared.addScore(levelRun.globalScore, for: levelRun.mistakeTolerance)
-                                // Show run complete screen
+                                // Reset everything
+                                levelRun.resetRunStats()
+                                levelRun.currentLevel = 1
+                                levelRun.isActive = false
+                                // Dismiss to go back to selection funnel (LevelSystemSelectionView)
                                 dismiss()
-                            } else {
-                                startNewLevel()
+                            },
+                            onSeeLeaderboard: {
+                                // Complete the level and save score
+                                levelRun.completeLevel()
+                                LeaderboardStore.shared.addScore(levelRun.globalScore, for: levelRun.mistakeTolerance)
+                                // Reset everything
+                                levelRun.resetRunStats()
+                                levelRun.currentLevel = 1
+                                levelRun.isActive = false
+                                // Dismiss LevelGameView first
+                                dismiss()
+                                // Then post notification to dismiss LevelSystemSelectionView and switch to leaderboard
+                                // Use a small delay to ensure the first dismiss completes
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                    NotificationCenter.default.post(name: NSNotification.Name("SwitchToLeaderboard"), object: nil)
+                                }
                             }
-                        },
-                        onBackToHome: {
-                            dismiss()
-                        }
-                    )
+                        )
+                    } else {
+                        LevelCompleteView(
+                            levelRun: levelRun,
+                            onNextLevel: {
+                                levelRun.completeLevel()
+                                if levelRun.isCompleted {
+                                    // Save score to leaderboard when run completes
+                                    LeaderboardStore.shared.addScore(levelRun.globalScore, for: levelRun.mistakeTolerance)
+                                    // Show run complete screen
+                                    dismiss()
+                                } else {
+                                    startNewLevel()
+                                }
+                            },
+                            onBackToHome: {
+                                dismiss()
+                            }
+                        )
+                    }
                 } else if isLevelFailed {
                     // Show LevelGameOverView for run-ending failures, LevelFailedView for insufficient score
                     if failedReason == .maxMistakes || failedReason == .negativeScore {
@@ -527,6 +562,38 @@ struct LevelGameView: View {
         }
     }
     
+    // Refresh board only (for non-punitive refresh levels 9-10)
+    // Keeps the same announced color, doesn't speak it again, just shuffles the tiles
+    private func refreshBoardOnly() {
+        isGameActive = false
+        
+        // Store previous tiles for comparison
+        if levelRun.gameType == .colorOnly {
+            previousTiles = tiles
+        } else {
+            previousTilesWithText = tilesWithText
+        }
+        
+        // Keep the same announced color - don't change it, don't speak it again
+        
+        // Build valid grid based on game type (with the same announced color)
+        if levelRun.gameType == .colorOnly {
+            tiles = buildValidGrid()
+        } else {
+            tilesWithText = buildValidGridWithText()
+        }
+        
+        // Enable game after a brief delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            isGameActive = true
+            
+            // Restart round timer for non-punitive refresh
+            if let levelConfig = levelRun.currentLevelConfig, levelConfig.hasTimeLimit {
+                startRoundTimer(timeLimit: levelConfig.timePerResponse ?? 1.5)
+            }
+        }
+    }
+    
     private func buildValidGrid() -> [Color] {
         var attempts = 0
         let maxAttempts = 10
@@ -656,16 +723,23 @@ struct LevelGameView: View {
     }
     
     private func handleRoundTimeout() {
-        guard isGameActive, isGameSessionActive, !isLevelComplete, !isLevelFailed else { return }
+        // Only check if game session is active and level is not complete/failed
+        // Don't check isGameActive here because it might be false when timer expires
+        guard isGameSessionActive, !isLevelComplete, !isLevelFailed else {
+            print("Timeout blocked: isGameSessionActive=\(isGameSessionActive), isLevelComplete=\(isLevelComplete), isLevelFailed=\(isLevelFailed)")
+            return
+        }
         
         // Check if this is a non-punitive refresh level (9-10)
         if let levelConfig = levelRun.currentLevelConfig, levelConfig.isNonPunitiveRefresh {
-            // Non-punitive refresh: just refresh the board, no penalty
+            // Non-punitive refresh: just refresh the board, keep same announced color, no penalty
             endRoundTimer()
-            startNewRound()
+            refreshBoardOnly()
         } else {
             // Regular timeout: apply penalty
+            print("Applying timeout penalty: -5 points")
             levelRun.addTimeout()
+            print("Score after timeout: \(levelRun.currentScore)")
             hapticsService.heavyImpact()
             showErrorFlash()
             
@@ -1133,6 +1207,7 @@ struct LevelCompleteView: View {
                 }
                 .padding(.trailing, 20)
                 .padding(.top, 10)
+                .padding(.leading, 20) // Add left padding for safety margin
                 
                 // Title: Crown + "Level X Complete!" - increased by 15% again
                 HStack(spacing: 8) {
@@ -1150,6 +1225,7 @@ struct LevelCompleteView: View {
                             )
                         )
                 }
+                .padding(.horizontal, 20) // Add horizontal padding for safety margin
                 
                 // Your Score: XX / YY with 3-color gradient and adaptive sizing
                 VStack(spacing: 4) {
@@ -1268,6 +1344,7 @@ struct LevelCompleteView: View {
                 }
             }
             .padding(.vertical)
+            .padding(.horizontal, 20) // Add horizontal padding for safety margin on sides
         }
     }
 }
@@ -1293,6 +1370,7 @@ struct StatBlock: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 16)
+        .frame(height: 90) // Fixed height to ensure all blocks are exactly the same size (includes padding)
         .background(
             RoundedRectangle(cornerRadius: 12)
                 .fill(backgroundColor)
@@ -1401,6 +1479,7 @@ struct LevelFailedView: View {
                 }
                 .padding(.trailing, 20)
                 .padding(.top, 10)
+                .padding(.leading, 20) // Add left padding for safety margin
                 
                 // Title: Fail icon + "Level X Failed!" - same size as Complete
                 HStack(spacing: 8) {
@@ -1418,6 +1497,7 @@ struct LevelFailedView: View {
                             )
                         )
                 }
+                .padding(.horizontal, 20) // Add horizontal padding for safety margin
             
                 // Your Score: XX / YY with 3-color red gradient and adaptive sizing
                 VStack(spacing: 4) {
@@ -1538,6 +1618,114 @@ struct LevelFailedView: View {
                 }
             }
             .padding(.vertical)
+            .padding(.horizontal, 20) // Add horizontal padding for safety margin on sides
+        }
+    }
+}
+
+// MARK: - Final Win View (for completing level 10)
+struct FinalWinView: View {
+    @ObservedObject var levelRun: LevelRun
+    let onPlayHarder: () -> Void
+    let onSeeLeaderboard: () -> Void
+    
+    // Total score including current level's positive points
+    private var totalScoreWithCurrentLevel: Int {
+        return levelRun.globalScore + levelRun.levelPositivePoints
+    }
+    
+    var body: some View {
+        ZStack {
+            // Global background: subtle light gradient
+            LinearGradient(
+                gradient: Gradient(colors: [
+                    Color(hex: "F5F0FF").opacity(0.3),
+                    Color.white
+                ]),
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+            
+            VStack(spacing: 28) {
+                Spacer()
+                    .frame(height: 60)
+                
+                // Title: "YOU WIN!"
+                Text("YOU WIN!")
+                    .font(.system(size: 48, weight: .bold, design: .rounded))
+                    .foregroundStyle(
+                        LinearGradient(
+                            gradient: Gradient(colors: [.purple, .pink]),
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                
+                // Subtitle: "Well done."
+                Text("Well done.")
+                    .font(.system(size: 20, weight: .regular))
+                    .foregroundColor(.secondary)
+                
+                // Final Score
+                VStack(spacing: 4) {
+                    Text("Final Score")
+                        .font(.system(size: 18, weight: .regular))
+                        .foregroundColor(.secondary)
+                    Text("\(totalScoreWithCurrentLevel)")
+                        .font(.system(size: 32, weight: .bold))
+                        .foregroundColor(.primary)
+                }
+                .padding(.top, 20)
+                
+                Spacer()
+                
+                // Buttons
+                VStack(spacing: 16) {
+                    // Play Harder button - most visible with color
+                    Button(action: onPlayHarder) {
+                        Text("Play Harder")
+                            .font(.system(size: 21, weight: .bold))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 55)
+                            .background(
+                                LinearGradient(
+                                    gradient: Gradient(stops: [
+                                        .init(color: Color(hex: "2B7FFF"), location: 0.0),
+                                        .init(color: Color(hex: "AD46FF"), location: 0.5),
+                                        .init(color: Color(hex: "F6339A"), location: 1.0)
+                                    ]),
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .cornerRadius(27)
+                            .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
+                    }
+                    
+                    // See Leaderboard button - less visible
+                    Button(action: onSeeLeaderboard) {
+                        Text("See Leaderboard")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(.primary)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 50)
+                            .background(
+                                RoundedRectangle(cornerRadius: 25)
+                                    .fill(Color.white)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 25)
+                                            .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                                    )
+                            )
+                            .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                    }
+                }
+                .padding(.horizontal, 40)
+                .padding(.bottom, 60)
+            }
+            .padding(.horizontal, 20)
         }
     }
 }
@@ -1615,6 +1803,7 @@ struct LevelGameOverView: View {
                     )
                 }
                 .padding(.trailing, 20)
+                .padding(.leading, 20) // Add left padding for safety margin
                 .padding(.top, 10)
                 
                 // Game Over icon
@@ -1677,6 +1866,7 @@ struct LevelGameOverView: View {
                 }
             }
             .padding(.vertical)
+            .padding(.horizontal, 20) // Add horizontal padding for safety margin on sides
         }
     }
 }

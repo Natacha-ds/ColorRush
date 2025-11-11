@@ -10,6 +10,7 @@ struct LevelSystemSelectionView: View {
     @State private var isGameViewPresented = false
     @State private var selectedGameType: GameType?
     @State private var selectedMistakeTolerance: MistakeTolerance? = .easy // Pre-select Easy
+    @State private var isRulesViewPresented = false
     @Binding var isPresented: Bool
     
     enum SelectionStep {
@@ -95,6 +96,17 @@ struct LevelSystemSelectionView: View {
                     // Navigation buttons
                     VStack(spacing: 16) {
                         if currentStep == .mistakeTolerance {
+                            // How to play button - above Start now button
+                            Button(action: {
+                                isRulesViewPresented = true
+                            }) {
+                                Text("How to play?")
+                                    .font(.system(size: 16, weight: .regular))
+                                    .foregroundColor(.primary)
+                                    .underline()
+                            }
+                            .padding(.bottom, 20) // Space between "How to play?" and "Start now!"
+                            
                             // Start Game button
                             Button(action: startLevelRun) {
                                 HStack(spacing: 10) {
@@ -130,9 +142,15 @@ struct LevelSystemSelectionView: View {
             .fullScreenCover(isPresented: $isGameViewPresented) {
                 LevelGameView(levelRun: levelRun)
             }
+            .fullScreenCover(isPresented: $isRulesViewPresented) {
+                RulesView(isPresented: $isRulesViewPresented)
+            }
             #else
             .sheet(isPresented: $isGameViewPresented) {
                 LevelGameView(levelRun: levelRun)
+            }
+            .sheet(isPresented: $isRulesViewPresented) {
+                RulesView(isPresented: $isRulesViewPresented)
             }
             #endif
         }
