@@ -52,6 +52,10 @@ struct LevelGameView: View {
     // Color repeat tracking
     @State private var recentAnnouncedColors: [Color] = []
     
+    // Tile position tracking (prevent same position being correct more than 4 times in a row)
+    // Key: tile position index (0-3), Value: consecutive times this position was correct
+    @State private var consecutiveCorrectByPosition: [Int: Int] = [:]
+    
     // Services
     @State private var speechService = SpeechService()
     private let hapticsService = HapticsService.shared
@@ -414,7 +418,16 @@ struct LevelGameView: View {
             isCorrect = !backgroundMatches && !textMatches
         }
         
-        print("Tile tapped: \(colorName(for: tappedBackgroundColor)), Announced: \(colorName(for: announcedColor)), Correct: \(isCorrect)")
+        // Update tracking: track consecutive correct taps per position
+        if isCorrect {
+            // This position was correct - increment counter
+            consecutiveCorrectByPosition[index] = (consecutiveCorrectByPosition[index] ?? 0) + 1
+        } else {
+            // This position was incorrect - reset counter for this position
+            consecutiveCorrectByPosition[index] = 0
+        }
+        
+        print("Tile tapped: index \(index), \(colorName(for: tappedBackgroundColor)), Announced: \(colorName(for: announcedColor)), Correct: \(isCorrect), Consecutive correct for this position: \(consecutiveCorrectByPosition[index] ?? 0)")
         
         if isCorrect {
             // Correct tap
@@ -503,6 +516,9 @@ struct LevelGameView: View {
         // Reset color tracking
         recentAnnouncedColors = []
         
+        // Reset position tracking for new level
+        consecutiveCorrectByPosition = [:]
+        
         // Start global timer
         gameTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
             if self.timeRemaining > 0 {
@@ -526,6 +542,10 @@ struct LevelGameView: View {
     
     private func startNewRound() {
         isGameActive = false
+        
+        // Note: We DON'T reset consecutiveCorrectByPosition here because we want to track
+        // across rounds to prevent the same position from being correct 4+ times in a row
+        // The tracking will be reset when a position becomes incorrect or at level start
         
         // Store previous tiles for comparison
         if levelRun.gameType == .colorOnly {
@@ -567,6 +587,9 @@ struct LevelGameView: View {
     private func refreshBoardOnly() {
         isGameActive = false
         
+        // Note: We DON'T reset consecutiveCorrectByPosition here because tiles change position
+        // but we still want to track to prevent the same position from being correct 4+ times
+        
         // Store previous tiles for comparison
         if levelRun.gameType == .colorOnly {
             previousTiles = tiles
@@ -596,7 +619,7 @@ struct LevelGameView: View {
     
     private func buildValidGrid() -> [Color] {
         var attempts = 0
-        let maxAttempts = 10
+        let maxAttempts = 20
         
         while attempts < maxAttempts {
             var grid: [Color] = []
@@ -618,16 +641,69 @@ struct LevelGameView: View {
             // Shuffle the grid
             var shuffledGrid = grid.shuffled()
             
+            // Ensure positions that have been correct 4+ times are NOT correct in this grid
+            // BUT always maintain at least one correct tile
+            var positionsToMakeIncorrect: [Int] = []
+            for (position, consecutiveCount) in consecutiveCorrectByPosition {
+                guard position < shuffledGrid.count else { continue }
+                if consecutiveCount >= 4 {
+                    positionsToMakeIncorrect.append(position)
+                }
+            }
+            
+            // If we need to make positions incorrect, do it carefully
+            if !positionsToMakeIncorrect.isEmpty {
+                // Count how many correct tiles we currently have
+                let correctTilesCount = shuffledGrid.filter { $0 != announcedColor }.count
+                
+                // We need at least 1 correct tile, so if making positions incorrect would leave us with 0, skip this grid
+                let wouldLeaveCorrectTiles = correctTilesCount - positionsToMakeIncorrect.count
+                if wouldLeaveCorrectTiles < 1 {
+                    // This grid would have no correct tiles, try again
+                    attempts += 1
+                    continue
+                }
+                
+                // Make the positions incorrect by setting them to announced color
+                for position in positionsToMakeIncorrect {
+                    shuffledGrid[position] = announcedColor
+                }
+            }
+            
             // Check if different from previous round
             if shuffledGrid != previousTiles {
-                return shuffledGrid
+                // Verify we still have at least one correct tile
+                let correctTilesCount = shuffledGrid.filter { $0 != announcedColor }.count
+                if correctTilesCount >= 1 {
+                    return shuffledGrid
+                }
             }
             
             attempts += 1
         }
         
-        // Fallback
-        return [announcedColor, colorPalette.randomElement() ?? .blue, colorPalette.randomElement() ?? .green, colorPalette.randomElement() ?? .yellow].shuffled()
+        // Fallback: ensure positions with 4+ consecutive correct are forced to be incorrect
+        // BUT always maintain at least one correct tile
+        var fallbackGrid = [announcedColor, colorPalette.randomElement() ?? .blue, colorPalette.randomElement() ?? .green, colorPalette.randomElement() ?? .yellow]
+        
+        // Count correct tiles before modifications
+        var correctTilesCount = fallbackGrid.filter { $0 != announcedColor }.count
+        var positionsToMakeIncorrect: [Int] = []
+        for (position, consecutiveCount) in consecutiveCorrectByPosition {
+            guard position < fallbackGrid.count else { continue }
+            if consecutiveCount >= 4 {
+                positionsToMakeIncorrect.append(position)
+            }
+        }
+        
+        // Only make positions incorrect if we'll still have at least 1 correct tile
+        if correctTilesCount - positionsToMakeIncorrect.count >= 1 {
+            for position in positionsToMakeIncorrect {
+                fallbackGrid[position] = announcedColor
+            }
+        }
+        
+        return fallbackGrid.shuffled()
     }
     
     private func buildValidGridWithText() -> [Tile] {
@@ -676,9 +752,54 @@ struct LevelGameView: View {
                 // Shuffle the grid
                 var shuffledGrid = grid.shuffled()
                 
+                // Ensure positions that have been correct 4+ times are NOT correct in this grid
+                // BUT always maintain at least one correct tile
+                var positionsToMakeIncorrect: [Int] = []
+                for (position, consecutiveCount) in consecutiveCorrectByPosition {
+                    guard position < shuffledGrid.count else { continue }
+                    if consecutiveCount >= 4 {
+                        let tile = shuffledGrid[position]
+                        // Check if this position is currently correct
+                        let backgroundMatches = tile.backgroundColor == announcedColor
+                        let textMatches = tile.textLabel.lowercased() == announcedColorName.lowercased()
+                        if !backgroundMatches && !textMatches {
+                            // This position is correct and needs to be made incorrect
+                            positionsToMakeIncorrect.append(position)
+                        }
+                    }
+                }
+                
+                // If we need to make positions incorrect, do it carefully
+                if !positionsToMakeIncorrect.isEmpty {
+                    // Count how many correct tiles we currently have
+                    let correctTilesCount = shuffledGrid.filter { tile in
+                        tile.backgroundColor != announcedColor && tile.textLabel.lowercased() != announcedColorName.lowercased()
+                    }.count
+                    
+                    // We need at least 1 correct tile, so if making positions incorrect would leave us with 0, skip this grid
+                    let wouldLeaveCorrectTiles = correctTilesCount - positionsToMakeIncorrect.count
+                    if wouldLeaveCorrectTiles < 1 {
+                        // This grid would have no correct tiles, try again
+                        attempts += 1
+                        continue
+                    }
+                    
+                    // Make the positions incorrect (either by background or text matching announced)
+                    for position in positionsToMakeIncorrect {
+                        // Make it wrong by setting background to announced color (simpler)
+                        shuffledGrid[position] = Tile(backgroundColor: announcedColor, textLabel: colorNames.randomElement() ?? "blue")
+                    }
+                }
+                
                 // Check if different from previous round
                 if shuffledGrid != previousTilesWithText {
-                    return shuffledGrid
+                    // Verify we still have at least one correct tile
+                    let correctTilesCount = shuffledGrid.filter { tile in
+                        tile.backgroundColor != announcedColor && tile.textLabel.lowercased() != announcedColorName.lowercased()
+                    }.count
+                    if correctTilesCount >= 1 {
+                        return shuffledGrid
+                    }
                 }
             }
             
@@ -699,7 +820,39 @@ struct LevelGameView: View {
         let fallbackColor4 = colorPalette.randomElement() ?? .yellow
         fallbackGrid.append(Tile(backgroundColor: fallbackColor4, textLabel: colorNames.randomElement() ?? "yellow"))
         
-        return fallbackGrid.shuffled()
+        // Ensure positions with 4+ consecutive correct are forced to be incorrect
+        // BUT always maintain at least one correct tile
+        var shuffledFallback = fallbackGrid.shuffled()
+        
+        // Count correct tiles before modifications
+        var correctTilesCount = shuffledFallback.filter { tile in
+            tile.backgroundColor != announcedColor && tile.textLabel.lowercased() != announcedColorName.lowercased()
+        }.count
+        
+        var positionsToMakeIncorrect: [Int] = []
+        for (position, consecutiveCount) in consecutiveCorrectByPosition {
+            guard position < shuffledFallback.count else { continue }
+            if consecutiveCount >= 4 {
+                let tile = shuffledFallback[position]
+                // Check if this position is currently correct
+                let backgroundMatches = tile.backgroundColor == announcedColor
+                let textMatches = tile.textLabel.lowercased() == announcedColorName.lowercased()
+                if !backgroundMatches && !textMatches {
+                    // This position is correct and needs to be made incorrect
+                    positionsToMakeIncorrect.append(position)
+                }
+            }
+        }
+        
+        // Only make positions incorrect if we'll still have at least 1 correct tile
+        if correctTilesCount - positionsToMakeIncorrect.count >= 1 {
+            for position in positionsToMakeIncorrect {
+                // Make it wrong by setting background to announced color
+                shuffledFallback[position] = Tile(backgroundColor: announcedColor, textLabel: colorNames.randomElement() ?? "blue")
+            }
+        }
+        
+        return shuffledFallback
     }
     
     private func startRoundTimer(timeLimit: Double) {
