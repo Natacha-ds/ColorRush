@@ -9,6 +9,7 @@ import SwiftUI
 
 struct RulesView: View {
     @Binding var isPresented: Bool
+    var gameType: GameType? = nil // Optional game type to adapt content
     
     var body: some View {
         NavigationView {
@@ -45,9 +46,25 @@ struct RulesView: View {
                                 .font(.system(size: 22, weight: .bold))
                                 .foregroundColor(.primary)
                             
-                            Text("Tap any color except the one that's said out loud.")
-                                .font(.system(size: 16, weight: .regular))
-                                .foregroundColor(.secondary)
+                            if gameType == .colorAndText {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text("Tap any tile that does NOT match:")
+                                        .font(.system(size: 16, weight: .regular))
+                                        .foregroundColor(.secondary)
+                                    Text("• the spoken color")
+                                        .font(.system(size: 16, weight: .regular))
+                                        .foregroundColor(.secondary)
+                                        .padding(.leading, 8)
+                                    Text("• the written word on the tile.")
+                                        .font(.system(size: 16, weight: .regular))
+                                        .foregroundColor(.secondary)
+                                        .padding(.leading, 8)
+                                }
+                            } else {
+                                Text("Tap any color except the one spoken out loud.")
+                                    .font(.system(size: 16, weight: .regular))
+                                    .foregroundColor(.secondary)
+                            }
                         }
                         
                         // Gameplay section
@@ -57,10 +74,9 @@ struct RulesView: View {
                                 .foregroundColor(.primary)
                             
                             VStack(alignment: .leading, spacing: 6) {
-                                Text("• Each correct tap gives points (value depends on level).")
-                                Text("• Wrong color → −10 pts and −1 life.")
-                                Text("• No tap in time → −5 pts.")
-                                Text("• Fail to reach target score → −1 life, no point loss.")
+                                Text("• Correct tap → scores points (value depends on the level).")
+                                Text("• Wrong tap → −10 pts")
+                                Text("• No tap in time → −5 pts")
                             }
                             .font(.system(size: 16, weight: .regular))
                             .foregroundColor(.secondary)
@@ -68,22 +84,36 @@ struct RulesView: View {
                         
                         // Streak Bonus section
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("🔥 Streak Bonus")
-                                .font(.system(size: 22, weight: .bold))
-                                .foregroundColor(.primary)
-                            
-                            Text("Earn extra points for consecutive correct taps:")
+                            if gameType == .colorAndText {
+                                Text("🔥 Streak Bonus (Color + Text only)")
+                                    .font(.system(size: 22, weight: .bold))
+                                    .foregroundColor(.primary)
+                                
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text("• Every 5 consecutive correct taps → +10 pts bonus")
+                                    Text("• Streak resets on any mistake or missed tap.")
+                                }
                                 .font(.system(size: 16, weight: .regular))
                                 .foregroundColor(.secondary)
-                            
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text("• 10 in a row → +20 pts")
-                                Text("• 20 in a row → +50 pts total (includes the first 20)")
-                                Text("• 30 in a row → +80 pts total (includes all previous bonuses)")
+                                .padding(.leading, 8)
+                            } else {
+                                Text("🔥 Streak Bonus")
+                                    .font(.system(size: 22, weight: .bold))
+                                    .foregroundColor(.primary)
+                                
+                                Text("Extra points for consecutive correct taps:")
+                                    .font(.system(size: 16, weight: .regular))
+                                    .foregroundColor(.secondary)
+                                
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text("• 10 in a row → +20 pts")
+                                    Text("• 20 in a row → +50 pts total")
+                                    Text("• 30 in a row → +80 pts total")
+                                }
+                                .font(.system(size: 16, weight: .regular))
+                                .foregroundColor(.secondary)
+                                .padding(.leading, 8)
                             }
-                            .font(.system(size: 16, weight: .regular))
-                            .foregroundColor(.secondary)
-                            .padding(.leading, 8)
                         }
                         
                         // Lives section
@@ -92,9 +122,13 @@ struct RulesView: View {
                                 .font(.system(size: 22, weight: .bold))
                                 .foregroundColor(.primary)
                             
-                            Text("You start with limited lives. Lose them all = Game Over.")
-                                .font(.system(size: 16, weight: .regular))
-                                .foregroundColor(.secondary)
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("• You start with a limited number of lives.")
+                                Text("• Fail a level → −1 life.")
+                                Text("• Lose all lives → Game Over.")
+                            }
+                            .font(.system(size: 16, weight: .regular))
+                            .foregroundColor(.secondary)
                         }
                         
                         // Levels section
@@ -103,9 +137,15 @@ struct RulesView: View {
                                 .font(.system(size: 22, weight: .bold))
                                 .foregroundColor(.primary)
                             
-                            Text("Each level has a target score to beat.")
-                                .font(.system(size: 16, weight: .regular))
-                                .foregroundColor(.secondary)
+                            if gameType == .colorAndText {
+                                Text("Each level has a target score. The mode is trickier, so stay laser-focused and keep your streak alive!")
+                                    .font(.system(size: 16, weight: .regular))
+                                    .foregroundColor(.secondary)
+                            } else {
+                                Text("Each level has a target score. Be fast, stay sharp, and chain streaks to climb higher!")
+                                    .font(.system(size: 16, weight: .regular))
+                                    .foregroundColor(.secondary)
+                            }
                         }
                         
                         Spacer()

@@ -143,14 +143,14 @@ struct LevelSystemSelectionView: View {
                 LevelGameView(levelRun: levelRun)
             }
             .fullScreenCover(isPresented: $isRulesViewPresented) {
-                RulesView(isPresented: $isRulesViewPresented)
+                RulesView(isPresented: $isRulesViewPresented, gameType: selectedGameType)
             }
             #else
             .sheet(isPresented: $isGameViewPresented) {
-                LevelGameView(levelRun: levelRun)
+LevelGameView(levelRun: levelRun)
             }
             .sheet(isPresented: $isRulesViewPresented) {
-                RulesView(isPresented: $isRulesViewPresented)
+                RulesView(isPresented: $isRulesViewPresented, gameType: selectedGameType)
             }
             #endif
         }
@@ -216,7 +216,7 @@ struct LevelSystemSelectionView: View {
     // MARK: - Mistake Tolerance Selection View
     private var mistakeToleranceSelectionView: some View {
         VStack(spacing: 30) {
-            Text("How many mistakes can you handle?")
+            Text("How many lives will you play with?")
                 .font(.system(size: 18, weight: .medium))
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)

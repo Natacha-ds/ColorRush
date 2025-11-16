@@ -220,12 +220,10 @@ struct LevelGameView: View {
                                         .fontWeight(.semibold)
                                         .foregroundColor(.primary)
                                     
-                                    if let levelConfig = levelRun.currentLevelConfig {
-                                        Text("Target: \(levelConfig.requiredScore)")
-                                            .font(.title3)
-                                            .fontWeight(.semibold)
-                                            .foregroundColor(.secondary)
-                                    }
+                                    Text("Target: \(levelRun.getRequiredScore())")
+                                        .font(.title3)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(.secondary)
                                 }
                                 
                                 Spacer()
@@ -236,7 +234,7 @@ struct LevelGameView: View {
                                         .resizable()
                                         .scaledToFit()
                                         .frame(width: 26, height: 26)
-                                    Text("\(max(0, levelRun.mistakeTolerance.maxMistakes - levelRun.mistakes))")
+                                    Text("\(levelRun.remainingLives)")
                                         .font(.title3)
                                         .fontWeight(.semibold)
                                         .foregroundColor(.primary)
@@ -335,28 +333,28 @@ struct LevelGameView: View {
                                 .transition(.opacity)
                         }
                         
-                    // Streak animation overlay
-                    if showStreakAnimation {
-                        StreakAnimationView(bonusAmount: streakBonusAmount)
-                            .transition(.asymmetric(
-                                insertion: .scale.combined(with: .opacity),
-                                removal: .opacity
-                            ))
-                            .zIndex(1000)
+                        // Streak animation overlay
+                        if showStreakAnimation {
+                            StreakAnimationView(bonusAmount: streakBonusAmount)
+                                .transition(.asymmetric(
+                                    insertion: .scale.combined(with: .opacity),
+                                    removal: .opacity
+                                ))
+                                .zIndex(1000)
+                        }
+                        
+                        // Level intro pop-in overlay
+                        if showLevelIntro {
+                            LevelIntroView(
+                                levelRun: levelRun,
+                                onDismiss: {
+                                    dismissLevelIntroAndStart()
+                                }
+                            )
+                            .zIndex(2000)
+                            .transition(.opacity)
+                        }
                     }
-                    
-                    // Level intro pop-in overlay
-                    if showLevelIntro {
-                        LevelIntroView(
-                            levelRun: levelRun,
-                            onDismiss: {
-                                dismissLevelIntroAndStart()
-                            }
-                        )
-                        .zIndex(2000)
-                        .transition(.opacity)
-                    }
-                }
                 }
             }
             #if !os(macOS)
@@ -476,10 +474,10 @@ struct LevelGameView: View {
             }
         }
         
-        // Check if run-wide mistakes exceed tolerance (e.g., Easy: 6th mistake triggers game over)
-        if levelRun.mistakes > levelRun.mistakeTolerance.maxMistakes {
+        // Check if no lives remaining (game over)
+        if levelRun.isGameOver {
             isLevelFailed = true
-            failedReason = .maxMistakes
+            failedReason = .maxMistakes // Reuse this reason for "out of lives"
             return
         }
     }
@@ -708,7 +706,7 @@ struct LevelGameView: View {
     
     private func buildValidGridWithText() -> [Tile] {
         var attempts = 0
-        let maxAttempts = 10
+        let maxAttempts = 20 // Increased attempts for better reliability
         let announcedColorName = colorName(for: announcedColor)
         let colorNames = colorPalette.map { colorName(for: $0) }
         
@@ -723,18 +721,28 @@ struct LevelGameView: View {
             // Requirement 2: At least one tile with text label = announced color name (wrong by text)
             // This tile must have background ≠ announced color
             let nonAnnouncedColors = colorPalette.filter { $0 != announcedColor }
-            if let wrongByTextColor = nonAnnouncedColors.randomElement() {
-                grid.append(Tile(backgroundColor: wrongByTextColor, textLabel: announcedColorName))
+            guard let wrongByTextColor = nonAnnouncedColors.randomElement() else {
+                attempts += 1
+                continue
             }
+            grid.append(Tile(backgroundColor: wrongByTextColor, textLabel: announcedColorName))
             
             // Requirement 3: At least one tile that is correct (both background ≠ announced AND text ≠ announced)
-            let correctColor = nonAnnouncedColors.randomElement() ?? colorPalette.first ?? .blue
+            // CRITICAL: This must always exist
+            guard let correctColor = nonAnnouncedColors.randomElement() else {
+                attempts += 1
+                continue
+            }
             let correctColorName = colorName(for: correctColor)
             let nonMatchingLabels = colorNames.filter { $0.lowercased() != announcedColorName.lowercased() && $0.lowercased() != correctColorName.lowercased() }
-            let correctLabel = nonMatchingLabels.randomElement() ?? colorNames.first { $0.lowercased() != announcedColorName.lowercased() } ?? "red"
+            guard let correctLabel = nonMatchingLabels.randomElement() ?? colorNames.first(where: { $0.lowercased() != announcedColorName.lowercased() }) else {
+                attempts += 1
+                continue
+            }
             grid.append(Tile(backgroundColor: correctColor, textLabel: correctLabel))
             
             // Fill remaining slots randomly (ensuring we have 4 tiles total)
+            // Make sure we don't accidentally fill with all incorrect tiles
             while grid.count < 4 {
                 let randomColor = colorPalette.randomElement() ?? .red
                 let randomLabel = colorNames.randomElement() ?? "red"
@@ -744,81 +752,93 @@ struct LevelGameView: View {
             // Validate that we have all three required tile types
             let hasWrongByBackground = grid.contains { $0.backgroundColor == announcedColor }
             let hasWrongByText = grid.contains { $0.textLabel.lowercased() == announcedColorName.lowercased() && $0.backgroundColor != announcedColor }
-            let hasCorrectTile = grid.contains { tile in
+            let correctTiles = grid.filter { tile in
                 tile.backgroundColor != announcedColor && tile.textLabel.lowercased() != announcedColorName.lowercased()
             }
+            let hasCorrectTile = !correctTiles.isEmpty
             
-            if hasWrongByBackground && hasWrongByText && hasCorrectTile {
-                // Shuffle the grid
-                var shuffledGrid = grid.shuffled()
-                
-                // Ensure positions that have been correct 4+ times are NOT correct in this grid
-                // BUT always maintain at least one correct tile
-                var positionsToMakeIncorrect: [Int] = []
-                for (position, consecutiveCount) in consecutiveCorrectByPosition {
-                    guard position < shuffledGrid.count else { continue }
-                    if consecutiveCount >= 4 {
-                        let tile = shuffledGrid[position]
-                        // Check if this position is currently correct
-                        let backgroundMatches = tile.backgroundColor == announcedColor
-                        let textMatches = tile.textLabel.lowercased() == announcedColorName.lowercased()
-                        if !backgroundMatches && !textMatches {
-                            // This position is correct and needs to be made incorrect
-                            positionsToMakeIncorrect.append(position)
-                        }
+            // CRITICAL: Must have at least one correct tile
+            guard hasWrongByBackground && hasWrongByText && hasCorrectTile else {
+                attempts += 1
+                continue
+            }
+            
+            // Shuffle the grid
+            var shuffledGrid = grid.shuffled()
+            
+            // Ensure positions that have been correct 4+ times are NOT correct in this grid
+            // BUT always maintain at least one correct tile
+            var positionsToMakeIncorrect: [Int] = []
+            for (position, consecutiveCount) in consecutiveCorrectByPosition {
+                guard position < shuffledGrid.count else { continue }
+                if consecutiveCount >= 4 {
+                    let tile = shuffledGrid[position]
+                    // Check if this position is currently correct
+                    let backgroundMatches = tile.backgroundColor == announcedColor
+                    let textMatches = tile.textLabel.lowercased() == announcedColorName.lowercased()
+                    if !backgroundMatches && !textMatches {
+                        // This position is correct and needs to be made incorrect
+                        positionsToMakeIncorrect.append(position)
                     }
                 }
+            }
+            
+            // If we need to make positions incorrect, do it carefully
+            if !positionsToMakeIncorrect.isEmpty {
+                // Count how many correct tiles we currently have
+                let correctTilesCount = shuffledGrid.filter { tile in
+                    tile.backgroundColor != announcedColor && tile.textLabel.lowercased() != announcedColorName.lowercased()
+                }.count
                 
-                // If we need to make positions incorrect, do it carefully
-                if !positionsToMakeIncorrect.isEmpty {
-                    // Count how many correct tiles we currently have
-                    let correctTilesCount = shuffledGrid.filter { tile in
-                        tile.backgroundColor != announcedColor && tile.textLabel.lowercased() != announcedColorName.lowercased()
-                    }.count
-                    
-                    // We need at least 1 correct tile, so if making positions incorrect would leave us with 0, skip this grid
-                    let wouldLeaveCorrectTiles = correctTilesCount - positionsToMakeIncorrect.count
-                    if wouldLeaveCorrectTiles < 1 {
-                        // This grid would have no correct tiles, try again
-                        attempts += 1
-                        continue
-                    }
-                    
-                    // Make the positions incorrect (either by background or text matching announced)
-                    for position in positionsToMakeIncorrect {
-                        // Make it wrong by setting background to announced color (simpler)
-                        shuffledGrid[position] = Tile(backgroundColor: announcedColor, textLabel: colorNames.randomElement() ?? "blue")
-                    }
+                // We need at least 1 correct tile, so if making positions incorrect would leave us with 0, skip this grid
+                let wouldLeaveCorrectTiles = correctTilesCount - positionsToMakeIncorrect.count
+                if wouldLeaveCorrectTiles < 1 {
+                    // This grid would have no correct tiles, try again
+                    attempts += 1
+                    continue
                 }
                 
-                // Check if different from previous round
-                if shuffledGrid != previousTilesWithText {
-                    // Verify we still have at least one correct tile
-                    let correctTilesCount = shuffledGrid.filter { tile in
-                        tile.backgroundColor != announcedColor && tile.textLabel.lowercased() != announcedColorName.lowercased()
-                    }.count
-                    if correctTilesCount >= 1 {
-                        return shuffledGrid
-                    }
+                // Make the positions incorrect (either by background or text matching announced)
+                for position in positionsToMakeIncorrect {
+                    // Make it wrong by setting background to announced color (simpler)
+                    shuffledGrid[position] = Tile(backgroundColor: announcedColor, textLabel: colorNames.randomElement() ?? "blue")
                 }
+            }
+            
+            // CRITICAL: Final verification - must have at least one correct tile
+            let finalCorrectTilesCount = shuffledGrid.filter { tile in
+                tile.backgroundColor != announcedColor && tile.textLabel.lowercased() != announcedColorName.lowercased()
+            }.count
+            
+            guard finalCorrectTilesCount >= 1 else {
+                // No correct tiles after modifications, try again
+                attempts += 1
+                continue
+            }
+            
+            // Check if different from previous round
+            if shuffledGrid != previousTilesWithText {
+                return shuffledGrid
             }
             
             attempts += 1
         }
         
-        // Fallback: ensure all three types exist
+        // Fallback: ensure all three types exist and ALWAYS have at least one correct tile
         var fallbackGrid: [Tile] = []
         // Wrong by background
         fallbackGrid.append(Tile(backgroundColor: announcedColor, textLabel: "blue"))
         // Wrong by text
         let fallbackWrongByTextColor = colorPalette.first { $0 != announcedColor } ?? .blue
         fallbackGrid.append(Tile(backgroundColor: fallbackWrongByTextColor, textLabel: announcedColorName))
-        // Correct tile
+        // CRITICAL: At least one correct tile (background ≠ announced AND text ≠ announced)
         let fallbackCorrectColor = colorPalette.first { $0 != announcedColor && $0 != fallbackWrongByTextColor } ?? .green
-        fallbackGrid.append(Tile(backgroundColor: fallbackCorrectColor, textLabel: "red"))
-        // Fill 4th slot
-        let fallbackColor4 = colorPalette.randomElement() ?? .yellow
-        fallbackGrid.append(Tile(backgroundColor: fallbackColor4, textLabel: colorNames.randomElement() ?? "yellow"))
+        let fallbackCorrectColorName = colorName(for: fallbackCorrectColor)
+        // Ensure the label is different from announced color name
+        let fallbackCorrectLabel = colorNames.first { $0.lowercased() != announcedColorName.lowercased() && $0.lowercased() != fallbackCorrectColorName.lowercased() } ?? "red"
+        fallbackGrid.append(Tile(backgroundColor: fallbackCorrectColor, textLabel: fallbackCorrectLabel))
+        // Fill 4th slot - make it incorrect to be safe
+        fallbackGrid.append(Tile(backgroundColor: announcedColor, textLabel: colorNames.randomElement() ?? "yellow"))
         
         // Ensure positions with 4+ consecutive correct are forced to be incorrect
         // BUT always maintain at least one correct tile
@@ -828,6 +848,18 @@ struct LevelGameView: View {
         var correctTilesCount = shuffledFallback.filter { tile in
             tile.backgroundColor != announcedColor && tile.textLabel.lowercased() != announcedColorName.lowercased()
         }.count
+        
+        // CRITICAL: If we have no correct tiles in fallback, force at least one
+        if correctTilesCount == 0 {
+            // Find a position and make it correct
+            if let firstPosition = shuffledFallback.indices.first {
+                let safeColor = colorPalette.first { $0 != announcedColor } ?? .blue
+                let safeColorName = colorName(for: safeColor)
+                let safeLabel = colorNames.first { $0.lowercased() != announcedColorName.lowercased() && $0.lowercased() != safeColorName.lowercased() } ?? "red"
+                shuffledFallback[firstPosition] = Tile(backgroundColor: safeColor, textLabel: safeLabel)
+                correctTilesCount = 1
+            }
+        }
         
         var positionsToMakeIncorrect: [Int] = []
         for (position, consecutiveCount) in consecutiveCorrectByPosition {
@@ -849,6 +881,22 @@ struct LevelGameView: View {
             for position in positionsToMakeIncorrect {
                 // Make it wrong by setting background to announced color
                 shuffledFallback[position] = Tile(backgroundColor: announcedColor, textLabel: colorNames.randomElement() ?? "blue")
+            }
+        }
+        
+        // FINAL CRITICAL CHECK: Verify we have at least one correct tile
+        let finalCorrectCount = shuffledFallback.filter { tile in
+            tile.backgroundColor != announcedColor && tile.textLabel.lowercased() != announcedColorName.lowercased()
+        }.count
+        
+        // If somehow we still have no correct tiles, force one
+        if finalCorrectCount == 0 {
+            // Find first position and make it correct
+            if let firstPosition = shuffledFallback.indices.first {
+                let safeColor = colorPalette.first { $0 != announcedColor } ?? .blue
+                let safeColorName = colorName(for: safeColor)
+                let safeLabel = colorNames.first { $0.lowercased() != announcedColorName.lowercased() && $0.lowercased() != safeColorName.lowercased() } ?? "red"
+                shuffledFallback[firstPosition] = Tile(backgroundColor: safeColor, textLabel: safeLabel)
             }
         }
         
@@ -914,19 +962,19 @@ struct LevelGameView: View {
         guard let levelConfig = levelRun.currentLevelConfig else { return }
         
         // Check if score meets requirement (streak bonuses are already included in currentScore)
-        if levelRun.getCurrentLevelScore() >= levelConfig.requiredScore {
+        let requiredScore = levelRun.getRequiredScore()
+        if levelRun.getCurrentLevelScore() >= requiredScore {
             isLevelComplete = true
         } else {
-            // Level failed due to insufficient score - count as 1 mistake (1 life)
-            levelRun.mistakes += 1 // Run-wide mistake counter
-            levelRun.levelMistakes += 1 // Level-specific mistake counter
+            // Level failed due to insufficient score - lose 1 life
+            levelRun.loseLife()
             
             isLevelFailed = true
             failedReason = .insufficientScore
             
-            // Check if this mistake exceeded the mistake tolerance (game over)
-            if levelRun.mistakes > levelRun.mistakeTolerance.maxMistakes {
-                failedReason = .maxMistakes
+            // Check if no lives remaining (game over)
+            if levelRun.isGameOver {
+                failedReason = .maxMistakes // Reuse this reason for "out of lives"
             }
         }
     }
@@ -1151,19 +1199,17 @@ struct LevelIntroView: View {
                         .padding(.top, 8)
                     
                     // Score container with light pink background - reduced height by 15%
-                    if let levelConfig = levelRun.currentLevelConfig {
-                        Text("\(levelConfig.requiredScore)")
-                            .font(.system(size: 48, weight: .bold))
-                            .foregroundColor(Color(hex: "E60076"))
-                            .frame(minWidth: 120)
-                            .padding(.horizontal, 24)
-                            .padding(.vertical, 10) // Reduced by 15% (12 * 0.85 = 10.2 ≈ 10)
+                    Text("\(levelRun.getRequiredScore())")
+                        .font(.system(size: 48, weight: .bold))
+                        .foregroundColor(Color(hex: "E60076"))
+                        .frame(minWidth: 120)
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 10) // Reduced by 15% (12 * 0.85 = 10.2 ≈ 10)
                             .background(
                                 RoundedRectangle(cornerRadius: 12)
                                     .fill(Color(hex: "FFC9C9"))
                                     .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
                             )
-                    }
                     
                     // Level description with bomb icon - 20% larger, text horizontally aligned with icon
                     if !levelDescription.isEmpty {
@@ -1279,9 +1325,8 @@ struct LevelCompleteView: View {
     }
     
     private var mistakesPenalty: Int {
-        // Only show mistakes that resulted in point deductions (wrong taps)
-        // Exclude mistakes from insufficient score (no point deduction)
-        return levelRun.levelMistakesFromWrongTaps * -10
+        // Show penalties from wrong taps (only point deductions, no life cost)
+        return levelRun.levelWrongTaps * -10
     }
     
     // Display value for correct answers (points, not count)
@@ -1303,7 +1348,7 @@ struct LevelCompleteView: View {
     
     // Calculate remaining lives
     private var remainingLives: Int {
-        return max(0, levelRun.mistakeTolerance.maxMistakes - levelRun.mistakes)
+        return levelRun.remainingLives
     }
     
     // Check if we should show bonus stat block (all levels 1-10)
@@ -1386,31 +1431,29 @@ struct LevelCompleteView: View {
                         .font(.system(size: 15, weight: .regular))
                         .foregroundColor(.secondary)
                     
-                    if let levelConfig = levelRun.currentLevelConfig {
-                        HStack(spacing: 4) {
-                            Text("\(finalLevelScore)")
-                                .font(.system(size: 40, weight: .black))
-                                .foregroundColor(.white)
-                            Text("/\(levelConfig.requiredScore)")
-                                .font(.system(size: 12, weight: .bold))
-                                .foregroundColor(.white.opacity(0.9))
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 14)
-                        .background(
-                            LinearGradient(
-                                gradient: Gradient(stops: [
-                                    .init(color: Color(hex: "278310"), location: 0.0),
-                                    .init(color: Color(hex: "10DA38"), location: 0.5),
-                                    .init(color: Color(hex: "64FB8A"), location: 1.0)
-                                ]),
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .cornerRadius(30)
-                        .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+                    HStack(spacing: 4) {
+                        Text("\(finalLevelScore)")
+                            .font(.system(size: 40, weight: .black))
+                            .foregroundColor(.white)
+                        Text("/\(levelRun.getRequiredScore())")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(.white.opacity(0.9))
                     }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 14)
+                    .background(
+                        LinearGradient(
+                            gradient: Gradient(stops: [
+                                .init(color: Color(hex: "278310"), location: 0.0),
+                                .init(color: Color(hex: "10DA38"), location: 0.5),
+                                .init(color: Color(hex: "64FB8A"), location: 1.0)
+                            ]),
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .cornerRadius(30)
+                    .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
                 }
                 
                 // 4 Stat Blocks in a row
@@ -1425,9 +1468,9 @@ struct LevelCompleteView: View {
                         iconSize: 34.56
                     )
                     
-                    // Heart - Mistakes (always shown) - show penalty points - icon +20% more
+                    // Fail - Mistakes (always shown) - show penalty points - icon +20% more
                     StatBlock(
-                        iconName: "Heart",
+                        iconName: "Fail",
                         value: mistakesPenalty != 0 ? "\(mistakesPenalty)" : "0",
                         color: .pink,
                         backgroundColor: Color(hex: "FEF2F2"),
@@ -1555,7 +1598,7 @@ struct LevelFailedView: View {
     
     // Calculate remaining lives
     private var remainingLives: Int {
-        return max(0, levelRun.mistakeTolerance.maxMistakes - levelRun.mistakes)
+        return levelRun.remainingLives
     }
     
     // Computed property for total score including current level's positive points
@@ -1571,9 +1614,8 @@ struct LevelFailedView: View {
     
     // Calculate mistakes penalty
     private var mistakesPenalty: Int {
-        // Only show mistakes that resulted in point deductions (wrong taps)
-        // Exclude mistakes from insufficient score (no point deduction)
-        return levelRun.levelMistakesFromWrongTaps * -10
+        // Show penalties from wrong taps (only point deductions, no life cost)
+        return levelRun.levelWrongTaps * -10
     }
     
     // Calculate timeouts penalty
@@ -1658,21 +1700,20 @@ struct LevelFailedView: View {
                         .font(.system(size: 15, weight: .regular))
                         .foregroundColor(.secondary)
                     
-                    if let levelConfig = levelRun.currentLevelConfig {
-                        HStack(spacing: 4) {
-                            Text("\(finalLevelScore)")
-                                .font(.system(size: 40, weight: .black))
-                                .foregroundColor(.white)
-                            Text("/\(levelConfig.requiredScore)")
-                                .font(.system(size: 12, weight: .bold))
-                                .foregroundColor(.white.opacity(0.9))
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 14)
-                        .background(
-                            LinearGradient(
-                                gradient: Gradient(stops: [
-                                    .init(color: Color(hex: "FD0000"), location: 0.0),
+                    HStack(spacing: 4) {
+                        Text("\(finalLevelScore)")
+                            .font(.system(size: 40, weight: .black))
+                            .foregroundColor(.white)
+                        Text("/\(levelRun.getRequiredScore())")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(.white.opacity(0.9))
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 14)
+                    .background(
+                        LinearGradient(
+                            gradient: Gradient(stops: [
+                                .init(color: Color(hex: "FD0000"), location: 0.0),
                                     .init(color: Color(hex: "FF4B04"), location: 0.5),
                                     .init(color: Color(hex: "FB6466"), location: 1.0)
                                 ]),
@@ -1682,7 +1723,6 @@ struct LevelFailedView: View {
                         )
                         .cornerRadius(30)
                         .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
-                    }
                 }
             
                 // 4 Stat Blocks in a row - same as Complete view
@@ -1697,9 +1737,9 @@ struct LevelFailedView: View {
                         iconSize: 34.56
                     )
                     
-                    // Heart - Mistakes (always shown) - show penalty points - icon +20% more
+                    // Fail - Mistakes (always shown) - show penalty points - icon +20% more
                     StatBlock(
-                        iconName: "Heart",
+                        iconName: "Fail",
                         value: mistakesPenalty != 0 ? "\(mistakesPenalty)" : "0",
                         color: .pink,
                         backgroundColor: Color(hex: "FEF2F2"),
@@ -1891,7 +1931,7 @@ struct LevelGameOverView: View {
     
     // Calculate remaining lives (should be 0 for game over)
     private var remainingLives: Int {
-        return max(0, levelRun.mistakeTolerance.maxMistakes - levelRun.mistakes)
+        return levelRun.remainingLives
     }
     
     // Total score including current level's positive points

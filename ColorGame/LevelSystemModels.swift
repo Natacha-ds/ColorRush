@@ -27,7 +27,7 @@ enum GameType: String, CaseIterable, Identifiable {
     }
 }
 
-// MARK: - Mistake Tolerance
+// MARK: - Mistake Tolerance (now represents total lives for the run)
 enum MistakeTolerance: String, CaseIterable, Identifiable {
     case easy = "easy"
     case normal = "normal"
@@ -43,19 +43,19 @@ enum MistakeTolerance: String, CaseIterable, Identifiable {
         }
     }
     
-    var maxMistakes: Int {
+    var totalLives: Int {
         switch self {
         case .easy: return 5
         case .normal: return 3
-        case .hard: return 0
+        case .hard: return 1
         }
     }
     
     var description: String {
         switch self {
-        case .easy: return "5 mistakes allowed"
-        case .normal: return "3 mistakes allowed"
-        case .hard: return "No mistakes allowed"
+        case .easy: return "5 lives"
+        case .normal: return "3 lives"
+        case .hard: return "1 life"
         }
     }
 }
@@ -105,6 +105,33 @@ class LevelSystemConfig {
     func getTotalLevels() -> Int {
         return levels.count
     }
+    
+    // Get required score for a level based on game type
+    func getRequiredScore(for levelNumber: Int, gameType: GameType) -> Int {
+        guard let levelConfig = getLevel(levelNumber) else {
+            return 0
+        }
+        
+        // For Color + Text mode, use different required scores
+        if gameType == .colorAndText {
+            switch levelNumber {
+            case 1: return 260
+            case 2: return 300
+            case 3: return 350
+            case 4: return 390
+            case 5: return 430
+            case 6: return 470
+            case 7: return 550
+            case 8: return 600
+            case 9: return 630
+            case 10: return 680
+            default: return levelConfig.requiredScore
+            }
+        }
+        
+        // For Color Only mode, use the default required score
+        return levelConfig.requiredScore
+    }
 }
 
 // MARK: - Level Run State
@@ -120,13 +147,12 @@ class LevelRun: ObservableObject {
     @Published var levelPositivePoints: Int = 0 // Positive points earned this level (to be added to globalScore on completion)
     @Published var levelBasePoints: Int = 0 // Base points from correct answers only (excluding bonuses, for display)
     @Published var levelPenalties: Int = 0 // Penalties from current level attempt (to be removed from globalScore on retry)
-    @Published var mistakes: Int = 0 // Run-wide mistakes (cumulative across all levels)
+    @Published var livesLost: Int = 0 // Lives lost during the run (only when failing a level)
     @Published var timeouts: Int = 0
     @Published var perfectLevels: [Int] = [] // Track which levels were completed perfectly
     
     // Level-specific tracking
-    @Published var levelMistakes: Int = 0 // All mistakes (wrong taps + insufficient score)
-    @Published var levelMistakesFromWrongTaps: Int = 0 // Only mistakes from wrong taps (with point deductions)
+    @Published var levelWrongTaps: Int = 0 // Wrong taps (only for display/statistics, no life cost)
     @Published var levelTimeouts: Int = 0
     @Published var levelCorrectAnswers: Int = 0 // Track correct answers for score breakdown
     
@@ -156,24 +182,38 @@ class LevelRun: ObservableObject {
     
     var canProceedToNextLevel: Bool {
         guard let levelConfig = currentLevelConfig else { return false }
-        return currentScore >= levelConfig.requiredScore
+        let requiredScore = config.getRequiredScore(for: currentLevel, gameType: gameType)
+        return currentScore >= requiredScore
+    }
+    
+    // Get required score for current level based on game type
+    func getRequiredScore() -> Int {
+        return config.getRequiredScore(for: currentLevel, gameType: gameType)
     }
     
     // Deprecated: Perfect level check (no longer used for bonuses)
     var isPerfectLevel: Bool {
-        return levelMistakes == 0 && levelTimeouts == 0
+        return levelWrongTaps == 0 && levelTimeouts == 0
     }
     
     // Calculate streak bonus for current streak count
     private func calculateStreakBonus(for streak: Int) -> Int {
-        if streak >= 30 {
-            return 80
-        } else if streak >= 20 {
-            return 50
-        } else if streak >= 10 {
-            return 20
+        if gameType == .colorAndText {
+            // Color + Text mode: +10 points every 5 consecutive correct answers
+            // At 5, 10, 15, 20, 25, 30, etc.
+            let bonusCount = streak / 5
+            return bonusCount * 10
+        } else {
+            // Color Only mode: original system (10→+20, 20→+50, 30→+80)
+            if streak >= 30 {
+                return 80
+            } else if streak >= 20 {
+                return 50
+            } else if streak >= 10 {
+                return 20
+            }
+            return 0
         }
-        return 0
     }
     
     var shouldShowDevTools: Bool {
@@ -188,9 +228,10 @@ class LevelRun: ObservableObject {
         
         // Award minimum passing score (no perfect bonus)
         // Set both currentScore and levelPositivePoints to required score
-        currentScore = levelConfig.requiredScore
-        levelPositivePoints = levelConfig.requiredScore
-        levelBasePoints = levelConfig.requiredScore // Also set base points for display
+        let requiredScore = config.getRequiredScore(for: currentLevel, gameType: gameType)
+        currentScore = requiredScore
+        levelPositivePoints = requiredScore
+        levelBasePoints = requiredScore // Also set base points for display
         
         // Use completeLevel() to properly add points to globalScore
         completeLevel()
@@ -206,9 +247,8 @@ class LevelRun: ObservableObject {
     }
     
     func startLevel() {
-        // Reset level-specific stats and score (mistakes remain cumulative)
-        levelMistakes = 0
-        levelMistakesFromWrongTaps = 0
+        // Reset level-specific stats and score (lives remain cumulative)
+        levelWrongTaps = 0
         levelTimeouts = 0
         levelCorrectAnswers = 0
         currentScore = 0 // Each level starts with 0 points
@@ -254,10 +294,9 @@ class LevelRun: ObservableObject {
         levelBasePoints = 0
         levelPenalties = 0
         globalScore = 0 // Reset global score for new run
-        mistakes = 0 // Reset run-wide mistakes
+        livesLost = 0 // Reset lives lost for new run
         timeouts = 0
-        levelMistakes = 0
-        levelMistakesFromWrongTaps = 0
+        levelWrongTaps = 0
         levelTimeouts = 0
         levelCorrectAnswers = 0
         currentStreak = 0
@@ -273,8 +312,7 @@ class LevelRun: ObservableObject {
         // Remove penalties from failed attempt from globalScore
         globalScore += levelPenalties // Add back the penalties that were subtracted
         
-        levelMistakes = 0
-        levelMistakesFromWrongTaps = 0
+        levelWrongTaps = 0
         levelTimeouts = 0
         levelCorrectAnswers = 0
         currentScore = 0 // Reset level score to 0 when retrying
@@ -284,7 +322,7 @@ class LevelRun: ObservableObject {
         currentStreak = 0 // Reset streak when retrying
         levelStreakBonuses = 0 // Reset streak bonuses when retrying
         lastBonusEarned = 0 // Reset bonus animation trigger
-        // Note: mistakes and timeouts are NOT reset here (run-wide)
+        // Note: livesLost is NOT reset here (run-wide)
         // Note: Positive points from failed attempt are discarded (never added to globalScore)
         // Note: Penalties from failed attempt are now removed from globalScore
     }
@@ -296,12 +334,17 @@ class LevelRun: ObservableObject {
         currentStreak += 1
         levelCorrectAnswers += 1 // Track for score breakdown
         
-        // Add base points (without bonuses)
-        currentScore += levelConfig.pointsPerRound
-        levelPositivePoints += levelConfig.pointsPerRound
-        levelBasePoints += levelConfig.pointsPerRound // Track base points separately for display
+        // Get points based on game type and level
+        let pointsToAdd = getPointsPerRound(for: levelConfig)
         
-        // Check for streak bonus milestones (10, 20, 30)
+        // Add base points (without bonuses)
+        currentScore += pointsToAdd
+        levelPositivePoints += pointsToAdd
+        levelBasePoints += pointsToAdd // Track base points separately for display
+        
+        // Check for streak bonus milestones
+        // Color Only: 10→+20, 20→+50, 30→+80
+        // Color + Text: +10 every 5 consecutive (5, 10, 15, 20, 25, 30, etc.)
         // Calculate the total bonus that should be applied at this streak level
         let totalBonusAtThisStreak = calculateStreakBonus(for: currentStreak)
         // Calculate how much bonus we've already added (from previous milestones)
@@ -325,25 +368,40 @@ class LevelRun: ObservableObject {
         // Reset streak on wrong answer
         currentStreak = 0
         
+        // Wrong answer only costs points, NOT lives
         // Penalties apply immediately to both currentScore and globalScore
         currentScore -= 10
         globalScore -= 10
         levelPenalties += 10 // Track penalty for potential retry removal
-        mistakes += 1 // Run-wide mistake counter
-        levelMistakes += 1 // Level-specific mistake counter (all mistakes)
-        levelMistakesFromWrongTaps += 1 // Only wrong-tap mistakes (for stat block display)
+        levelWrongTaps += 1 // Track for statistics/display only
     }
     
     func addTimeout() {
         // Reset streak on timeout (missed round)
         currentStreak = 0
         
+        // Timeout only costs points, NOT lives
         // Penalties apply immediately to both currentScore and globalScore
         currentScore -= 5
         globalScore -= 5
         levelPenalties += 5 // Track penalty for potential retry removal
-        timeouts += 1 // Run-wide timeout counter
+        timeouts += 1 // Run-wide timeout counter (for statistics)
         levelTimeouts += 1 // Level-specific timeout counter
+    }
+    
+    // Lose a life when failing a level (not reaching required score)
+    func loseLife() {
+        livesLost += 1
+    }
+    
+    // Get remaining lives
+    var remainingLives: Int {
+        return max(0, mistakeTolerance.totalLives - livesLost)
+    }
+    
+    // Check if game over (no lives remaining)
+    var isGameOver: Bool {
+        return remainingLives <= 0
     }
     
     func getCurrentLevelScore() -> Int {
@@ -359,5 +417,29 @@ class LevelRun: ObservableObject {
     // Get total streak bonuses earned this level
     func getLevelStreakBonuses() -> Int {
         return levelStreakBonuses
+    }
+    
+    // Get points per round based on game type and level
+    private func getPointsPerRound(for levelConfig: LevelConfig) -> Int {
+        // For Color Only mode, use the standard points from config
+        if gameType == .colorOnly {
+            return levelConfig.pointsPerRound
+        }
+        
+        // For Color + Text mode, use different points based on level
+        switch levelConfig.id {
+        case 1, 2:
+            return 15 // Instead of 10
+        case 3, 4:
+            return 20 // Instead of 15
+        case 5, 6:
+            return 25 // Instead of 20
+        case 7, 8:
+            return 30 // Instead of 25
+        case 9, 10:
+            return 35 // Instead of 30
+        default:
+            return levelConfig.pointsPerRound // Fallback to standard points
+        }
     }
 }
