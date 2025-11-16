@@ -9,12 +9,14 @@ class CustomizationStore: ObservableObject {
     private let levelSystemEnabledKey = "level.system.enabled"
     
     @Published var customization: GameCustomization
-    @Published var isLevelSystemEnabled: Bool = false
+    @Published var isLevelSystemEnabled: Bool = true // Always enabled - new system only
     
     private init() {
         self.customization = GameCustomization()
         self.customization = loadCustomization()
-        self.isLevelSystemEnabled = loadLevelSystemEnabled()
+        // Force new system to always be enabled
+        self.isLevelSystemEnabled = true
+        userDefaults.set(true, forKey: levelSystemEnabledKey)
     }
     
     private func loadCustomization() -> GameCustomization {
