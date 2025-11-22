@@ -28,6 +28,7 @@ struct HomeView: View {
                     endPoint: .bottom
                 )
                 .ignoresSafeArea()
+                .preferredColorScheme(.light)
                 
                 VStack(spacing: 0) {
                     // Top section with Best Score
