@@ -621,19 +621,31 @@ struct LevelGameView: View {
         
         while attempts < maxAttempts {
             var grid: [Color] = []
+            let nonAnnouncedColors = colorPalette.filter { $0 != announcedColor }
             
-            // Add the announced color at least once
+            // CRITICAL: Guarantee at least 1 incorrect (announced color) and 1 correct (different color)
+            // Add the announced color at least once (incorrect tile)
             grid.append(announcedColor)
             
-            // Add at least one different color
-            let nonAnnouncedColors = colorPalette.filter { $0 != announcedColor }
-            if let differentColor = nonAnnouncedColors.randomElement() {
-                grid.append(differentColor)
+            // Add at least one different color (correct tile)
+            guard let differentColor = nonAnnouncedColors.randomElement() else {
+                attempts += 1
+                continue
             }
+            grid.append(differentColor)
             
-            // Fill remaining slots randomly
-            while grid.count < 4 {
-                grid.append(colorPalette.randomElement() ?? .red)
+            // Fill remaining 2 slots: ensure we maintain at least 1 correct and 1 incorrect
+            // Strategy: Add 1 more announced color and 1 more different color
+            if grid.count < 4 {
+                grid.append(announcedColor) // Add another incorrect tile
+            }
+            if grid.count < 4 {
+                // Add another correct tile (different from announced)
+                if let anotherDifferentColor = nonAnnouncedColors.randomElement() {
+                    grid.append(anotherDifferentColor)
+                } else {
+                    grid.append(differentColor) // Fallback to the same different color
+                }
             }
             
             // Shuffle the grid
@@ -668,11 +680,13 @@ struct LevelGameView: View {
                 }
             }
             
-            // Check if different from previous round
-            if shuffledGrid != previousTiles {
-                // Verify we still have at least one correct tile
-                let correctTilesCount = shuffledGrid.filter { $0 != announcedColor }.count
-                if correctTilesCount >= 1 {
+            // Final verification: ensure we have at least 1 correct and 1 incorrect
+            let finalCorrectCount = shuffledGrid.filter { $0 != announcedColor }.count
+            let finalIncorrectCount = shuffledGrid.filter { $0 == announcedColor }.count
+            
+            if finalCorrectCount >= 1 && finalIncorrectCount >= 1 {
+                // Check if different from previous round
+                if shuffledGrid != previousTiles {
                     return shuffledGrid
                 }
             }
@@ -680,9 +694,15 @@ struct LevelGameView: View {
             attempts += 1
         }
         
-        // Fallback: ensure positions with 4+ consecutive correct are forced to be incorrect
-        // BUT always maintain at least one correct tile
-        var fallbackGrid = [announcedColor, colorPalette.randomElement() ?? .blue, colorPalette.randomElement() ?? .green, colorPalette.randomElement() ?? .yellow]
+        // Fallback: guarantee at least 1 correct and 1 incorrect
+        let nonAnnouncedColors = colorPalette.filter { $0 != announcedColor }
+        guard let correctColor1 = nonAnnouncedColors.randomElement() else {
+            // If no non-announced colors available (shouldn't happen), use a fallback
+            return [announcedColor, .red, .blue, .green].filter { $0 != announcedColor || $0 == announcedColor }
+        }
+        let correctColor2 = nonAnnouncedColors.count > 1 ? nonAnnouncedColors.filter { $0 != correctColor1 }.randomElement() ?? correctColor1 : correctColor1
+        
+        var fallbackGrid = [announcedColor, announcedColor, correctColor1, correctColor2]
         
         // Count correct tiles before modifications
         var correctTilesCount = fallbackGrid.filter { $0 != announcedColor }.count
@@ -701,7 +721,16 @@ struct LevelGameView: View {
             }
         }
         
-        return fallbackGrid.shuffled()
+        // Final verification of fallback
+        let finalCorrect = fallbackGrid.filter { $0 != announcedColor }.count
+        let finalIncorrect = fallbackGrid.filter { $0 == announcedColor }.count
+        
+        if finalCorrect >= 1 && finalIncorrect >= 1 {
+            return fallbackGrid.shuffled()
+        } else {
+            // Last resort: force 2 correct and 2 incorrect
+            return [announcedColor, announcedColor, correctColor1, correctColor2].shuffled()
+        }
     }
     
     private func buildValidGridWithText() -> [Tile] {
@@ -741,12 +770,12 @@ struct LevelGameView: View {
             }
             grid.append(Tile(backgroundColor: correctColor, textLabel: correctLabel))
             
-            // Fill remaining slots randomly (ensuring we have 4 tiles total)
-            // Make sure we don't accidentally fill with all incorrect tiles
-            while grid.count < 4 {
-                let randomColor = colorPalette.randomElement() ?? .red
-                let randomLabel = colorNames.randomElement() ?? "red"
-                grid.append(Tile(backgroundColor: randomColor, textLabel: randomLabel))
+            // Fill remaining slot (4th tile) - ensure we maintain at least 1 correct tile
+            // We already have: 1 wrong by background, 1 wrong by text, 1 correct
+            // For the 4th tile, add another incorrect tile (wrong by background) to maintain balance
+            if grid.count < 4 {
+                let fourthTileLabel = colorNames.randomElement() ?? "blue"
+                grid.append(Tile(backgroundColor: announcedColor, textLabel: fourthTileLabel))
             }
             
             // Validate that we have all three required tile types
@@ -757,8 +786,17 @@ struct LevelGameView: View {
             }
             let hasCorrectTile = !correctTiles.isEmpty
             
-            // CRITICAL: Must have at least one correct tile
+            // CRITICAL: Must have at least one correct tile and at least one incorrect tile
             guard hasWrongByBackground && hasWrongByText && hasCorrectTile else {
+                attempts += 1
+                continue
+            }
+            
+            // Final check: ensure we have at least 1 correct and at least 1 incorrect
+            let incorrectTiles = grid.filter { tile in
+                tile.backgroundColor == announcedColor || tile.textLabel.lowercased() == announcedColorName.lowercased()
+            }
+            guard incorrectTiles.count >= 1 && correctTiles.count >= 1 else {
                 attempts += 1
                 continue
             }
@@ -805,13 +843,16 @@ struct LevelGameView: View {
                 }
             }
             
-            // CRITICAL: Final verification - must have at least one correct tile
-            let finalCorrectTilesCount = shuffledGrid.filter { tile in
+            // CRITICAL: Final verification - must have at least one correct tile AND one incorrect tile
+            let finalCorrectTiles = shuffledGrid.filter { tile in
                 tile.backgroundColor != announcedColor && tile.textLabel.lowercased() != announcedColorName.lowercased()
-            }.count
+            }
+            let finalIncorrectTiles = shuffledGrid.filter { tile in
+                tile.backgroundColor == announcedColor || tile.textLabel.lowercased() == announcedColorName.lowercased()
+            }
             
-            guard finalCorrectTilesCount >= 1 else {
-                // No correct tiles after modifications, try again
+            guard finalCorrectTiles.count >= 1 && finalIncorrectTiles.count >= 1 else {
+                // Must have at least 1 correct and 1 incorrect tile, try again
                 attempts += 1
                 continue
             }
