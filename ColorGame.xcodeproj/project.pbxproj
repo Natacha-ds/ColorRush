@@ -6,6 +6,11 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		C65EA5212ED3338600DD0F8E /* .swiftformat in Resources */ = {isa = PBXBuildFile; fileRef = C65EA5202ED3338600DD0F8E /* .swiftformat */; };
+		C69333AB2ED32AFB0078C8A6 /* .swiftlint.yml in Resources */ = {isa = PBXBuildFile; fileRef = C69333A92ED32AEE0078C8A6 /* .swiftlint.yml */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		BB7594512E86AA8B0043F341 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -27,6 +32,8 @@
 		BB7594412E86AA890043F341 /* ColorGame.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ColorGame.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BB7594502E86AA8B0043F341 /* ColorGameTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ColorGameTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		BB75945A2E86AA8B0043F341 /* ColorGameUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ColorGameUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		C65EA5202ED3338600DD0F8E /* .swiftformat */ = {isa = PBXFileReference; lastKnownFileType = text; path = .swiftformat; sourceTree = "<group>"; };
+		C69333A92ED32AEE0078C8A6 /* .swiftlint.yml */ = {isa = PBXFileReference; lastKnownFileType = text.yaml; path = .swiftlint.yml; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -75,6 +82,8 @@
 		BB7594382E86AA890043F341 = {
 			isa = PBXGroup;
 			children = (
+				C69333A92ED32AEE0078C8A6 /* .swiftlint.yml */,
+				C65EA5202ED3338600DD0F8E /* .swiftformat */,
 				BB7594432E86AA890043F341 /* ColorGame */,
 				BB7594532E86AA8B0043F341 /* ColorGameTests */,
 				BB75945D2E86AA8B0043F341 /* ColorGameUITests */,
@@ -102,6 +111,8 @@
 				BB75943D2E86AA890043F341 /* Sources */,
 				BB75943E2E86AA890043F341 /* Frameworks */,
 				BB75943F2E86AA890043F341 /* Resources */,
+				C69333A82ED3299B0078C8A6 /* SwiftLint */,
+				C69333AC2ED330B90078C8A6 /* SwiftFormat */,
 			);
 			buildRules = (
 			);
@@ -212,6 +223,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C69333AB2ED32AFB0078C8A6 /* .swiftlint.yml in Resources */,
+				C65EA5212ED3338600DD0F8E /* .swiftformat in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -230,6 +243,48 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		C69333A82ED3299B0078C8A6 /* SwiftLint */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 12;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/.swiftlint.yml",
+				"$(TARGET_BUILD_DIR)/$(INFOPLIST_PATH)",
+			);
+			name = SwiftLint;
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "export PATH=\"$PATH:/opt/homebrew/bin:/usr/local/bin\"\n\nif which swiftlint > /dev/null; then\n  swiftlint lint --force-exclude\nelse\n  echo \"warning: SwiftLint not installed\"\nfi\n";
+		};
+		C69333AC2ED330B90078C8A6 /* SwiftFormat */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = SwiftFormat;
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "export PATH=\"$PATH:/opt/homebrew/bin:/usr/local/bin\"\n\nif which swiftformat > /dev/null; then\n  swiftformat . --swiftversion 5.9\nelse\n  echo \"warning: SwiftFormat not installed\"\nfi\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		BB75943D2E86AA890043F341 /* Sources */ = {
@@ -390,8 +445,10 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 4G4JXCMDD9;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
@@ -432,8 +489,10 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 4G4JXCMDD9;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;

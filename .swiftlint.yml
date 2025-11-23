@@ -1,0 +1,9 @@
+opt_in_rules:
+  - unused_setter_value
+
+analyzer_rules:
+  - unused_declaration
+  - unused_import
+
+disabled_rules:
+  - line_length  # Optionnel, si vous trouvez ça trop strict
