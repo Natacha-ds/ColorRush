@@ -1,0 +1,20 @@
+# Xcode
+*.xcuserstate
+*.xcuserdatad
+xcuserdata/
+
+# Build folders
+build/
+DerivedData/
+
+# CocoaPods
+Pods/
+*.xcworkspace
+!default.xcworkspace
+
+# Swift Package Manager
+.swiftpm/
+.build/
+
+# Other
+.DS_Store
