@@ -70,7 +70,6 @@ struct LevelConfig: Codable, Identifiable {
   let timePerResponse: Double? // nil means no limit
   let requiredScore: Int
   let pointsPerRound: Int
-  let perfectBonus: Int?
 
   var hasTimeLimit: Bool {
     timePerResponse != nil
@@ -95,80 +94,70 @@ class LevelSystemConfig {
       durationSeconds: 30,
       timePerResponse: nil,
       requiredScore: 250,
-      pointsPerRound: 10,
-      perfectBonus: nil
+      pointsPerRound: 10
     ),
     LevelConfig(
       id: 2,
       durationSeconds: 30,
       timePerResponse: nil,
       requiredScore: 280,
-      pointsPerRound: 10,
-      perfectBonus: nil
+      pointsPerRound: 10
     ),
     LevelConfig(
       id: 3,
       durationSeconds: 30,
       timePerResponse: 1.8,
       requiredScore: 370,
-      pointsPerRound: 15,
-      perfectBonus: 30
+      pointsPerRound: 15
     ),
     LevelConfig(
       id: 4,
       durationSeconds: 30,
       timePerResponse: 1.8,
       requiredScore: 420,
-      pointsPerRound: 15,
-      perfectBonus: 30
+      pointsPerRound: 15
     ),
     LevelConfig(
       id: 5,
       durationSeconds: 30,
       timePerResponse: 1.5,
       requiredScore: 500,
-      pointsPerRound: 20,
-      perfectBonus: 40
+      pointsPerRound: 20
     ),
     LevelConfig(
       id: 6,
       durationSeconds: 30,
       timePerResponse: 1.5,
       requiredScore: 530,
-      pointsPerRound: 20,
-      perfectBonus: 40
+      pointsPerRound: 20
     ),
     LevelConfig(
       id: 7,
       durationSeconds: 30,
       timePerResponse: 1.2,
       requiredScore: 600,
-      pointsPerRound: 25,
-      perfectBonus: 50
+      pointsPerRound: 25
     ),
     LevelConfig(
       id: 8,
       durationSeconds: 30,
       timePerResponse: 1.2,
       requiredScore: 650,
-      pointsPerRound: 25,
-      perfectBonus: 50
+      pointsPerRound: 25
     ),
     LevelConfig(
       id: 9,
       durationSeconds: 30,
       timePerResponse: 1.0,
       requiredScore: 700,
-      pointsPerRound: 30,
-      perfectBonus: 60
+      pointsPerRound: 30
     ),
     LevelConfig(
       id: 10,
       durationSeconds: 30,
       timePerResponse: 1.0,
       requiredScore: 750,
-      pointsPerRound: 30,
-      perfectBonus: 60
+      pointsPerRound: 30
     ),
   ]
 
@@ -231,8 +220,6 @@ class LevelRun: ObservableObject {
   @Published var livesLost: Int =
     0 // Lives lost during the run (only when failing a level)
   @Published var timeouts: Int = 0
-  @Published var perfectLevels: [Int] =
-    [] // Track which levels were completed perfectly
 
   // Level-specific tracking
   @Published var levelWrongTaps: Int =
@@ -280,11 +267,6 @@ class LevelRun: ObservableObject {
   // Get required score for current level based on game type
   func getRequiredScore() -> Int {
     config.getRequiredScore(for: currentLevel, gameType: gameType)
-  }
-
-  // Deprecated: Perfect level check (no longer used for bonuses)
-  var isPerfectLevel: Bool {
-    levelWrongTaps == 0 && levelTimeouts == 0
   }
 
   // Calculate streak bonus for current streak count
@@ -400,7 +382,6 @@ class LevelRun: ObservableObject {
     currentStreak = 0
     levelStreakBonuses = 0
     lastBonusEarned = 0
-    perfectLevels = []
     completedLevels = []
     failedLevels = []
     levelScores = [:] // Clear previous level scores
@@ -506,12 +487,6 @@ class LevelRun: ObservableObject {
 
   func getCurrentLevelScore() -> Int {
     currentScore // currentScore is already the level score
-  }
-
-  // Deprecated: Perfect bonus (replaced by streak bonuses)
-  func getPerfectBonus() -> Int {
-    // No longer used - streak bonuses are awarded during gameplay
-    0
   }
 
   // Get total streak bonuses earned this level
