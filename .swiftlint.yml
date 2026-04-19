@@ -7,3 +7,20 @@ analyzer_rules:
 
 disabled_rules:
   - line_length  # Optionnel, si vous trouvez ça trop strict
+
+type_body_length:
+  warning: 350
+  
+file_length:
+  warning: 1000
+
+function_body_length:
+  warning: 100
+
+cyclomatic_complexity:
+  warning: 10
+
+identifier_name:
+  min_length:
+    warning: 1
+  
