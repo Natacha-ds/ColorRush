@@ -27,7 +27,7 @@ Each bug is intended to become an individual OpenSpec change.
 | BUG-011 | P1 | ✅ Done | corollary of BUG-004 (commit `dd75ba2`) |
 | BUG-012 | P2 | ⏳ Open | — |
 | BUG-013 | P2 | ⏳ Open | — |
-| BUG-014 | P3 | ⏳ Open | — |
+| BUG-014 | P3 | ✅ Done | corollary of BUG-001/002/003 (no code change needed) |
 | BUG-015 | P3 | ⏳ Open | — |
 | BUG-016 | P3 | ⏳ Open | — |
 | BUG-018 | P3 | ✅ Done | commit `cd86273` / archive `2026-04-26-fix-bug-018-remove-customization-subsystem` |
@@ -108,10 +108,10 @@ Each bug is intended to become an individual OpenSpec change.
 - **Finding**: mostly dead code, except `ColorTile` (SwiftUI view) used by `LevelGameView`
 - **Applied fix**: `ColorTile` extracted into `ColorGame/ColorTile.swift`, `GameView.swift` removed (-1854 lines net). OpenSpec change: `fix-bug-000-remove-dead-gameview` (archived).
 
-### BUG-014 — Potential reference cycles
+### BUG-014 — Potential reference cycles ✅
 - **File**: `LevelGameView.swift` (broad)
-- **Finding**: to validate via Xcode Memory Graph after 15+ runs
-- **Fix**: covered by BUG-002 (`[weak self]` everywhere in timers/closures)
+- **Finding**: the audit flagged a generic "reference cycle" suspicion to be validated via Xcode Memory Graph after 15+ runs.
+- **Resolved as corollary**: closed by the combination of BUG-001 (replaced manual `NotificationCenter` observers with SwiftUI `.onReceive` modifiers — lifetime managed by SwiftUI), BUG-002 (added `isGameSessionActive` / `isRoundTimerActive` guards inside Timer closures so they no-op on stale state), and BUG-003 (made deferred `asyncAfter` work cancellable via `DispatchWorkItem`). No remaining closure pattern captures long-lived state in a way that would create a cycle. `LevelGameView` is a SwiftUI `struct`, so `[weak self]` does not apply; the structural changes above are the right equivalent.
 
 ### BUG-015 — Silent `try? JSONDecode`
 - **File**: `LeaderboardStore.swift:44-50`
