@@ -19,7 +19,7 @@ Each bug is intended to become an individual OpenSpec change.
 | BUG-000 | P3 | ✅ Done | commit `3216f80` / archive `2026-04-26-fix-bug-000-remove-dead-gameview` |
 | BUG-001 | P0 | ✅ Done | commit `2c37b0b` / archive `2026-04-26-fix-bug-001-leaked-notification-observers` |
 | BUG-002 | P0 | ✅ Done | commit `c78af98` / archive `2026-04-26-fix-bug-002-guard-timer-closures-against-stale-fires` |
-| BUG-003 | P0 | ⏳ Open | — |
+| BUG-003 | P0 | ✅ Done | commit `50100d0` / archive `2026-04-26-fix-bug-003-cancellable-async-after-and-guards` |
 | BUG-004 | P0 | ✅ Done | commit `dd75ba2` / archive `2026-04-26-fix-bug-004-clamp-scores-and-remove-negative-game-over` |
 | BUG-008 | P1 | ⏳ Open | — |
 | BUG-009 | P1 | ⏳ Open | — |
@@ -50,11 +50,11 @@ Each bug is intended to become an individual OpenSpec change.
 - **Cause**: closures had no guard; `LevelGameView` is a struct so `[weak self]` does not apply
 - **Applied fix**: added `guard isGameSessionActive else { return }` at the top of both `gameTimer` closures and `guard isRoundTimerActive else { return }` at the top of the `roundTimer` closure. Stale ticks are now no-ops. OpenSpec change: `fix-bug-002-guard-timer-closures-against-stale-fires` (archived).
 
-### BUG-003 — Non-cancellable `asyncAfter` closures
-- **File**: `LevelGameView.swift:533-537`
-- **Symptom**: `startNewRound()` may fire twice; score saved twice
-- **Cause**: `DispatchQueue.main.asyncAfter` closures cannot be cancelled when state changes
-- **Fix**: replace with `DispatchWorkItem` instances stored in an array, cancelled on `onDisappear` or state changes
+### BUG-003 — Non-cancellable `asyncAfter` closures ✅
+- **File**: `LevelGameView.swift` — 10 `asyncAfter` sites (5 gameplay-state, 3 animation flags, 2 intentional)
+- **Symptom**: rapid double-tap could double-execute round transitions; Back during the 3 s intro mutated `levelRun` after dismiss; Back during the 100 ms activation window flipped `isGameActive` on a dead view; rapid taps on the same correct tile cumulated points within the 300 ms transition window (discovered during apply)
+- **Cause**: closures had no cancellation mechanism, several lacked internal guards, and `handleTileTap` had no in-round re-entrance gate
+- **Applied fix**: 5 state-mutating sites converted to `DispatchWorkItem` with three `@State` slots cancelled in `endGameSession()`; 3 benign sites guarded with `isGameSessionActive`; 2 intentional sites left alone; in-round re-entrance closed by flipping `isGameActive = false` at the top of `handleTileTap`. OpenSpec change: `fix-bug-003-cancellable-async-after-and-guards` (archived).
 
 ### BUG-004 — `globalScore` can become negative ✅
 - **Files updated**: `LevelSystemModels.swift` (`addWrongAnswer`, `addTimeout`), `LevelGameView.swift` (negative-score game-over removed, `LevelFailureReason.negativeScore` cleaned up)

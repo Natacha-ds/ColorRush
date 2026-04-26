@@ -41,6 +41,6 @@
 
 ## 6. Commit & archive
 
-- [ ] 6.1 Commit with message `fix: cancel deferred async work and guard animation writes (BUG-003)` and reference the OpenSpec change in the body
-- [ ] 6.2 Update `AUDIT_BUGS.md` status table: BUG-003 → ✅ Done with the commit hash and archive folder name
-- [ ] 6.3 Archive the change via `/opsx:archive fix-bug-003-cancellable-async-after-and-guards`
+- [x] 6.1 Commit `50100d0 fix: cancel deferred async work and guard animation writes (BUG-003)`
+- [x] 6.2 `AUDIT_BUGS.md` status table updated (BUG-003 → ✅ Done) in the archive commit
+- [x] 6.3 Archived via `/opsx:archive` to `2026-04-26-fix-bug-003-cancellable-async-after-and-guards`
