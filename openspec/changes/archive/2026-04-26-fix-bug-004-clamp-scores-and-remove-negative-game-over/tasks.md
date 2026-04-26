@@ -28,6 +28,6 @@
 
 ## 5. Commit & archive
 
-- [ ] 5.1 Commit with message `fix: clamp scores and remove negative-score game over (BUG-004, BUG-011)` and reference the OpenSpec change in the body
-- [ ] 5.2 Update `AUDIT_BUGS.md` status table: BUG-004 → ✅ Done, BUG-011 → ✅ Done (resolved as corollary), with the commit hash and archive folder name
-- [ ] 5.3 Archive the change via `/opsx:archive fix-bug-004-clamp-scores-and-remove-negative-game-over`
+- [x] 5.1 Commit `dd75ba2 fix: clamp scores and remove negative-score game over (BUG-004, BUG-011)`
+- [x] 5.2 `AUDIT_BUGS.md` status table updated (BUG-004 → ✅ Done, BUG-011 → ✅ Done as corollary) in the archive commit
+- [x] 5.3 Archived via `/opsx:archive` to `2026-04-26-fix-bug-004-clamp-scores-and-remove-negative-game-over`

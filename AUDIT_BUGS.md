@@ -20,11 +20,11 @@ Each bug is intended to become an individual OpenSpec change.
 | BUG-001 | P0 | ✅ Done | commit `2c37b0b` / archive `2026-04-26-fix-bug-001-leaked-notification-observers` |
 | BUG-002 | P0 | ⏳ Open | — |
 | BUG-003 | P0 | ⏳ Open | — |
-| BUG-004 | P0 | ⏳ Open | — |
+| BUG-004 | P0 | ✅ Done | commit `dd75ba2` / archive `2026-04-26-fix-bug-004-clamp-scores-and-remove-negative-game-over` |
 | BUG-008 | P1 | ⏳ Open | — |
 | BUG-009 | P1 | ⏳ Open | — |
 | BUG-010 | P2 | ⏳ Open | — |
-| BUG-011 | P1 | ⏳ Open | — |
+| BUG-011 | P1 | ✅ Done | corollary of BUG-004 (commit `dd75ba2`) |
 | BUG-012 | P2 | ⏳ Open | — |
 | BUG-013 | P2 | ⏳ Open | — |
 | BUG-014 | P3 | ⏳ Open | — |
@@ -56,11 +56,10 @@ Each bug is intended to become an individual OpenSpec change.
 - **Cause**: `DispatchQueue.main.asyncAfter` closures cannot be cancelled when state changes
 - **Fix**: replace with `DispatchWorkItem` instances stored in an array, cancelled on `onDisappear` or state changes
 
-### BUG-004 — `globalScore` can become negative
-- **File**: `LevelSystemModels.swift:467-490`
-- **Symptom**: leaderboard may display negative scores (impossible for the player to beat)
-- **Cause**: `addWrongAnswer()` and `addTimeout()` perform `globalScore -= ...` with no clamp
-- **Fix**: clamp `globalScore = max(0, globalScore - X)` inside `LevelRun`, OR clamp inside `LeaderboardStore.addScore()`
+### BUG-004 — `globalScore` can become negative ✅
+- **Files updated**: `LevelSystemModels.swift` (`addWrongAnswer`, `addTimeout`), `LevelGameView.swift` (negative-score game-over removed, `LevelFailureReason.negativeScore` cleaned up)
+- **Player-visible symptom**: a wrong tap on level 1 ended the run instantly (`Score < 0` screen) — way more punishing than the announced lives system
+- **Applied fix**: scores are clamped to ≥ 0 at the source, and `levelPenalties` tracks the *actual* amount subtracted (not the nominal) so retry refunds stay correct. The negative-score game-over path was removed entirely; lives are now the only run-ending mechanism. OpenSpec change: `fix-bug-004-clamp-scores-and-remove-negative-game-over` (archived).
 
 ---
 
@@ -76,10 +75,10 @@ Each bug is intended to become an individual OpenSpec change.
 - **Symptom**: the "+20" displayed on screen suggests these 20 points are added on top, when they are already included in `currentScore`
 - **Fix**: clarify the animation (label "Streak!" instead of "+20") or change the addition sequence
 
-### BUG-011 — Leaderboard not clamped to ≥ 0
+### BUG-011 — Leaderboard not clamped to ≥ 0 ✅
 - **File**: `LeaderboardStore.swift:60`
 - **Symptom**: corollary of BUG-004 — negative scores persist in the leaderboard
-- **Fix**: `addScore(max(0, score), ...)`; covered by BUG-004 if fixed inside `LevelRun`
+- **Resolved as corollary**: with `globalScore` clamped at the source (BUG-004), `LeaderboardStore.addScore` cannot receive a negative value anymore. No defensive clamp added at the LeaderboardStore level.
 
 ---
 
