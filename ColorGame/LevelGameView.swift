@@ -440,12 +440,25 @@ struct LevelGameView: View {
       #endif
       .onAppear {
         startLevel()
-        setupBackgroundNotifications()
       }
       .onDisappear {
         endGameSession()
-        removeBackgroundNotifications()
       }
+      #if canImport(UIKit)
+      .onReceive(NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)) { _ in
+        pauseTimer()
+      }
+      .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+        resumeTimer()
+      }
+      #elseif os(macOS)
+      .onReceive(NotificationCenter.default.publisher(for: NSApplication.willResignActiveNotification)) { _ in
+        pauseTimer()
+      }
+      .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+        resumeTimer()
+      }
+      #endif
       .onChange(of: levelRun.lastBonusEarned) { newValue in
         if newValue > 0 {
           streakBonusAmount = newValue
@@ -1264,68 +1277,6 @@ struct LevelGameView: View {
     gameTimer?.invalidate()
     gameTimer = nil
     endRoundTimer()
-  }
-
-  private func setupBackgroundNotifications() {
-    #if canImport(UIKit)
-      NotificationCenter.default.addObserver(
-        forName: UIApplication.willResignActiveNotification,
-        object: nil,
-        queue: .main
-      ) { _ in
-        pauseTimer()
-      }
-
-      NotificationCenter.default.addObserver(
-        forName: UIApplication.didBecomeActiveNotification,
-        object: nil,
-        queue: .main
-      ) { _ in
-        resumeTimer()
-      }
-    #elseif os(macOS)
-      NotificationCenter.default.addObserver(
-        forName: NSApplication.willResignActiveNotification,
-        object: nil,
-        queue: .main
-      ) { _ in
-        pauseTimer()
-      }
-
-      NotificationCenter.default.addObserver(
-        forName: NSApplication.didBecomeActiveNotification,
-        object: nil,
-        queue: .main
-      ) { _ in
-        resumeTimer()
-      }
-    #endif
-  }
-
-  private func removeBackgroundNotifications() {
-    #if canImport(UIKit)
-      NotificationCenter.default.removeObserver(
-        self,
-        name: UIApplication.willResignActiveNotification,
-        object: nil
-      )
-      NotificationCenter.default.removeObserver(
-        self,
-        name: UIApplication.didBecomeActiveNotification,
-        object: nil
-      )
-    #elseif os(macOS)
-      NotificationCenter.default.removeObserver(
-        self,
-        name: NSApplication.willResignActiveNotification,
-        object: nil
-      )
-      NotificationCenter.default.removeObserver(
-        self,
-        name: NSApplication.didBecomeActiveNotification,
-        object: nil
-      )
-    #endif
   }
 
   private func pauseTimer() {
