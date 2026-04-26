@@ -22,6 +22,6 @@
 
 ## 4. Commit & archive
 
-- [ ] 4.1 Commit with message `fix: remove leaked NotificationCenter observers (BUG-001)` and reference the OpenSpec change in the body
-- [ ] 4.2 Update `AUDIT_BUGS.md` status table: BUG-001 → ✅ Done with the commit hash and archive folder name
-- [ ] 4.3 Archive the change via `/opsx:archive fix-bug-001-leaked-notification-observers`
+- [x] 4.1 Commit `2c37b0b fix: remove leaked NotificationCenter observers (BUG-001)`
+- [x] 4.2 `AUDIT_BUGS.md` status table updated (BUG-001 → ✅ Done) in the archive commit
+- [x] 4.3 Archived via `/opsx:archive` to `2026-04-26-fix-bug-001-leaked-notification-observers`

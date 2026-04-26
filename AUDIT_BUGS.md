@@ -17,7 +17,7 @@ Each bug is intended to become an individual OpenSpec change.
 | Bug | Priority | Status | Reference |
 |---|---|---|---|
 | BUG-000 | P3 | ✅ Done | commit `3216f80` / archive `2026-04-26-fix-bug-000-remove-dead-gameview` |
-| BUG-001 | P0 | ⏳ Open | — |
+| BUG-001 | P0 | ✅ Done | commit `2c37b0b` / archive `2026-04-26-fix-bug-001-leaked-notification-observers` |
 | BUG-002 | P0 | ⏳ Open | — |
 | BUG-003 | P0 | ⏳ Open | — |
 | BUG-004 | P0 | ⏳ Open | — |
@@ -38,11 +38,11 @@ Each bug is intended to become an individual OpenSpec change.
 
 ## 🔴 P0 — App Store blockers
 
-### BUG-001 — Leaked NotificationCenter observers
-- **File**: `LevelGameView.swift:1270-1330`
+### BUG-001 — Leaked NotificationCenter observers ✅
+- **File**: `LevelGameView.swift:1270-1330` (former location of the broken setup/remove helpers)
 - **Symptom**: memory leaks per game session, possible crash if the observer fires after the view is torn down
-- **Cause**: `addObserver(forName:object:queue:using:)` (closure-based) but `removeObserver(self, ...)` (incompatible — the closure API returns a token that must be retained)
-- **Fix**: store the `NSObjectProtocol` tokens returned by `addObserver` and pass them to `removeObserver`; `[weak self]` inside the closure
+- **Cause**: `addObserver(forName:object:queue:using:)` (closure-based) but `removeObserver(self, ...)` (incompatible — the closure API returns a token that must be retained, and `self` is a struct here)
+- **Applied fix**: replaced the manual setup/remove plumbing with idiomatic SwiftUI `.onReceive(NotificationCenter.default.publisher(for:))` modifiers — SwiftUI binds the subscription to the view lifetime, making the leak structurally impossible. OpenSpec change: `fix-bug-001-leaked-notification-observers` (archived).
 
 ### BUG-002 — Timer firing after view teardown
 - **File**: `LevelGameView.swift:607-614, 1355-1362`
