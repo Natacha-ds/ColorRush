@@ -6,7 +6,6 @@ import SwiftUI
 #endif
 
 enum LevelFailureReason {
-  case negativeScore
   case maxMistakes
   case insufficientScore
 }
@@ -141,7 +140,7 @@ struct LevelGameView: View {
         } else if isLevelFailed {
           // Show LevelGameOverView for run-ending failures, LevelFailedView for
           // insufficient score
-          if failedReason == .maxMistakes || failedReason == .negativeScore {
+          if failedReason == .maxMistakes {
             LevelGameOverView(
               levelRun: levelRun,
               failedReason: failedReason,
@@ -554,23 +553,6 @@ struct LevelGameView: View {
 
     // Only check for failure conditions during gameplay
     // Level completion is checked when timer runs out
-
-    // Check if score is negative (game over)
-    // Level 1: Check current level score only (since no total score exists yet)
-    // Level 2+: Check cumulative total score
-    if levelRun.currentLevel == 1 {
-      if levelRun.currentScore < 0 {
-        isLevelFailed = true
-        failedReason = .negativeScore
-        return
-      }
-    } else {
-      if levelRun.globalScore < 0 {
-        isLevelFailed = true
-        failedReason = .negativeScore
-        return
-      }
-    }
 
     // Check if no lives remaining (game over)
     if levelRun.isGameOver {
@@ -2189,10 +2171,6 @@ struct LevelGameOverView: View {
   // Reason for loss text
   private var lossReason: String {
     switch failedReason {
-    case .negativeScore:
-      levelRun.currentLevel == 1 ?
-        "Your score dropped below zero!" :
-        "Your total score dropped below zero!"
     case .maxMistakes:
       "You ran out of lives"
     case .insufficientScore:

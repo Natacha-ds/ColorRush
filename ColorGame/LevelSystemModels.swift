@@ -446,28 +446,30 @@ class LevelRun: ObservableObject {
   }
 
   func addWrongAnswer() {
-    // Reset streak on wrong answer
     currentStreak = 0
 
-    // Wrong answer only costs points, NOT lives
-    // Penalties apply immediately to both currentScore and globalScore
-    currentScore -= 10
-    globalScore -= 10
-    levelPenalties += 10 // Track penalty for potential retry removal
-    levelWrongTaps += 1 // Track for statistics/display only
+    // Wrong answer costs points (not lives). Scores floor at 0; track only the
+    // amount actually subtracted from globalScore so retry refunds stay correct.
+    currentScore = max(0, currentScore - 10)
+    let oldGlobal = globalScore
+    globalScore = max(0, globalScore - 10)
+    levelPenalties += oldGlobal - globalScore
+
+    levelWrongTaps += 1
   }
 
   func addTimeout() {
-    // Reset streak on timeout (missed round)
     currentStreak = 0
 
-    // Timeout only costs points, NOT lives
-    // Penalties apply immediately to both currentScore and globalScore
-    currentScore -= 5
-    globalScore -= 5
-    levelPenalties += 5 // Track penalty for potential retry removal
-    timeouts += 1 // Run-wide timeout counter (for statistics)
-    levelTimeouts += 1 // Level-specific timeout counter
+    // Timeout costs points (not lives). Same clamping/refund-tracking pattern
+    // as addWrongAnswer.
+    currentScore = max(0, currentScore - 5)
+    let oldGlobal = globalScore
+    globalScore = max(0, globalScore - 5)
+    levelPenalties += oldGlobal - globalScore
+
+    timeouts += 1
+    levelTimeouts += 1
   }
 
   // Lose a life when failing a level (not reaching required score)
