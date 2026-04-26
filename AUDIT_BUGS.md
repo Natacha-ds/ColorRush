@@ -82,10 +82,10 @@ Chaque bug est destiné à devenir une `change` OpenSpec individuelle.
 
 ## 🔵 P3 — Tech debt avant ads/IAP
 
-### BUG-000 — `GameView.swift` est mort
+### BUG-000 — `GameView.swift` est mort ✅
 - **Fichier** : `ColorGame/GameView.swift` (1869 lignes)
-- **Constat** : aucune référence externe (vérifié par grep), seul le `#Preview` final s'en sert
-- **Fix** : supprimer le fichier + retirer du `project.pbxproj`
+- **Constat** : majoritairement dead code, sauf `ColorTile` (vue SwiftUI) utilisé par `LevelGameView`
+- **Fix appliqué** : `ColorTile` extrait dans `ColorGame/ColorTile.swift`, `GameView.swift` supprimé (-1854 lignes net). Change OpenSpec : `fix-bug-000-remove-dead-gameview` (archivée).
 
 ### BUG-014 — Reference cycles potentiels
 - **Fichier** : `LevelGameView.swift` (général)
