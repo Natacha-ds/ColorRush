@@ -600,6 +600,7 @@ struct LevelGameView: View {
     // Start global timer
     gameTimer = Timer
       .scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
+        guard isGameSessionActive else { return }
         if timeRemaining > 0 {
           timeRemaining -= 0.1
         } else {
@@ -1134,6 +1135,7 @@ struct LevelGameView: View {
 
     roundTimer = Timer
       .scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
+        guard isRoundTimerActive else { return }
         roundTimeRemaining -= 0.1
 
         if roundTimeRemaining <= 0 {
@@ -1286,6 +1288,7 @@ struct LevelGameView: View {
 
     gameTimer = Timer
       .scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
+        guard isGameSessionActive else { return }
         if timeRemaining > 0 {
           timeRemaining -= 0.1
         } else {
