@@ -18,3 +18,6 @@ Pods/
 
 # Other
 .DS_Store
+
+# Claude Code (local config only — tooling is versioned)
+.claude/settings.local.json
