@@ -16,6 +16,6 @@
 
 ## 4. Commit & archive
 
-- [ ] 4.1 Commit with message `fix: re-announce color on non-punitive refresh (BUG-008)` and reference the OpenSpec change in the body
-- [ ] 4.2 Update `AUDIT_BUGS.md` status table: BUG-008 → ✅ Done with the commit hash and archive folder name
-- [ ] 4.3 Archive the change via `/opsx:archive fix-bug-008-reannounce-color-on-non-punitive-refresh`
+- [x] 4.1 Commit `a8b66a8 fix: re-announce color on non-punitive refresh (BUG-008)`
+- [x] 4.2 `AUDIT_BUGS.md` status table updated (BUG-008 → ✅ Done) in the archive commit
+- [x] 4.3 Archived via `/opsx:archive` to `2026-04-26-fix-bug-008-reannounce-color-on-non-punitive-refresh`

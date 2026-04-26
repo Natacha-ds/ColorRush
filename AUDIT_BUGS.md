@@ -21,7 +21,7 @@ Each bug is intended to become an individual OpenSpec change.
 | BUG-002 | P0 | ✅ Done | commit `c78af98` / archive `2026-04-26-fix-bug-002-guard-timer-closures-against-stale-fires` |
 | BUG-003 | P0 | ✅ Done | commit `50100d0` / archive `2026-04-26-fix-bug-003-cancellable-async-after-and-guards` |
 | BUG-004 | P0 | ✅ Done | commit `dd75ba2` / archive `2026-04-26-fix-bug-004-clamp-scores-and-remove-negative-game-over` |
-| BUG-008 | P1 | ⏳ Open | — |
+| BUG-008 | P1 | ✅ Done | commit `a8b66a8` / archive `2026-04-26-fix-bug-008-reannounce-color-on-non-punitive-refresh` |
 | BUG-009 | P1 | ⏳ Open | — |
 | BUG-010 | P2 | ⏳ Open | — |
 | BUG-011 | P1 | ✅ Done | corollary of BUG-004 (commit `dd75ba2`) |
@@ -65,10 +65,10 @@ Each bug is intended to become an individual OpenSpec change.
 
 ## 🟠 P1 — Player-visible logic
 
-### BUG-008 — Non-punitive refresh L9-10 without re-announcement
-- **File**: `LevelGameView.swift:1168-1192`
-- **Symptom**: the grid refreshes every 1s but the announced color (audio) is not re-spoken → player gets confused
-- **Fix**: either re-announce the color via `SpeechService.speak(...)`, or only shuffle positions without changing colors
+### BUG-008 — Non-punitive refresh L9-10 without re-announcement ✅
+- **File**: `LevelGameView.swift` `refreshBoardOnly()`
+- **Symptom**: the grid refreshes every 1 s but the announced color (audio) was not re-spoken, leaving the player without audio reinforcement against a brand-new visual layout
+- **Applied fix**: `refreshBoardOnly()` now calls `speechService.speak(colorName(for: announcedColor))` on every refresh. `SpeechService.speak` already stops in-flight audio so re-announces pre-empt cleanly. OpenSpec change: `fix-bug-008-reannounce-color-on-non-punitive-refresh` (archived).
 
 ### BUG-009 — Misleading streak bonus animation
 - **File**: `LevelSystemModels.swift:429-465`
