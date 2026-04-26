@@ -12,6 +12,28 @@ Prioritized backlog produced from auditing the live runtime code.
 
 Each bug is intended to become an individual OpenSpec change.
 
+## Status
+
+| Bug | Priority | Status | Reference |
+|---|---|---|---|
+| BUG-000 | P3 | ✅ Done | commit `3216f80` / archive `2026-04-26-fix-bug-000-remove-dead-gameview` |
+| BUG-001 | P0 | ⏳ Open | — |
+| BUG-002 | P0 | ⏳ Open | — |
+| BUG-003 | P0 | ⏳ Open | — |
+| BUG-004 | P0 | ⏳ Open | — |
+| BUG-008 | P1 | ⏳ Open | — |
+| BUG-009 | P1 | ⏳ Open | — |
+| BUG-010 | P2 | ⏳ Open | — |
+| BUG-011 | P1 | ⏳ Open | — |
+| BUG-012 | P2 | ⏳ Open | — |
+| BUG-013 | P2 | ⏳ Open | — |
+| BUG-014 | P3 | ⏳ Open | — |
+| BUG-015 | P3 | ⏳ Open | — |
+| BUG-016 | P3 | ⏳ Open | — |
+| BUG-018 | P3 | ⏳ Open | — |
+| BUG-019 | P3 | ⏳ Open | — |
+| BUG-020 | P3 | ⏳ Open | — |
+
 ---
 
 ## 🔴 P0 — App Store blockers
@@ -102,10 +124,14 @@ Each bug is intended to become an individual OpenSpec change.
 - **Symptom**: possible 0.2-0.5s freeze on edge cases
 - **Fix**: 100ms timeout + hard-coded fallback grid
 
-### BUG-018 — `CustomizationStore`: dead code
-- **File**: `CustomizationStore.swift:45-142`
-- **Finding**: `updateEasyDuration`, etc. methods for the legacy mode system — never called
-- **Fix**: remove (~100 lines)
+### BUG-018 — Dead customization subsystem
+- **Files**:
+  - `CustomizeModeSheet.swift` (619 lines) — never instantiated externally
+  - `CustomizationStore.swift` (142 lines) — only referenced by the dead `CustomizeModeSheet` and a never-read `@StateObject` in `LevelGameView`
+  - `GameCustomization.swift` (150 lines) — only referenced by `CustomizationStore`
+  - `LevelGameView.swift:17` — `@StateObject private var customizationStore = CustomizationStore.shared` declared but never read
+- **Finding**: the entire customization subsystem (legacy difficulty mode tuning UI) is dead. Initial audit underestimated the scope ("~100 lines"); actual scope is ~912 lines across 3 files plus one orphan declaration.
+- **Fix**: delete the three files and remove the unused `@StateObject` declaration from `LevelGameView.swift`. Single cohesive cleanup change.
 
 ### BUG-019 — Race on rapid double-tap "Retry"
 - **File**: `LevelSystemModels.swift:390-408`
