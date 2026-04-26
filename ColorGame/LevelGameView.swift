@@ -14,7 +14,6 @@ enum LevelFailureReason {
 struct LevelGameView: View {
   @ObservedObject var levelRun: LevelRun
   @Environment(\.dismiss) private var dismiss
-  @StateObject private var customizationStore = CustomizationStore.shared
   @State private var showFinalWinView = false
 
   // Game state
