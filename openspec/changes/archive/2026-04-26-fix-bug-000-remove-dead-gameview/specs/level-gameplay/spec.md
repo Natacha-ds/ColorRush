@@ -2,14 +2,14 @@
 
 ### Requirement: Single canonical level-gameplay view
 
-L'application SHALL rendre toute session de jeu basée sur les niveaux exclusivement via la vue `LevelGameView`. Aucune autre vue de jeu (héritée ou alternative) ne doit coexister dans la cible compilée `ColorGame`.
+The application SHALL render any level-based game session exclusively through the `LevelGameView` view. No other game view (legacy or alternative) shall coexist in the compiled `ColorGame` target.
 
-#### Scenario: Lancement d'une partie depuis l'écran de sélection
+#### Scenario: Starting a game from the selection screen
 
-- **WHEN** l'utilisateur valide un mode et une difficulté depuis `LevelSystemSelectionView` puis tape "Start"
-- **THEN** la session de jeu s'ouvre dans une instance de `LevelGameView` (et aucune autre vue de jeu)
+- **WHEN** the player picks a mode and difficulty in `LevelSystemSelectionView` and taps "Start"
+- **THEN** the game session opens in an instance of `LevelGameView` (and no other game view)
 
-#### Scenario: Audit du code source
+#### Scenario: Source code audit
 
-- **WHEN** un développeur recherche les définitions de vues de jeu dans la cible `ColorGame`
-- **THEN** seule `LevelGameView` est définie ; aucune `struct GameView: View` héritée ne subsiste dans le module
+- **WHEN** a developer searches the `ColorGame` target for game-view definitions
+- **THEN** only `LevelGameView` is defined; no legacy `struct GameView: View` remains in the module

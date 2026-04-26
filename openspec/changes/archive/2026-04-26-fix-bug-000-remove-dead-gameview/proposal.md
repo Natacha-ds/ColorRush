@@ -1,30 +1,30 @@
 ## Why
 
-`ColorGame/GameView.swift` (1869 lignes) est du code mort hérité de l'ancien système de jeu. Aucun call-site externe ne le référence — seules la définition `struct GameView: View` (ligne 49) et son `#Preview` final (ligne 1868) le mentionnent. Le runtime utilise exclusivement `LevelGameView` (instancié depuis `LevelSystemSelectionView.swift:153-164`).
+`ColorGame/GameView.swift` (1869 lines) is dead code carried over from the legacy game system. No external call site references it — only the `struct GameView: View` definition (line 49) and its trailing `#Preview` (line 1868) mention it. The runtime exclusively uses `LevelGameView` (instantiated from `LevelSystemSelectionView.swift:153-164`).
 
-Garder ce fichier nuit à la lisibilité, double presque la surface d'audit du module de jeu, et complique l'intégration future des SDKs ads/IAP sur lesquels on doit travailler avant la submission App Store.
+Keeping this file hurts readability, nearly doubles the audit surface of the game module, and complicates the upcoming integration of the ads/IAP SDKs we need to land before App Store submission.
 
 ## What Changes
 
-- Suppression complète du fichier `ColorGame/GameView.swift`.
-- Retrait de toutes les références à `GameView.swift` dans `ColorGame.xcodeproj/project.pbxproj` (sections `PBXFileReference`, `PBXBuildFile`, group children, et `Sources` build phase).
-- Aucune modification de comportement runtime : pas de feature flag, pas de release notes utilisateur.
-- Aucune migration de données ni d'état persistant.
+- Full removal of the `ColorGame/GameView.swift` file.
+- Removal of all `GameView.swift` references in `ColorGame.xcodeproj/project.pbxproj` (`PBXFileReference`, `PBXBuildFile`, group children, and `Sources` build phase) — discovered during apply to be a no-op since the project uses `PBXFileSystemSynchronizedRootGroup`.
+- No runtime behavior change: no feature flag, no user-facing release notes.
+- No data or state migration.
 
 ## Capabilities
 
 ### New Capabilities
 
-- `level-gameplay` : capacité couvrant le rendu et le pilotage d'une session de jeu basée sur les niveaux. Cette change l'introduit avec une seule exigence (l'unicité de la vue de jeu) qui sera étendue par les change suivantes (fixes des bugs P0/P1 de l'audit).
+- `level-gameplay`: capability covering the rendering and orchestration of a level-based game session. This change introduces it with a single requirement (uniqueness of the game view), to be extended by the upcoming changes (P0/P1 fixes from the audit).
 
 ### Modified Capabilities
 
-Aucune.
+None.
 
 ## Impact
 
-- **Code** : `ColorGame/GameView.swift` supprimé, `ColorGame.xcodeproj/project.pbxproj` modifié.
-- **Build** : doit rester vert (`xcodebuild ... build` → `BUILD SUCCEEDED`).
-- **Runtime** : aucun impact attendu — le fichier n'est référencé nulle part en dehors de lui-même.
-- **Dépendances externes** : aucune.
-- **Tests** : aucun test n'existe à ce jour, donc rien à mettre à jour.
+- **Code**: `ColorGame/GameView.swift` removed; `ColorGame/ColorTile.swift` added (rescued live `ColorTile` view used by `LevelGameView`).
+- **Build**: must remain green (`xcodebuild ... build` → `BUILD SUCCEEDED`).
+- **Runtime**: no expected impact — the file is not referenced anywhere outside itself, except for the `ColorTile` view which has been preserved.
+- **External dependencies**: none.
+- **Tests**: no tests exist today, so nothing to update.
