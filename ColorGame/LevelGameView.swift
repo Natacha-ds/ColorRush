@@ -687,8 +687,8 @@ struct LevelGameView: View {
   }
 
   // Refresh board only (for non-punitive refresh levels 9-10)
-  // Keeps the same announced color, doesn't speak it again, just shuffles the
-  // tiles
+  // Keeps the same announced color, re-speaks it for audio reinforcement, and
+  // reshuffles the tiles
   private func refreshBoardOnly() {
     isGameActive = false
 
@@ -704,7 +704,9 @@ struct LevelGameView: View {
       previousTilesWithText = tilesWithText
     }
 
-    // Keep the same announced color - don't change it, don't speak it again
+    // Keep the same announced color but re-speak it so the audio cue stays in
+    // sync with the visual board (BUG-008).
+    speechService.speak(colorName(for: announcedColor))
 
     // Build valid grid based on game type (with the same announced color)
     if levelRun.gameType == .colorOnly {
