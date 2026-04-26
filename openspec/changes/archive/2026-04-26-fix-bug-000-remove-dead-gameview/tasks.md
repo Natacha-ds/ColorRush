@@ -19,6 +19,6 @@
 
 ## 4. Commit & archive
 
-- [ ] 4.1 Commit avec message `refactor: remove dead GameView.swift (BUG-000)` (corps : référencer la change OpenSpec)
-- [ ] 4.2 Mettre à jour `AUDIT_BUGS.md` pour cocher BUG-000 comme traité
-- [ ] 4.3 Archiver la change via `/opsx:archive fix-bug-000-remove-dead-gameview` une fois mergée
+- [x] 4.1 Commit `3216f80 refactor: remove dead GameView.swift (BUG-000)`
+- [x] 4.2 `AUDIT_BUGS.md` mis à jour (BUG-000 ✅) dans le même commit
+- [x] 4.3 Archive en cours via `/opsx:archive`
