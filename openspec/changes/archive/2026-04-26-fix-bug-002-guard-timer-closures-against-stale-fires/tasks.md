@@ -19,6 +19,6 @@
 
 ## 4. Commit & archive
 
-- [ ] 4.1 Commit with message `fix: guard Timer closures against stale fires (BUG-002)` and reference the OpenSpec change in the body
-- [ ] 4.2 Update `AUDIT_BUGS.md` status table: BUG-002 → ✅ Done with the commit hash and archive folder name
-- [ ] 4.3 Archive the change via `/opsx:archive fix-bug-002-guard-timer-closures-against-stale-fires`
+- [x] 4.1 Commit `c78af98 fix: guard Timer closures against stale fires (BUG-002)`
+- [x] 4.2 `AUDIT_BUGS.md` status table updated (BUG-002 → ✅ Done) in the archive commit
+- [x] 4.3 Archived via `/opsx:archive` to `2026-04-26-fix-bug-002-guard-timer-closures-against-stale-fires`

@@ -18,7 +18,7 @@ Each bug is intended to become an individual OpenSpec change.
 |---|---|---|---|
 | BUG-000 | P3 | ✅ Done | commit `3216f80` / archive `2026-04-26-fix-bug-000-remove-dead-gameview` |
 | BUG-001 | P0 | ✅ Done | commit `2c37b0b` / archive `2026-04-26-fix-bug-001-leaked-notification-observers` |
-| BUG-002 | P0 | ⏳ Open | — |
+| BUG-002 | P0 | ✅ Done | commit `c78af98` / archive `2026-04-26-fix-bug-002-guard-timer-closures-against-stale-fires` |
 | BUG-003 | P0 | ⏳ Open | — |
 | BUG-004 | P0 | ✅ Done | commit `dd75ba2` / archive `2026-04-26-fix-bug-004-clamp-scores-and-remove-negative-game-over` |
 | BUG-008 | P1 | ⏳ Open | — |
@@ -44,11 +44,11 @@ Each bug is intended to become an individual OpenSpec change.
 - **Cause**: `addObserver(forName:object:queue:using:)` (closure-based) but `removeObserver(self, ...)` (incompatible — the closure API returns a token that must be retained, and `self` is a struct here)
 - **Applied fix**: replaced the manual setup/remove plumbing with idiomatic SwiftUI `.onReceive(NotificationCenter.default.publisher(for:))` modifiers — SwiftUI binds the subscription to the view lifetime, making the leak structurally impossible. OpenSpec change: `fix-bug-001-leaked-notification-observers` (archived).
 
-### BUG-002 — Timer firing after view teardown
-- **File**: `LevelGameView.swift:607-614, 1355-1362`
-- **Symptom**: possible "Unexpectedly found nil" crash if the user exits while the timer expires
-- **Cause**: `Timer.scheduledTimer` strongly captures `self`, no `isGameSessionActive` guard inside the closure
-- **Fix**: `[weak self]` + `guard let self, self.isGameSessionActive else { return }`
+### BUG-002 — Timer firing after view teardown ✅
+- **Files updated**: `LevelGameView.swift` — three `Timer.scheduledTimer` call sites (initial `gameTimer`, `roundTimer`, resume `gameTimer`)
+- **Symptom**: possible "Unexpectedly found nil" crash and silent state corruption (timer ticking past 0, restart on stale state) if a tick fires after `.onDisappear`/`endGameSession` / `endRoundTimer`
+- **Cause**: closures had no guard; `LevelGameView` is a struct so `[weak self]` does not apply
+- **Applied fix**: added `guard isGameSessionActive else { return }` at the top of both `gameTimer` closures and `guard isRoundTimerActive else { return }` at the top of the `roundTimer` closure. Stale ticks are now no-ops. OpenSpec change: `fix-bug-002-guard-timer-closures-against-stale-fires` (archived).
 
 ### BUG-003 — Non-cancellable `asyncAfter` closures
 - **File**: `LevelGameView.swift:533-537`
