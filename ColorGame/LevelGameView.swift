@@ -35,6 +35,11 @@ struct LevelGameView: View {
   @State private var roundTimer: Timer?
   @State private var isRoundTimerActive = false
 
+  // Pending deferred work — superseded on re-schedule, cancelled in endGameSession()
+  @State private var pendingNextRound: DispatchWorkItem?
+  @State private var pendingIntroDismiss: DispatchWorkItem?
+  @State private var pendingActivation: DispatchWorkItem?
+
   // Game over state
   @State private var isLevelComplete = false
   @State private var isLevelFailed = false
@@ -464,11 +469,13 @@ struct LevelGameView: View {
           showStreakAnimation = true
           // Reset the trigger after a short delay
           DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            guard isGameSessionActive else { return }
             levelRun.lastBonusEarned = 0
           }
           // Hide animation after fade out completes (1.8 seconds total: 1.5s
           // visible + 0.3s fade)
           DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
+            guard isGameSessionActive else { return }
             showStreakAnimation = false
           }
         }
@@ -482,6 +489,9 @@ struct LevelGameView: View {
   private func handleTileTap(_ index: Int) {
     guard isGameActive, isGameSessionActive, !isLevelComplete,
           !isLevelFailed else { return }
+
+    // Block additional taps in this round; startNewRound() will re-enable.
+    isGameActive = false
 
     // End round timer immediately
     endRoundTimer()
@@ -541,11 +551,14 @@ struct LevelGameView: View {
     checkLevelStatus()
 
     // Wait 300ms then start next round
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+    pendingNextRound?.cancel()
+    let item = DispatchWorkItem {
       if isGameSessionActive, !isLevelComplete, !isLevelFailed {
         startNewRound()
       }
     }
+    pendingNextRound = item
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: item)
   }
 
   private func checkLevelStatus() {
@@ -569,11 +582,14 @@ struct LevelGameView: View {
     showLevelIntro = true
 
     // Auto-dismiss after 3 seconds
-    DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+    pendingIntroDismiss?.cancel()
+    let item = DispatchWorkItem {
       if showLevelIntro {
         dismissLevelIntroAndStart()
       }
     }
+    pendingIntroDismiss = item
+    DispatchQueue.main.asyncAfter(deadline: .now() + 3.0, execute: item)
   }
 
   private func dismissLevelIntroAndStart() {
@@ -655,7 +671,8 @@ struct LevelGameView: View {
     }
 
     // Enable game after a brief delay
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+    pendingActivation?.cancel()
+    let item = DispatchWorkItem {
       isGameActive = true
 
       // Start round timer if level has time limit
@@ -665,6 +682,8 @@ struct LevelGameView: View {
         startRoundTimer(timeLimit: levelConfig.timePerResponse ?? 1.5)
       }
     }
+    pendingActivation = item
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1, execute: item)
   }
 
   // Refresh board only (for non-punitive refresh levels 9-10)
@@ -695,7 +714,8 @@ struct LevelGameView: View {
     }
 
     // Enable game after a brief delay
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+    pendingActivation?.cancel()
+    let item = DispatchWorkItem {
       isGameActive = true
 
       // Restart round timer for non-punitive refresh
@@ -705,6 +725,8 @@ struct LevelGameView: View {
         startRoundTimer(timeLimit: levelConfig.timePerResponse ?? 1.5)
       }
     }
+    pendingActivation = item
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1, execute: item)
   }
 
   private func buildValidGrid() -> [Color] {
@@ -1180,11 +1202,14 @@ struct LevelGameView: View {
       endRoundTimer()
       checkLevelStatus()
 
-      DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+      pendingNextRound?.cancel()
+      let item = DispatchWorkItem {
         if isGameSessionActive, !isLevelComplete, !isLevelFailed {
           startNewRound()
         }
       }
+      pendingNextRound = item
+      DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: item)
     }
   }
 
@@ -1219,6 +1244,7 @@ struct LevelGameView: View {
     }
 
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+      guard isGameSessionActive else { return }
       withAnimation(.easeInOut(duration: 0.1)) {
         showingErrorFlash = false
       }
@@ -1261,6 +1287,13 @@ struct LevelGameView: View {
     gameTimer?.invalidate()
     gameTimer = nil
     endRoundTimer()
+
+    pendingNextRound?.cancel()
+    pendingNextRound = nil
+    pendingIntroDismiss?.cancel()
+    pendingIntroDismiss = nil
+    pendingActivation?.cancel()
+    pendingActivation = nil
   }
 
   private func pauseTimer() {
