@@ -30,7 +30,7 @@ Each bug is intended to become an individual OpenSpec change.
 | BUG-014 | P3 | ⏳ Open | — |
 | BUG-015 | P3 | ⏳ Open | — |
 | BUG-016 | P3 | ⏳ Open | — |
-| BUG-018 | P3 | ⏳ Open | — |
+| BUG-018 | P3 | ✅ Done | commit `cd86273` / archive `2026-04-26-fix-bug-018-remove-customization-subsystem` |
 | BUG-019 | P3 | ⏳ Open | — |
 | BUG-020 | P3 | ⏳ Open | — |
 
@@ -124,14 +124,14 @@ Each bug is intended to become an individual OpenSpec change.
 - **Symptom**: possible 0.2-0.5s freeze on edge cases
 - **Fix**: 100ms timeout + hard-coded fallback grid
 
-### BUG-018 — Dead customization subsystem
-- **Files**:
-  - `CustomizeModeSheet.swift` (619 lines) — never instantiated externally
-  - `CustomizationStore.swift` (142 lines) — only referenced by the dead `CustomizeModeSheet` and a never-read `@StateObject` in `LevelGameView`
-  - `GameCustomization.swift` (150 lines) — only referenced by `CustomizationStore`
-  - `LevelGameView.swift:17` — `@StateObject private var customizationStore = CustomizationStore.shared` declared but never read
-- **Finding**: the entire customization subsystem (legacy difficulty mode tuning UI) is dead. Initial audit underestimated the scope ("~100 lines"); actual scope is ~912 lines across 3 files plus one orphan declaration.
-- **Fix**: delete the three files and remove the unused `@StateObject` declaration from `LevelGameView.swift`. Single cohesive cleanup change.
+### BUG-018 — Dead customization subsystem ✅
+- **Files removed**:
+  - `CustomizeModeSheet.swift` (619 lines)
+  - `CustomizationStore.swift` (142 lines)
+  - `GameCustomization.swift` (150 lines)
+  - `LevelGameView.swift:17` — orphan `@StateObject` declaration
+- **Finding**: the entire customization subsystem (legacy difficulty-mode tuning UI) was dead. Initial audit underestimated the scope ("~100 lines"); actual scope was ~912 lines across 3 files plus one orphan declaration.
+- **Applied fix**: deleted the three files and removed the unused `@StateObject` from `LevelGameView.swift`. Net diff: -912 / +135 (the +135 is the OpenSpec change artifacts). OpenSpec change: `fix-bug-018-remove-customization-subsystem` (archived).
 
 ### BUG-019 — Race on rapid double-tap "Retry"
 - **File**: `LevelSystemModels.swift:390-408`
