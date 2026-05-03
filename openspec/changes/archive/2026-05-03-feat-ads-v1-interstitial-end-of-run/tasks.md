@@ -44,6 +44,6 @@
 
 ## 7. Commit & archive
 
-- [ ] 7.1 Commit with message `feat: ship v1 interstitial ads at end of run (feat-ads-v1)` — bundle Tony's SPM addition + Info.plist edits + AdsService + wiring in the same commit
-- [ ] 7.2 No `AUDIT_BUGS.md` entry — feature, not a bug fix
-- [ ] 7.3 Archive the change via `/opsx:archive feat-ads-v1-interstitial-end-of-run`
+- [x] 7.1 Commit `e804009 feat: ship v1 interstitial ads at end of run (feat-ads-v1)`
+- [x] 7.2 No AUDIT_BUGS.md entry — feature
+- [x] 7.3 Archived via `/opsx:archive` to `2026-05-03-feat-ads-v1-interstitial-end-of-run`
