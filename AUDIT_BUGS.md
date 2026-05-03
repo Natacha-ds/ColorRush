@@ -34,6 +34,7 @@ Each bug is intended to become an individual OpenSpec change.
 | BUG-019 | P3 | ✅ Done | commit `4331f12` / archive `2026-05-03-fix-defensive-guards-batch` |
 | BUG-020 | P3 | ✅ Done | commit `4331f12` / archive `2026-05-03-fix-defensive-guards-batch` |
 | BUG-021 | P2 | ⏳ Open | post-audit finding (2026-05-03) |
+| BUG-022 | P0 | ⏳ Open | post-audit finding (2026-05-03) |
 
 ---
 
@@ -94,6 +95,14 @@ Each bug is intended to become an individual OpenSpec change.
 - **File**: `LevelGameView.swift` `resumeTimer()`
 - **Symptom**: after a phone call (or any willResignActive interruption), the player returned to the game with no fresh audio cue for the announced color
 - **Applied fix**: added a single `speechService.speak(colorName(for: announcedColor))` inside `resumeTimer()` after the `handleTimeUp()` guard, so the announced color is re-anchored on resume only when the round genuinely continues. The broader `AVAudioSession` setup the audit also suggested (silent-mode policy, ducking) was deliberately left out of scope — those are orthogonal product decisions that deserve their own change if they ever bite. OpenSpec change: `fix-bug-012-reannounce-color-on-resume-from-interruption` (archived).
+
+### BUG-022 — LevelFailedView and LevelCompleteView do not render their Back to Home button
+- **Files**: `LevelGameView.swift` `LevelFailedView` (~line 1848) and `LevelCompleteView` (~line 1561)
+- **Symptom**: a player who fails a level mid-run is stuck — the only button is "Try Again". Same problem on the level-complete screen between levels: only "Next Level" is shown. There is no way to exit a run gracefully without force-quitting, and the leaderboard save logic (wired to `onBackToHome`) never fires, so scores from incomplete runs are silently lost.
+- **Cause**: both views accept an `onBackToHome: () -> Void` parameter and the parent `LevelGameView` provides a save-and-dismiss closure for it, but the views' bodies never render a Back to Home button. The callback is wired-but-orphaned.
+- **Player impact**: severe — confirmed by user (could not exit a failed Easy run, ended up with empty leaderboard despite scoring 150 points). P0 because it silently destroys leaderboard state and traps the player in a loop.
+- **Suggested fix**: render a secondary "Back to Home" button in both `LevelFailedView` and `LevelCompleteView`, wired to the existing `onBackToHome` callback. Style as a less-prominent secondary action (text or outlined button) so it doesn't compete with the primary "Try Again" / "Next Level" CTA.
+- **Note**: post-audit finding (2026-05-03), reported by user.
 
 ### BUG-021 — Leaderboard does not distinguish Color Only vs Color+Text
 - **File**: `LeaderboardStore.swift`, `LeaderboardView.swift`
