@@ -2,6 +2,7 @@ import SwiftUI
 
 struct LeaderboardView: View {
   @StateObject private var leaderboardStore = LeaderboardStore.shared
+  @State private var selectedGameType: GameType = .colorOnly
   @State private var selectedMistakeTolerance: MistakeTolerance = .easy
 
   var body: some View {
@@ -31,6 +32,48 @@ struct LeaderboardView: View {
               )
             )
             .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
+
+          // Game Type selector (Color Only / Color + Text)
+          HStack(spacing: 0) {
+            ForEach(GameType.allCases) { gameType in
+              Button(action: {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                  selectedGameType = gameType
+                }
+              }) {
+                Text(gameType.displayName)
+                  .font(.system(size: 14, weight: .medium))
+                  .foregroundColor(selectedGameType == gameType ?
+                    Color.purple :
+                    Color.gray)
+                  .frame(width: 140, height: 36)
+                  .background(
+                    selectedGameType == gameType ?
+                      RoundedRectangle(cornerRadius: 18)
+                      .fill(Color.white)
+                      .overlay(
+                        RoundedRectangle(cornerRadius: 18)
+                          .stroke(
+                            LinearGradient(
+                              gradient: Gradient(colors: [.blue, .pink]),
+                              startPoint: .leading,
+                              endPoint: .trailing
+                            ),
+                            lineWidth: 2
+                          )
+                      ) :
+                      nil
+                  )
+              }
+              .buttonStyle(PlainButtonStyle())
+            }
+          }
+          .background(
+            RoundedRectangle(cornerRadius: 18)
+              .fill(Color.white)
+              .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+          )
+          .frame(width: 280)
 
           // Mistake Tolerance selector with capsule style
           HStack(spacing: 0) {
@@ -82,7 +125,10 @@ struct LeaderboardView: View {
 
         // Scores list (top 5 only, no scrolling)
         VStack(spacing: 12) {
-          let scores = leaderboardStore.getScores(for: selectedMistakeTolerance)
+          let scores = leaderboardStore.getScores(
+            gameType: selectedGameType,
+            mistakeTolerance: selectedMistakeTolerance
+          )
           let topFiveScores = Array(scores.prefix(5)) // Show only top 5
 
           if scores.isEmpty {

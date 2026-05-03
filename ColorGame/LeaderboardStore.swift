@@ -1,22 +1,30 @@
 import Combine
 import Foundation
 
+struct LeaderboardKey: Hashable {
+  let gameType: GameType
+  let mistakeTolerance: MistakeTolerance
+
+  var storageKey: String {
+    "leaderboard.\(gameType.rawValue).\(mistakeTolerance.rawValue)"
+  }
+}
+
 class LeaderboardStore: ObservableObject {
   static let shared = LeaderboardStore()
 
   private let userDefaults = UserDefaults.standard
-  private let easyKey = "leaderboard.easy"
-  private let normalKey = "leaderboard.normal"
-  private let hardKey = "leaderboard.hard"
 
-  @Published var easyScores: [ScoreEntry] = []
-  @Published var normalScores: [ScoreEntry] = []
-  @Published var hardScores: [ScoreEntry] = []
+  // Legacy v1 keys (MistakeTolerance only). Removed during the v2 migration.
+  private let legacyEasyKey = "leaderboard.easy"
+  private let legacyNormalKey = "leaderboard.normal"
+  private let legacyHardKey = "leaderboard.hard"
 
-  private let resetKey = "leaderboard.reset.done"
+  @Published var scoresByKey: [LeaderboardKey: [ScoreEntry]] = [:]
+
+  private let resetKey = "leaderboard.reset.done.v2"
 
   private init() {
-    // Reset leaderboard once (clear legacy data)
     if !userDefaults.bool(forKey: resetKey) {
       resetLeaderboard()
       userDefaults.set(true, forKey: resetKey)
@@ -25,20 +33,36 @@ class LeaderboardStore: ObservableObject {
   }
 
   func resetLeaderboard() {
-    // Clear all leaderboard data
-    userDefaults.removeObject(forKey: easyKey)
-    userDefaults.removeObject(forKey: normalKey)
-    userDefaults.removeObject(forKey: hardKey)
-    easyScores = []
-    normalScores = []
-    hardScores = []
+    // Clear all current-schema keys.
+    for gameType in GameType.allCases {
+      for tolerance in MistakeTolerance.allCases {
+        let key = LeaderboardKey(
+          gameType: gameType,
+          mistakeTolerance: tolerance
+        )
+        userDefaults.removeObject(forKey: key.storageKey)
+      }
+    }
+    // Clear legacy v1 keys so they don't linger in UserDefaults.
+    userDefaults.removeObject(forKey: legacyEasyKey)
+    userDefaults.removeObject(forKey: legacyNormalKey)
+    userDefaults.removeObject(forKey: legacyHardKey)
+    scoresByKey = [:]
     userDefaults.synchronize()
   }
 
   private func loadScores() {
-    easyScores = loadScores(forKey: easyKey)
-    normalScores = loadScores(forKey: normalKey)
-    hardScores = loadScores(forKey: hardKey)
+    var loaded: [LeaderboardKey: [ScoreEntry]] = [:]
+    for gameType in GameType.allCases {
+      for tolerance in MistakeTolerance.allCases {
+        let key = LeaderboardKey(
+          gameType: gameType,
+          mistakeTolerance: tolerance
+        )
+        loaded[key] = loadScores(forKey: key.storageKey)
+      }
+    }
+    scoresByKey = loaded
   }
 
   private func loadScores(forKey key: String) -> [ScoreEntry] {
@@ -59,42 +83,37 @@ class LeaderboardStore: ObservableObject {
     }
   }
 
-  func addScore(_ score: Int, for mistakeTolerance: MistakeTolerance) {
-    let newEntry = ScoreEntry(score: score)
-
-    switch mistakeTolerance {
-    case .easy:
-      easyScores.append(newEntry)
-      easyScores = Array(easyScores.sorted(by: >).prefix(5)) // Keep only top 5
-      saveScores(easyScores, forKey: easyKey)
-    case .normal:
-      normalScores.append(newEntry)
-      normalScores = Array(normalScores.sorted(by: >)
-        .prefix(5)) // Keep only top 5
-      saveScores(normalScores, forKey: normalKey)
-    case .hard:
-      hardScores.append(newEntry)
-      hardScores = Array(hardScores.sorted(by: >).prefix(5)) // Keep only top 5
-      saveScores(hardScores, forKey: hardKey)
-    }
+  func addScore(
+    _ score: Int,
+    gameType: GameType,
+    mistakeTolerance: MistakeTolerance
+  ) {
+    let key = LeaderboardKey(
+      gameType: gameType,
+      mistakeTolerance: mistakeTolerance
+    )
+    var current = scoresByKey[key] ?? []
+    current.append(ScoreEntry(score: score))
+    current = Array(current.sorted(by: >).prefix(5)) // Keep only top 5
+    scoresByKey[key] = current
+    saveScores(current, forKey: key.storageKey)
   }
 
-  func getScores(for mistakeTolerance: MistakeTolerance) -> [ScoreEntry] {
-    switch mistakeTolerance {
-    case .easy: easyScores
-    case .normal: normalScores
-    case .hard: hardScores
-    }
+  func getScores(
+    gameType: GameType,
+    mistakeTolerance: MistakeTolerance
+  ) -> [ScoreEntry] {
+    let key = LeaderboardKey(
+      gameType: gameType,
+      mistakeTolerance: mistakeTolerance
+    )
+    return scoresByKey[key] ?? []
   }
 
-  func getBestScore(for mistakeTolerance: MistakeTolerance) -> Int {
-    let scores = getScores(for: mistakeTolerance)
-    return scores.first?.score ?? 0
-  }
-
-  // Get the overall best score across all difficulty levels
+  // Get the overall best score across all (gameType, mistakeTolerance) buckets.
   func getOverallBestScore() -> Int {
-    let allScores = easyScores + normalScores + hardScores
-    return allScores.max(by: { $0.score < $1.score })?.score ?? 0
+    scoresByKey.values
+      .flatMap { $0 }
+      .max(by: { $0.score < $1.score })?.score ?? 0
   }
 }

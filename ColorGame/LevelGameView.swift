@@ -86,7 +86,7 @@ struct LevelGameView: View {
                 levelRun.completeLevel()
                 LeaderboardStore.shared.addScore(
                   levelRun.globalScore,
-                  for: levelRun.mistakeTolerance
+                  gameType: levelRun.gameType, mistakeTolerance: levelRun.mistakeTolerance
                 )
                 // Reset everything
                 levelRun.resetRunStats()
@@ -101,7 +101,7 @@ struct LevelGameView: View {
                 levelRun.completeLevel()
                 LeaderboardStore.shared.addScore(
                   levelRun.globalScore,
-                  for: levelRun.mistakeTolerance
+                  gameType: levelRun.gameType, mistakeTolerance: levelRun.mistakeTolerance
                 )
                 // Reset everything
                 levelRun.resetRunStats()
@@ -129,7 +129,7 @@ struct LevelGameView: View {
                   // Save score to leaderboard when run completes
                   LeaderboardStore.shared.addScore(
                     levelRun.globalScore,
-                    for: levelRun.mistakeTolerance
+                    gameType: levelRun.gameType, mistakeTolerance: levelRun.mistakeTolerance
                   )
                   // Show run complete screen
                   dismiss()
@@ -143,7 +143,7 @@ struct LevelGameView: View {
                 if totalScore > 0 {
                   LeaderboardStore.shared.addScore(
                     totalScore,
-                    for: levelRun.mistakeTolerance
+                    gameType: levelRun.gameType, mistakeTolerance: levelRun.mistakeTolerance
                   )
                 }
                 levelRun.resetRunStats()
@@ -171,7 +171,7 @@ struct LevelGameView: View {
                 if totalScore > 0 {
                   LeaderboardStore.shared.addScore(
                     totalScore,
-                    for: levelRun.mistakeTolerance
+                    gameType: levelRun.gameType, mistakeTolerance: levelRun.mistakeTolerance
                   )
                 }
                 // Reset everything when going back to home after game over
@@ -198,7 +198,7 @@ struct LevelGameView: View {
                 if totalScore > 0 {
                   LeaderboardStore.shared.addScore(
                     totalScore,
-                    for: levelRun.mistakeTolerance
+                    gameType: levelRun.gameType, mistakeTolerance: levelRun.mistakeTolerance
                   )
                 }
                 levelRun.resetRunStats()
@@ -224,7 +224,7 @@ struct LevelGameView: View {
                   if totalScore > 0 {
                     LeaderboardStore.shared.addScore(
                       totalScore,
-                      for: levelRun.mistakeTolerance
+                      gameType: levelRun.gameType, mistakeTolerance: levelRun.mistakeTolerance
                     )
                   }
                   levelRun.resetRunStats()
