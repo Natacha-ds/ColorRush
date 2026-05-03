@@ -47,7 +47,7 @@ struct LevelGameView: View {
 
   // Streak animation state
   @State private var showStreakAnimation = false
-  @State private var streakBonusAmount = 0
+  @State private var streakDisplayCount = 0
 
   // Level intro pop-in state
   @State private var showLevelIntro = false
@@ -417,7 +417,7 @@ struct LevelGameView: View {
 
             // Streak animation overlay
             if showStreakAnimation {
-              StreakAnimationView(bonusAmount: streakBonusAmount)
+              StreakAnimationView(streakCount: streakDisplayCount)
                 .transition(.asymmetric(
                   insertion: .scale.combined(with: .opacity),
                   removal: .opacity
@@ -465,7 +465,7 @@ struct LevelGameView: View {
       #endif
       .onChange(of: levelRun.lastBonusEarned) { newValue in
         if newValue > 0 {
-          streakBonusAmount = newValue
+          streakDisplayCount = levelRun.currentStreak
           showStreakAnimation = true
           // Reset the trigger after a short delay
           DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -1494,7 +1494,7 @@ struct LevelIntroView: View {
 // MARK: - Streak Animation View
 
 struct StreakAnimationView: View {
-  let bonusAmount: Int
+  let streakCount: Int
   @State private var scale: CGFloat = 0.5
   @State private var opacity: Double = 0.0
 
@@ -1507,7 +1507,7 @@ struct StreakAnimationView: View {
         Text("🔥")
           .font(.system(size: 32))
 
-        Text("Streak +\(bonusAmount) pt")
+        Text("\(streakCount) in a row!")
           .font(.system(size: 24, weight: .bold, design: .rounded))
           .foregroundColor(.white)
       }
