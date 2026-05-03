@@ -53,6 +53,6 @@
 
 ## 8. Commit & archive
 
-- [ ] 8.1 Commit with message `feat: ship Remove Ads IAP via RevenueCat (feat-iap-remove-ads)`
-- [ ] 8.2 No `AUDIT_BUGS.md` entry — feature
-- [ ] 8.3 Archive via `/opsx:archive feat-iap-remove-ads`
+- [x] 8.1 Commit with message `feat: ship Remove Ads IAP via RevenueCat (feat-iap-remove-ads)`
+- [x] 8.2 No `AUDIT_BUGS.md` entry — feature
+- [x] 8.3 Archive via `/opsx:archive feat-iap-remove-ads`
