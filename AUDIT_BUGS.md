@@ -23,7 +23,7 @@ Each bug is intended to become an individual OpenSpec change.
 | BUG-004 | P0 | ✅ Done | commit `dd75ba2` / archive `2026-04-26-fix-bug-004-clamp-scores-and-remove-negative-game-over` |
 | BUG-008 | P1 | ✅ Done | commit `a8b66a8` / archive `2026-04-26-fix-bug-008-reannounce-color-on-non-punitive-refresh` |
 | BUG-009 | P1 | ✅ Done | commit `2a07678` / archive `2026-05-03-fix-bug-009-streak-animation-shows-count-not-points` |
-| BUG-010 | P2 | ⏳ Open | — |
+| BUG-010 | P2 | ✅ Done | corollary of BUG-003 (intro auto-dismiss now cancelled on dismiss) |
 | BUG-011 | P1 | ✅ Done | corollary of BUG-004 (commit `dd75ba2`) |
 | BUG-012 | P2 | ⏳ Open | — |
 | BUG-013 | P2 | ⏳ Open | — |
@@ -84,10 +84,10 @@ Each bug is intended to become an individual OpenSpec change.
 
 ## 🟡 P2 — Degraded UX
 
-### BUG-010 — "Back" button active during the intro
-- **File**: `LevelGameView.swift:197-215`
-- **Symptom**: tapping "Back" during the 3-second intro → odd UI state
-- **Fix**: `.disabled(showLevelIntro)` on the button
+### BUG-010 — "Back" button active during the intro ✅
+- **File**: `LevelGameView.swift`
+- **Symptom**: tapping "Back" during the 3-second intro left the view in an odd state because the auto-dismiss closure still fired afterwards and mutated `levelRun`
+- **Resolved as corollary**: BUG-003 made the intro auto-dismiss cancellable via `pendingIntroDismiss`, which `endGameSession()` cancels in `.onDisappear`. Tapping Back during the intro now cleanly cancels the auto-dismiss; no mutation of `levelRun` from a dead view. The audit also suggested `.disabled(showLevelIntro)` on the Back button, but allowing Back during the intro is actually better UX (the player can bail early), so we keep it tappable.
 
 ### BUG-012 — No audio interruption handling
 - **File**: `SpeechService.swift:31-63`
