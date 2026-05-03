@@ -33,6 +33,7 @@ Each bug is intended to become an individual OpenSpec change.
 | BUG-018 | P3 | ✅ Done | commit `cd86273` / archive `2026-04-26-fix-bug-018-remove-customization-subsystem` |
 | BUG-019 | P3 | ✅ Done | commit `4331f12` / archive `2026-05-03-fix-defensive-guards-batch` |
 | BUG-020 | P3 | ✅ Done | commit `4331f12` / archive `2026-05-03-fix-defensive-guards-batch` |
+| BUG-021 | P2 | ⏳ Open | post-audit finding (2026-05-03) |
 
 ---
 
@@ -93,6 +94,13 @@ Each bug is intended to become an individual OpenSpec change.
 - **File**: `LevelGameView.swift` `resumeTimer()`
 - **Symptom**: after a phone call (or any willResignActive interruption), the player returned to the game with no fresh audio cue for the announced color
 - **Applied fix**: added a single `speechService.speak(colorName(for: announcedColor))` inside `resumeTimer()` after the `handleTimeUp()` guard, so the announced color is re-anchored on resume only when the round genuinely continues. The broader `AVAudioSession` setup the audit also suggested (silent-mode policy, ducking) was deliberately left out of scope — those are orthogonal product decisions that deserve their own change if they ever bite. OpenSpec change: `fix-bug-012-reannounce-color-on-resume-from-interruption` (archived).
+
+### BUG-021 — Leaderboard does not distinguish Color Only vs Color+Text
+- **File**: `LeaderboardStore.swift`, `LeaderboardView.swift`
+- **Symptom**: scores from Color Only and Color+Text runs at the same difficulty (Easy/Normal/Hard) land in the same leaderboard pile, so the displayed top 5 mixes two game modes whose scoring math is intentionally different (different points-per-round, different streak-bonus formula, different `requiredScore`).
+- **Why this matters**: cross-mode comparisons are meaningless. A great Color+Text run can be beaten by a mediocre Color Only run (or vice-versa) just because the modes scale differently. Pre-shipping concern for honest leaderboards.
+- **Suggested fix**: key the leaderboard storage by `(GameType, MistakeTolerance)` — six leaderboards instead of three. Update `LeaderboardView` to add a Color Only / Color+Text segmented control (or sub-tabs) on top of the existing Easy/Normal/Hard one.
+- **Note**: post-audit finding (2026-05-03), surfaced while diagnosing a separate "score not appearing" report from the user.
 
 ### BUG-013 — `UIImpactFeedbackGenerator` recreated per tap ✅
 - **File**: `HapticsService.swift`
