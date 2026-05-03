@@ -1321,6 +1321,9 @@ struct LevelGameView: View {
       return
     }
 
+    // Re-anchor the player by re-speaking the announced color (BUG-012).
+    speechService.speak(colorName(for: announcedColor))
+
     gameTimer = Timer
       .scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
         guard isGameSessionActive else { return }
