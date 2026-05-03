@@ -9,6 +9,10 @@ import SwiftUI
 
 @main
 struct ColorRushApp: App {
+  init() {
+    AdsService.shared.bootstrap()
+  }
+
   var body: some Scene {
     WindowGroup {
       MainTabView()

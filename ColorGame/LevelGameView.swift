@@ -92,9 +92,11 @@ struct LevelGameView: View {
                 levelRun.resetRunStats()
                 levelRun.currentLevel = 1
                 levelRun.isActive = false
-                // Dismiss to go back to selection funnel
-                // (LevelSystemSelectionView)
-                dismiss()
+                // Maybe show an interstitial, then dismiss back to the
+                // selection funnel.
+                AdsService.shared.showInterstitialIfReady {
+                  dismiss()
+                }
               },
               onSeeLeaderboard: {
                 // Complete the level and save score
@@ -107,16 +109,15 @@ struct LevelGameView: View {
                 levelRun.resetRunStats()
                 levelRun.currentLevel = 1
                 levelRun.isActive = false
-                // Dismiss LevelGameView first
-                dismiss()
-                // Then post notification to dismiss LevelSystemSelectionView
-                // and switch to leaderboard
-                // Use a small delay to ensure the first dismiss completes
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                  NotificationCenter.default.post(
-                    name: NSNotification.Name("SwitchToLeaderboard"),
-                    object: nil
-                  )
+                // Maybe show an interstitial first, then dismiss + switch tab.
+                AdsService.shared.showInterstitialIfReady {
+                  dismiss()
+                  DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    NotificationCenter.default.post(
+                      name: NSNotification.Name("SwitchToLeaderboard"),
+                      object: nil
+                    )
+                  }
                 }
               }
             )
@@ -149,10 +150,12 @@ struct LevelGameView: View {
                 levelRun.resetRunStats()
                 levelRun.currentLevel = 1
                 levelRun.isActive = false
-                NotificationCenter.default.post(
-                  name: NSNotification.Name("DismissToHome"),
-                  object: nil
-                )
+                AdsService.shared.showInterstitialIfReady {
+                  NotificationCenter.default.post(
+                    name: NSNotification.Name("DismissToHome"),
+                    object: nil
+                  )
+                }
               }
             )
           }
@@ -178,10 +181,12 @@ struct LevelGameView: View {
                 levelRun.resetRunStats()
                 levelRun.currentLevel = 1
                 levelRun.isActive = false
-                NotificationCenter.default.post(
-                  name: NSNotification.Name("DismissToHome"),
-                  object: nil
-                )
+                AdsService.shared.showInterstitialIfReady {
+                  NotificationCenter.default.post(
+                    name: NSNotification.Name("DismissToHome"),
+                    object: nil
+                  )
+                }
               }
             )
           } else {
@@ -204,10 +209,12 @@ struct LevelGameView: View {
                 levelRun.resetRunStats()
                 levelRun.currentLevel = 1
                 levelRun.isActive = false
-                NotificationCenter.default.post(
-                  name: NSNotification.Name("DismissToHome"),
-                  object: nil
-                )
+                AdsService.shared.showInterstitialIfReady {
+                  NotificationCenter.default.post(
+                    name: NSNotification.Name("DismissToHome"),
+                    object: nil
+                  )
+                }
               }
             )
           }
@@ -235,10 +242,12 @@ struct LevelGameView: View {
                   // dismantle this LevelGameView automatically as the parent
                   // fullScreenCover goes away — calling dismiss() here would
                   // produce a visible flash of the selection screen.
-                  NotificationCenter.default.post(
-                    name: NSNotification.Name("DismissToHome"),
-                    object: nil
-                  )
+                  AdsService.shared.showInterstitialIfReady {
+                    NotificationCenter.default.post(
+                      name: NSNotification.Name("DismissToHome"),
+                      object: nil
+                    )
+                  }
                 }) {
                   Image(systemName: "chevron.left")
                     .font(.system(size: 18, weight: .medium))
