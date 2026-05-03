@@ -25,7 +25,7 @@ Each bug is intended to become an individual OpenSpec change.
 | BUG-009 | P1 | ✅ Done | commit `2a07678` / archive `2026-05-03-fix-bug-009-streak-animation-shows-count-not-points` |
 | BUG-010 | P2 | ✅ Done | corollary of BUG-003 (intro auto-dismiss now cancelled on dismiss) |
 | BUG-011 | P1 | ✅ Done | corollary of BUG-004 (commit `dd75ba2`) |
-| BUG-012 | P2 | ⏳ Open | — |
+| BUG-012 | P2 | ✅ Done | commit `7f21eae` / archive `2026-05-03-fix-bug-012-reannounce-color-on-resume-from-interruption` |
 | BUG-013 | P2 | ⏳ Open | — |
 | BUG-014 | P3 | ✅ Done | corollary of BUG-001/002/003 (no code change needed) |
 | BUG-015 | P3 | ⏳ Open | — |
@@ -89,10 +89,10 @@ Each bug is intended to become an individual OpenSpec change.
 - **Symptom**: tapping "Back" during the 3-second intro left the view in an odd state because the auto-dismiss closure still fired afterwards and mutated `levelRun`
 - **Resolved as corollary**: BUG-003 made the intro auto-dismiss cancellable via `pendingIntroDismiss`, which `endGameSession()` cancels in `.onDisappear`. Tapping Back during the intro now cleanly cancels the auto-dismiss; no mutation of `levelRun` from a dead view. The audit also suggested `.disabled(showLevelIntro)` on the Back button, but allowing Back during the intro is actually better UX (the player can bail early), so we keep it tappable.
 
-### BUG-012 — No audio interruption handling
-- **File**: `SpeechService.swift:31-63`
-- **Symptom**: an incoming call breaks the audio; the game does not re-announce the color afterwards
-- **Fix**: configure `AVAudioSession` + listener on `AVAudioSession.interruptionNotification`
+### BUG-012 — No audio interruption handling ✅
+- **File**: `LevelGameView.swift` `resumeTimer()`
+- **Symptom**: after a phone call (or any willResignActive interruption), the player returned to the game with no fresh audio cue for the announced color
+- **Applied fix**: added a single `speechService.speak(colorName(for: announcedColor))` inside `resumeTimer()` after the `handleTimeUp()` guard, so the announced color is re-anchored on resume only when the round genuinely continues. The broader `AVAudioSession` setup the audit also suggested (silent-mode policy, ducking) was deliberately left out of scope — those are orthogonal product decisions that deserve their own change if they ever bite. OpenSpec change: `fix-bug-012-reannounce-color-on-resume-from-interruption` (archived).
 
 ### BUG-013 — `UIImpactFeedbackGenerator` recreated per tap
 - **File**: `HapticsService.swift:17-29`

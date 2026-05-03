@@ -16,6 +16,6 @@
 
 ## 4. Commit & archive
 
-- [ ] 4.1 Commit with message `fix: re-announce color on resume from interruption (BUG-012)` and reference the OpenSpec change in the body
-- [ ] 4.2 Update `AUDIT_BUGS.md` status table: BUG-012 → ✅ Done with the commit hash and archive folder name
-- [ ] 4.3 Archive the change via `/opsx:archive fix-bug-012-reannounce-color-on-resume-from-interruption`
+- [x] 4.1 Commit `7f21eae fix: re-announce color on resume from interruption (BUG-012)`
+- [x] 4.2 `AUDIT_BUGS.md` status table updated (BUG-012 → ✅ Done) in the archive commit
+- [x] 4.3 Archived via `/opsx:archive` to `2026-05-03-fix-bug-012-reannounce-color-on-resume-from-interruption`
