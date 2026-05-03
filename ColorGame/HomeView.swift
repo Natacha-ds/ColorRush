@@ -5,6 +5,7 @@
 //  Created by Natacha Dehass on 26/09/2025.
 //
 
+import RevenueCat
 import SwiftUI
 
 enum Difficulty: String, CaseIterable {
@@ -17,6 +18,9 @@ struct HomeView: View {
   @State private var isLevelSystemSelectionPresented = false
   @State private var isRulesViewPresented = false
   @StateObject private var leaderboardStore = LeaderboardStore.shared
+  @StateObject private var store = StoreService.shared
+  @State private var isPurchasing = false
+  @State private var isRestoring = false
 
   var body: some View {
     NavigationView {
@@ -146,6 +150,70 @@ struct HomeView: View {
           Spacer()
             .frame(minHeight: 40) // More balanced spacing
 
+          // Remove Ads IAP — hidden once the entitlement is held.
+          if !store.hasRemoveAds {
+            VStack(spacing: 14) {
+              // Primary IAP button: capsule with gradient stroke, matches the
+              // visual language of the Best Score pill at the top.
+              Button(action: triggerPurchase) {
+                HStack(spacing: 8) {
+                  if isPurchasing {
+                    ProgressView()
+                      .progressViewStyle(.circular)
+                      .tint(.purple)
+                  } else {
+                    Text("✨")
+                      .font(.system(size: 16))
+                  }
+                  Text(removeAdsButtonTitle)
+                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                    .foregroundStyle(
+                      LinearGradient(
+                        gradient: Gradient(colors: [.purple, .pink]),
+                        startPoint: .leading,
+                        endPoint: .trailing
+                      )
+                    )
+                }
+                .frame(width: 220, height: 44)
+                .background(
+                  Capsule()
+                    .fill(Color.white)
+                )
+                .overlay(
+                  Capsule()
+                    .stroke(
+                      LinearGradient(
+                        gradient: Gradient(colors: [.purple, .pink]),
+                        startPoint: .leading,
+                        endPoint: .trailing
+                      ),
+                      lineWidth: 2
+                    )
+                )
+                .shadow(color: .purple.opacity(0.2), radius: 8, x: 0, y: 4)
+              }
+              .disabled(store.package == nil || isPurchasing || isRestoring)
+              .opacity(store.package == nil ? 0.6 : 1)
+
+              // Secondary action: restore previous purchases.
+              Button(action: triggerRestore) {
+                HStack(spacing: 6) {
+                  if isRestoring {
+                    ProgressView()
+                      .progressViewStyle(.circular)
+                      .tint(.secondary)
+                  }
+                  Text("Restore Purchases")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.secondary)
+                    .underline()
+                }
+              }
+              .disabled(isPurchasing || isRestoring)
+            }
+          }
+
           Spacer()
             .frame(height: 60)
         }
@@ -190,6 +258,40 @@ struct HomeView: View {
   private var currentBestScore: String {
     let score = leaderboardStore.getOverallBestScore()
     return score > 0 ? "\(score)" : "—"
+  }
+
+  private var removeAdsButtonTitle: String {
+    if let package = store.package {
+      "Remove Ads — \(package.storeProduct.localizedPriceString)"
+    } else {
+      "Loading…"
+    }
+  }
+
+  private func triggerPurchase() {
+    guard !isPurchasing else { return }
+    isPurchasing = true
+    Task {
+      defer { isPurchasing = false }
+      do {
+        _ = try await store.purchase()
+      } catch {
+        print("Purchase failed: \(error)")
+      }
+    }
+  }
+
+  private func triggerRestore() {
+    guard !isRestoring else { return }
+    isRestoring = true
+    Task {
+      defer { isRestoring = false }
+      do {
+        try await store.restore()
+      } catch {
+        print("Restore failed: \(error)")
+      }
+    }
   }
 }
 

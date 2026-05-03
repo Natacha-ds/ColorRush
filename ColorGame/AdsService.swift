@@ -94,6 +94,14 @@ final class AdsService: NSObject, ObservableObject {
   /// controller is available. Callers can therefore unconditionally chain the
   /// follow-up navigation inside `onDismiss` without branching themselves.
   func showInterstitialIfReady(onDismiss: @escaping () -> Void) {
+    // Suppress ads entirely for users who own the Remove Ads IAP.
+    // Counter is NOT incremented here, so an entitlement loss (refund etc.)
+    // doesn't produce a backlog of "owed" ads on the next eligible event.
+    guard !StoreService.shared.hasRemoveAds else {
+      onDismiss()
+      return
+    }
+
     runsSinceLastAd += 1
 
     guard runsSinceLastAd >= frequency else {

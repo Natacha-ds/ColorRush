@@ -10,6 +10,7 @@
 		C65EA5212ED3338600DD0F8E /* .swiftformat in Resources */ = {isa = PBXBuildFile; fileRef = C65EA5202ED3338600DD0F8E /* .swiftformat */; };
 		C69333AB2ED32AFB0078C8A6 /* .swiftlint.yml in Resources */ = {isa = PBXBuildFile; fileRef = C69333A92ED32AEE0078C8A6 /* .swiftlint.yml */; };
 		C6CE696D2FA7A3F500143086 /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = C6CE696C2FA7A3F500143086 /* GoogleMobileAds */; };
+		C6E57E4D2FA7DCFD00D0E2C9 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = C6E57E4C2FA7DCFD00D0E2C9 /* RevenueCat */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -35,6 +36,7 @@
 		BB75945A2E86AA8B0043F341 /* ColorGameUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ColorGameUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		C65EA5202ED3338600DD0F8E /* .swiftformat */ = {isa = PBXFileReference; lastKnownFileType = text; path = .swiftformat; sourceTree = "<group>"; };
 		C69333A92ED32AEE0078C8A6 /* .swiftlint.yml */ = {isa = PBXFileReference; lastKnownFileType = text.yaml; path = .swiftlint.yml; sourceTree = "<group>"; };
+		C6E57E4A2FA7B56000D0E2C9 /* Configuration.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = Configuration.storekit; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -60,6 +62,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C6E57E4D2FA7DCFD00D0E2C9 /* RevenueCat in Frameworks */,
 				C6CE696D2FA7A3F500143086 /* GoogleMobileAds in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -84,6 +87,7 @@
 		BB7594382E86AA890043F341 = {
 			isa = PBXGroup;
 			children = (
+				C6E57E4A2FA7B56000D0E2C9 /* Configuration.storekit */,
 				C69333A92ED32AEE0078C8A6 /* .swiftlint.yml */,
 				C65EA5202ED3338600DD0F8E /* .swiftformat */,
 				BB7594432E86AA890043F341 /* ColorGame */,
@@ -126,6 +130,7 @@
 			name = ColorGame;
 			packageProductDependencies = (
 				C6CE696C2FA7A3F500143086 /* GoogleMobileAds */,
+				C6E57E4C2FA7DCFD00D0E2C9 /* RevenueCat */,
 			);
 			productName = ColorGame;
 			productReference = BB7594412E86AA890043F341 /* ColorGame.app */;
@@ -211,6 +216,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				C6CE696B2FA7A3F500143086 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */,
+				C6E57E4B2FA7DCFC00D0E2C9 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = BB7594422E86AA890043F341 /* Products */;
@@ -682,6 +688,14 @@
 				minimumVersion = 13.3.0;
 			};
 		};
+		C6E57E4B2FA7DCFC00D0E2C9 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios-spm";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.70.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -689,6 +703,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = C6CE696B2FA7A3F500143086 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */;
 			productName = GoogleMobileAds;
+		};
+		C6E57E4C2FA7DCFD00D0E2C9 /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C6E57E4B2FA7DCFC00D0E2C9 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCat;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
