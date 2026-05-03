@@ -30,6 +30,6 @@
 
 ## 7. Commit & archive
 
-- [ ] 7.1 Commit with message `fix: defensive guards batch (BUG-013/015/016/019/020)` and reference the OpenSpec change in the body
-- [ ] 7.2 Update `AUDIT_BUGS.md` status table for all five bugs with the commit hash and archive folder name
-- [ ] 7.3 Archive the change via `/opsx:archive fix-defensive-guards-batch`
+- [x] 7.1 Commit `4331f12 fix: defensive guards batch (BUG-013/015/016/019/020)`
+- [x] 7.2 `AUDIT_BUGS.md` status table updated for all five bugs in the archive commit
+- [x] 7.3 Archived via `/opsx:archive` to `2026-05-03-fix-defensive-guards-batch`

@@ -26,13 +26,13 @@ Each bug is intended to become an individual OpenSpec change.
 | BUG-010 | P2 | ✅ Done | corollary of BUG-003 (intro auto-dismiss now cancelled on dismiss) |
 | BUG-011 | P1 | ✅ Done | corollary of BUG-004 (commit `dd75ba2`) |
 | BUG-012 | P2 | ✅ Done | commit `7f21eae` / archive `2026-05-03-fix-bug-012-reannounce-color-on-resume-from-interruption` |
-| BUG-013 | P2 | ⏳ Open | — |
+| BUG-013 | P2 | ✅ Done | commit `4331f12` / archive `2026-05-03-fix-defensive-guards-batch` |
 | BUG-014 | P3 | ✅ Done | corollary of BUG-001/002/003 (no code change needed) |
-| BUG-015 | P3 | ⏳ Open | — |
-| BUG-016 | P3 | ⏳ Open | — |
+| BUG-015 | P3 | ✅ Done | commit `4331f12` / archive `2026-05-03-fix-defensive-guards-batch` |
+| BUG-016 | P3 | ✅ Done | closed without code change (maxAttempts + deterministic fallback already cover the concern); see archive `2026-05-03-fix-defensive-guards-batch` |
 | BUG-018 | P3 | ✅ Done | commit `cd86273` / archive `2026-04-26-fix-bug-018-remove-customization-subsystem` |
-| BUG-019 | P3 | ⏳ Open | — |
-| BUG-020 | P3 | ⏳ Open | — |
+| BUG-019 | P3 | ✅ Done | commit `4331f12` / archive `2026-05-03-fix-defensive-guards-batch` |
+| BUG-020 | P3 | ✅ Done | commit `4331f12` / archive `2026-05-03-fix-defensive-guards-batch` |
 
 ---
 
@@ -94,10 +94,10 @@ Each bug is intended to become an individual OpenSpec change.
 - **Symptom**: after a phone call (or any willResignActive interruption), the player returned to the game with no fresh audio cue for the announced color
 - **Applied fix**: added a single `speechService.speak(colorName(for: announcedColor))` inside `resumeTimer()` after the `handleTimeUp()` guard, so the announced color is re-anchored on resume only when the round genuinely continues. The broader `AVAudioSession` setup the audit also suggested (silent-mode policy, ducking) was deliberately left out of scope — those are orthogonal product decisions that deserve their own change if they ever bite. OpenSpec change: `fix-bug-012-reannounce-color-on-resume-from-interruption` (archived).
 
-### BUG-013 — `UIImpactFeedbackGenerator` recreated per tap
-- **File**: `HapticsService.swift:17-29`
-- **Symptom**: haptic feedback drops on rapid taps
-- **Fix**: keep a shared instance + 50ms debounce
+### BUG-013 — `UIImpactFeedbackGenerator` recreated per tap ✅
+- **File**: `HapticsService.swift`
+- **Symptom**: haptic feedback dropped on rapid taps because each call instantiated a new generator
+- **Applied fix**: `HapticsService` now holds shared `UIImpactFeedbackGenerator` instances at class scope and reuses them. Verified on physical iPhone (simulator cannot reproduce haptics). OpenSpec change: `fix-defensive-guards-batch` (archived).
 
 ---
 
@@ -113,15 +113,15 @@ Each bug is intended to become an individual OpenSpec change.
 - **Finding**: the audit flagged a generic "reference cycle" suspicion to be validated via Xcode Memory Graph after 15+ runs.
 - **Resolved as corollary**: closed by the combination of BUG-001 (replaced manual `NotificationCenter` observers with SwiftUI `.onReceive` modifiers — lifetime managed by SwiftUI), BUG-002 (added `isGameSessionActive` / `isRoundTimerActive` guards inside Timer closures so they no-op on stale state), and BUG-003 (made deferred `asyncAfter` work cancellable via `DispatchWorkItem`). No remaining closure pattern captures long-lived state in a way that would create a cycle. `LevelGameView` is a SwiftUI `struct`, so `[weak self]` does not apply; the structural changes above are the right equivalent.
 
-### BUG-015 — Silent `try? JSONDecode`
-- **File**: `LeaderboardStore.swift:44-50`
-- **Symptom**: corrupted JSON = leaderboard wiped silently
-- **Fix**: log on error; harden before storing IAP state
+### BUG-015 — Silent `try? JSONDecode` ✅
+- **File**: `LeaderboardStore.swift` `loadScores(forKey:)`
+- **Symptom**: a corrupted JSON wiped the leaderboard silently
+- **Applied fix**: replaced `try?` with `do/catch` that prints `"Leaderboard decode failed for key '<key>': <error>"` and returns `[]` as a safe fallback. Critical hardening before any IAP state lands in `UserDefaults`. OpenSpec change: `fix-defensive-guards-batch` (archived).
 
-### BUG-016 — `buildValidGrid` with no timeout
-- **File**: `LevelGameView.swift:715-846`
-- **Symptom**: possible 0.2-0.5s freeze on edge cases
-- **Fix**: 100ms timeout + hard-coded fallback grid
+### BUG-016 — `buildValidGrid` with no timeout ✅
+- **File**: `LevelGameView.swift` `buildValidGrid()` and `buildValidGridWithText()`
+- **Audit hypothesis**: 0.2-0.5 s freeze on pathological inputs
+- **Closed without code change**: code review showed `maxAttempts = 20` (microseconds per iteration) and a deterministic fallback path that always returns a valid grid. No real freeze risk; the audit's hypothesis didn't survive code review. Rationale documented in `fix-defensive-guards-batch/design.md` (archived).
 
 ### BUG-018 — Dead customization subsystem ✅
 - **Files removed**:
@@ -132,15 +132,15 @@ Each bug is intended to become an individual OpenSpec change.
 - **Finding**: the entire customization subsystem (legacy difficulty-mode tuning UI) was dead. Initial audit underestimated the scope ("~100 lines"); actual scope was ~912 lines across 3 files plus one orphan declaration.
 - **Applied fix**: deleted the three files and removed the unused `@StateObject` from `LevelGameView.swift`. Net diff: -912 / +135 (the +135 is the OpenSpec change artifacts). OpenSpec change: `fix-bug-018-remove-customization-subsystem` (archived).
 
-### BUG-019 — Race on rapid double-tap "Retry"
-- **File**: `LevelSystemModels.swift:390-408`
-- **Symptom**: `resetLevelStats()` called twice → inconsistent `globalScore`
-- **Fix**: `isResetInProgress` flag or `.disabled` on the button after tap
+### BUG-019 — Race on rapid double-tap "Retry" ✅
+- **File**: `LevelGameView.swift` `startNewLevel()`
+- **Symptom**: rapid double-tap on "Try Again" called `startNewLevel()` twice
+- **Applied fix**: prepended `guard isLevelFailed || isLevelComplete else { return }` to `startNewLevel()`. Both flags flip false on the first call, so the second rapid call is a clean no-op. OpenSpec change: `fix-defensive-guards-batch` (archived).
 
-### BUG-020 — No fallback when `currentLevelConfig == nil`
-- **File**: `LevelGameView.swift:1195-1218`
-- **Symptom**: extreme edge case → game freezes
-- **Fix**: force `isLevelFailed = true` inside the guard
+### BUG-020 — No fallback when `currentLevelConfig == nil` ✅
+- **File**: `LevelGameView.swift` `handleTimeUp()`
+- **Symptom**: if `currentLevelConfig` was nil at time-up, the view returned silently and froze
+- **Applied fix**: the guard now sets `isLevelFailed = true; failedReason = .insufficientScore` before returning, routing the player into the existing failure UI instead of freezing. OpenSpec change: `fix-defensive-guards-batch` (archived).
 
 ---
 
