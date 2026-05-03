@@ -629,6 +629,7 @@ struct LevelGameView: View {
   }
 
   private func startNewLevel() {
+    guard isLevelFailed || isLevelComplete else { return }
     endGameSession() // Stop previous timer
     isLevelComplete = false
     isLevelFailed = false
@@ -1219,7 +1220,11 @@ struct LevelGameView: View {
     endGameSession()
 
     // Check if level was completed successfully
-    guard let levelConfig = levelRun.currentLevelConfig else { return }
+    guard let levelConfig = levelRun.currentLevelConfig else {
+      isLevelFailed = true
+      failedReason = .insufficientScore
+      return
+    }
 
     // Check if score meets requirement (streak bonuses are already included in
     // currentScore)

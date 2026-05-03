@@ -12,19 +12,22 @@
 class HapticsService {
   static let shared = HapticsService()
 
+  #if canImport(UIKit)
+    private let lightGenerator = UIImpactFeedbackGenerator(style: .light)
+    private let heavyGenerator = UIImpactFeedbackGenerator(style: .heavy)
+  #endif
+
   private init() {}
 
   func lightImpact() {
     #if canImport(UIKit)
-      let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-      impactFeedback.impactOccurred()
+      lightGenerator.impactOccurred()
     #endif
   }
 
   func heavyImpact() {
     #if canImport(UIKit)
-      let impactFeedback = UIImpactFeedbackGenerator(style: .heavy)
-      impactFeedback.impactOccurred()
+      heavyGenerator.impactOccurred()
     #endif
   }
 }

@@ -42,12 +42,14 @@ class LeaderboardStore: ObservableObject {
   }
 
   private func loadScores(forKey key: String) -> [ScoreEntry] {
-    guard let data = userDefaults.data(forKey: key),
-          let scores = try? JSONDecoder().decode([ScoreEntry].self, from: data)
-    else {
+    guard let data = userDefaults.data(forKey: key) else { return [] }
+    do {
+      let scores = try JSONDecoder().decode([ScoreEntry].self, from: data)
+      return Array(scores.sorted(by: >).prefix(5)) // Keep only top 5
+    } catch {
+      print("Leaderboard decode failed for key '\(key)': \(error)")
       return []
     }
-    return Array(scores.sorted(by: >).prefix(5)) // Keep only top 5
   }
 
   private func saveScores(_ scores: [ScoreEntry], forKey key: String) {
