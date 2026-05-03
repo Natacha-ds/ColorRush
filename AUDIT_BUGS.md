@@ -33,7 +33,7 @@ Each bug is intended to become an individual OpenSpec change.
 | BUG-018 | P3 | ✅ Done | commit `cd86273` / archive `2026-04-26-fix-bug-018-remove-customization-subsystem` |
 | BUG-019 | P3 | ✅ Done | commit `4331f12` / archive `2026-05-03-fix-defensive-guards-batch` |
 | BUG-020 | P3 | ✅ Done | commit `4331f12` / archive `2026-05-03-fix-defensive-guards-batch` |
-| BUG-021 | P2 | ⏳ Open | post-audit finding (2026-05-03) |
+| BUG-021 | P2 | ✅ Done | commit `39b54b2` / archive `2026-05-03-fix-bug-021-leaderboard-keyed-by-game-type-and-tolerance` |
 | BUG-022 | P0 | ✅ Done | commit `903c44e` / archive `2026-05-03-fix-bug-022-render-and-wire-back-to-home` |
 
 ---
@@ -105,12 +105,10 @@ Each bug is intended to become an individual OpenSpec change.
 - **Applied fix**: rendered the secondary "Back to Home" button in both views, fixed `LevelCompleteView`'s parent `onBackToHome` closure to actually save (it had been a bare `dismiss()`), wrapped the in-game Back chevron in the canonical save closure, and routed all four "Back to Home" exits to the Home tab via a `DismissToHome` notification listened to by `HomeView`. Implementation note: the `LevelGameView`-side handlers post the notification without calling their own `dismiss()` so the parent fullScreenCover cascade produces a single-animation transition with no flash of the level selector. OpenSpec change: `fix-bug-022-render-and-wire-back-to-home` (archived).
 - **Note**: post-audit finding (2026-05-03), reported by user.
 
-### BUG-021 — Leaderboard does not distinguish Color Only vs Color+Text
-- **File**: `LeaderboardStore.swift`, `LeaderboardView.swift`
-- **Symptom**: scores from Color Only and Color+Text runs at the same difficulty (Easy/Normal/Hard) land in the same leaderboard pile, so the displayed top 5 mixes two game modes whose scoring math is intentionally different (different points-per-round, different streak-bonus formula, different `requiredScore`).
-- **Why this matters**: cross-mode comparisons are meaningless. A great Color+Text run can be beaten by a mediocre Color Only run (or vice-versa) just because the modes scale differently. Pre-shipping concern for honest leaderboards.
-- **Suggested fix**: key the leaderboard storage by `(GameType, MistakeTolerance)` — six leaderboards instead of three. Update `LeaderboardView` to add a Color Only / Color+Text segmented control (or sub-tabs) on top of the existing Easy/Normal/Hard one.
-- **Note**: post-audit finding (2026-05-03), surfaced while diagnosing a separate "score not appearing" report from the user.
+### BUG-021 — Leaderboard does not distinguish Color Only vs Color+Text ✅
+- **Files updated**: `LeaderboardStore.swift` (storage refactor + v2 migration), `LevelGameView.swift` (7 call-site updates), `LeaderboardView.swift` (second segmented control)
+- **Symptom**: scores from Color Only and Color+Text runs at the same difficulty mixed in the same leaderboard pile, making cross-mode comparisons meaningless
+- **Applied fix**: re-keyed `LeaderboardStore` storage by `(GameType, MistakeTolerance)` — six leaderboards instead of three. `LeaderboardView` now exposes both axes via two segmented controls. One-time `UserDefaults` migration on first launch wipes the legacy v1 data. Introduced a new `leaderboard` capability spec (separate from `level-gameplay`) to give this surface a first-class home for future work (cloud sync, multiplayer, achievements). OpenSpec change: `fix-bug-021-leaderboard-keyed-by-game-type-and-tolerance` (archived).
 
 ### BUG-013 — `UIImpactFeedbackGenerator` recreated per tap ✅
 - **File**: `HapticsService.swift`

@@ -38,6 +38,6 @@
 
 ## 6. Commit & archive
 
-- [ ] 6.1 Commit with message `fix: leaderboard keyed by (GameType, MistakeTolerance) (BUG-021)` and reference the OpenSpec change in the body
-- [ ] 6.2 Update `AUDIT_BUGS.md` status table: BUG-021 → ✅ Done with the commit hash and archive folder name
-- [ ] 6.3 Archive the change via `/opsx:archive fix-bug-021-leaderboard-keyed-by-game-type-and-tolerance`
+- [x] 6.1 Commit `39b54b2 fix: leaderboard keyed by (GameType, MistakeTolerance) (BUG-021)`
+- [x] 6.2 `AUDIT_BUGS.md` status table updated (BUG-021 → ✅ Done) in the archive commit
+- [x] 6.3 Archived via `/opsx:archive` to `2026-05-03-fix-bug-021-leaderboard-keyed-by-game-type-and-tolerance`
