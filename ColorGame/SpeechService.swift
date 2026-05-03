@@ -8,57 +8,72 @@
 import AVFoundation
 import Foundation
 
-class SpeechService {
-  private var audioPlayer: AVAudioPlayer?
+final class SpeechService {
+  // Pre-built players keyed by color. Reusing a primed AVAudioPlayer
+  // skips the per-call decode + session-activation cost that surfaced
+  // as audible leading silence on device.
+  private var players: [String: AVAudioPlayer] = [:]
 
-  // Map color names to audio file names
-  private func audioFileName(for colorName: String) -> String? {
-    let lowercased = colorName.lowercased()
-    switch lowercased {
-    case "red":
-      return "Red-voice"
-    case "blue":
-      return "Blue-voice"
-    case "green":
-      return "Green-voice"
-    case "yellow":
-      return "Yellow-voice"
-    default:
-      return nil
+  init() {
+    configureAudioSession()
+    preloadPlayers()
+  }
+
+  private func configureAudioSession() {
+    #if os(iOS)
+    do {
+      try AVAudioSession.sharedInstance().setCategory(
+        .ambient,
+        mode: .default,
+        options: [.mixWithOthers]
+      )
+      try AVAudioSession.sharedInstance().setActive(true)
+    } catch {
+      print("Failed to configure audio session: \(error.localizedDescription)")
+    }
+    #endif
+  }
+
+  private func preloadPlayers() {
+    let mapping: [String: String] = [
+      "red": "Red-voice",
+      "blue": "Blue-voice",
+      "green": "Green-voice",
+      "yellow": "Yellow-voice",
+    ]
+
+    for (key, fileName) in mapping {
+      guard
+        let url = Bundle.main.url(forResource: fileName, withExtension: "mp3")
+      else {
+        print("Audio file not found in bundle: \(fileName).mp3")
+        continue
+      }
+
+      do {
+        let player = try AVAudioPlayer(contentsOf: url)
+        player.prepareToPlay()
+        players[key] = player
+      } catch {
+        print("Error preparing audio player for \(fileName): \(error.localizedDescription)")
+      }
     }
   }
 
   func speak(_ text: String) {
-    // Stop any ongoing audio playback
-    audioPlayer?.stop()
-    audioPlayer = nil
-
-    // Get the audio file name for the color
-    guard let audioFileName = audioFileName(for: text) else {
-      print("No audio file found for color: \(text)")
+    let key = text.lowercased()
+    guard let player = players[key] else {
+      print("No audio player ready for color: \(text)")
       return
     }
 
-    // Find the audio file in the bundle
-    // Files should be added to Xcode project and included in the app bundle
-    guard let url = Bundle.main.url(
-      forResource: audioFileName,
-      withExtension: "mp3"
-    ) else {
-      print("Audio file not found in bundle: \(audioFileName).mp3")
-      print(
-        "Make sure the file is added to the Xcode project and included in the app target"
-      )
-      return
+    // Stop any voice currently playing, then start the requested one
+    // from the beginning. All players stay primed across calls.
+    for other in players.values where other.isPlaying {
+      other.stop()
+      other.currentTime = 0
     }
-
-    // Create and play the audio
-    do {
-      audioPlayer = try AVAudioPlayer(contentsOf: url)
-      audioPlayer?.prepareToPlay()
-      audioPlayer?.play()
-    } catch {
-      print("Error playing audio: \(error.localizedDescription)")
-    }
+    player.currentTime = 0
+    player.play()
   }
 }
