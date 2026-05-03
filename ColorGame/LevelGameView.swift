@@ -138,7 +138,21 @@ struct LevelGameView: View {
                 }
               },
               onBackToHome: {
-                dismiss()
+                let totalScore = levelRun.globalScore + levelRun
+                  .levelPositivePoints
+                if totalScore > 0 {
+                  LeaderboardStore.shared.addScore(
+                    totalScore,
+                    for: levelRun.mistakeTolerance
+                  )
+                }
+                levelRun.resetRunStats()
+                levelRun.currentLevel = 1
+                levelRun.isActive = false
+                NotificationCenter.default.post(
+                  name: NSNotification.Name("DismissToHome"),
+                  object: nil
+                )
               }
             )
           }
@@ -164,7 +178,10 @@ struct LevelGameView: View {
                 levelRun.resetRunStats()
                 levelRun.currentLevel = 1
                 levelRun.isActive = false
-                dismiss()
+                NotificationCenter.default.post(
+                  name: NSNotification.Name("DismissToHome"),
+                  object: nil
+                )
               }
             )
           } else {
@@ -187,7 +204,10 @@ struct LevelGameView: View {
                 levelRun.resetRunStats()
                 levelRun.currentLevel = 1
                 levelRun.isActive = false
-                dismiss()
+                NotificationCenter.default.post(
+                  name: NSNotification.Name("DismissToHome"),
+                  object: nil
+                )
               }
             )
           }
@@ -199,7 +219,26 @@ struct LevelGameView: View {
               HStack {
                 Button(action: {
                   endGameSession()
-                  dismiss()
+                  let totalScore = levelRun.globalScore + levelRun
+                    .levelPositivePoints
+                  if totalScore > 0 {
+                    LeaderboardStore.shared.addScore(
+                      totalScore,
+                      for: levelRun.mistakeTolerance
+                    )
+                  }
+                  levelRun.resetRunStats()
+                  levelRun.currentLevel = 1
+                  levelRun.isActive = false
+                  // Dismiss to the Home tab in a single animation by collapsing
+                  // the LevelSystemSelectionView underneath us. SwiftUI will
+                  // dismantle this LevelGameView automatically as the parent
+                  // fullScreenCover goes away — calling dismiss() here would
+                  // produce a visible flash of the selection screen.
+                  NotificationCenter.default.post(
+                    name: NSNotification.Name("DismissToHome"),
+                    object: nil
+                  )
                 }) {
                   Image(systemName: "chevron.left")
                     .font(.system(size: 18, weight: .medium))
@@ -1794,6 +1833,14 @@ struct LevelCompleteView: View {
             .cornerRadius(25)
             .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
         }
+
+        // Back to Home — secondary exit (saves accumulated score)
+        Button(action: onBackToHome) {
+          Text("Back to Home")
+            .font(.system(size: 16, weight: .medium))
+            .foregroundColor(.secondary)
+            .padding(.vertical, 8)
+        }
       }
       .padding(.vertical)
       .padding(
@@ -2077,6 +2124,14 @@ struct LevelFailedView: View {
               )
               .cornerRadius(25)
               .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
+          }
+
+          // Back to Home — secondary exit (saves accumulated score)
+          Button(action: onBackToHome) {
+            Text("Back to Home")
+              .font(.system(size: 16, weight: .medium))
+              .foregroundColor(.secondary)
+              .padding(.vertical, 8)
           }
         }
       }

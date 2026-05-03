@@ -162,6 +162,12 @@ struct HomeView: View {
         isLevelSystemSelectionPresented = false
         // Switch to leaderboard tab (handled by MainTabView)
       }
+      .onReceive(NotificationCenter.default
+        .publisher(for: NSNotification.Name("DismissToHome")))
+      { _ in
+        // Dismiss the selection view so the player lands on the Home tab
+        isLevelSystemSelectionPresented = false
+      }
       .fullScreenCover(isPresented: $isRulesViewPresented) {
         RulesView(isPresented: $isRulesViewPresented)
       }
