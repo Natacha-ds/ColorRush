@@ -22,7 +22,7 @@ Each bug is intended to become an individual OpenSpec change.
 | BUG-003 | P0 | ✅ Done | commit `50100d0` / archive `2026-04-26-fix-bug-003-cancellable-async-after-and-guards` |
 | BUG-004 | P0 | ✅ Done | commit `dd75ba2` / archive `2026-04-26-fix-bug-004-clamp-scores-and-remove-negative-game-over` |
 | BUG-008 | P1 | ✅ Done | commit `a8b66a8` / archive `2026-04-26-fix-bug-008-reannounce-color-on-non-punitive-refresh` |
-| BUG-009 | P1 | ⏳ Open | — |
+| BUG-009 | P1 | ✅ Done | commit `2a07678` / archive `2026-05-03-fix-bug-009-streak-animation-shows-count-not-points` |
 | BUG-010 | P2 | ⏳ Open | — |
 | BUG-011 | P1 | ✅ Done | corollary of BUG-004 (commit `dd75ba2`) |
 | BUG-012 | P2 | ⏳ Open | — |
@@ -70,10 +70,10 @@ Each bug is intended to become an individual OpenSpec change.
 - **Symptom**: the grid refreshes every 1 s but the announced color (audio) was not re-spoken, leaving the player without audio reinforcement against a brand-new visual layout
 - **Applied fix**: `refreshBoardOnly()` now calls `speechService.speak(colorName(for: announcedColor))` on every refresh. `SpeechService.speak` already stops in-flight audio so re-announces pre-empt cleanly. OpenSpec change: `fix-bug-008-reannounce-color-on-non-punitive-refresh` (archived).
 
-### BUG-009 — Misleading streak bonus animation
-- **File**: `LevelSystemModels.swift:429-465`
-- **Symptom**: the "+20" displayed on screen suggests these 20 points are added on top, when they are already included in `currentScore`
-- **Fix**: clarify the animation (label "Streak!" instead of "+20") or change the addition sequence
+### BUG-009 — Misleading streak bonus animation ✅
+- **File**: `LevelGameView.swift` (`StreakAnimationView` and the `.onChange(of: lastBonusEarned)` handler)
+- **Symptom**: animation read "🔥 Streak +20 pt"; the bonus was already counted in `currentScore`, so "+20 pt" misled players into expecting another addition
+- **Applied fix**: switched the displayed metric from the bonus point delta to the streak length reached. The animation now reads "🔥 X in a row!" using `levelRun.currentStreak` captured at the milestone. Score math unchanged. OpenSpec change: `fix-bug-009-streak-animation-shows-count-not-points` (archived).
 
 ### BUG-011 — Leaderboard not clamped to ≥ 0 ✅
 - **File**: `LeaderboardStore.swift:60`
