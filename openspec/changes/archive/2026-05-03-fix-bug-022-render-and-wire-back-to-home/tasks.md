@@ -29,6 +29,6 @@
 
 ## 6. Commit & archive
 
-- [ ] 6.1 Commit with message `fix: render and wire Back to Home across all exit paths (BUG-022)` and reference the OpenSpec change in the body
-- [ ] 6.2 Update `AUDIT_BUGS.md` status table: BUG-022 → ✅ Done with the commit hash and archive folder name
-- [ ] 6.3 Archive the change via `/opsx:archive fix-bug-022-render-and-wire-back-to-home`
+- [x] 6.1 Commit `903c44e fix: render and wire Back to Home across all exit paths (BUG-022)`
+- [x] 6.2 `AUDIT_BUGS.md` status table updated (BUG-022 → ✅ Done) in the archive commit
+- [x] 6.3 Archived via `/opsx:archive` to `2026-05-03-fix-bug-022-render-and-wire-back-to-home`
