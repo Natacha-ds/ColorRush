@@ -2,6 +2,7 @@ import SwiftUI
 
 struct LeaderboardView: View {
   @StateObject private var leaderboardStore = LeaderboardStore.shared
+  @StateObject private var gameCenter = GameCenterService.shared
   @State private var selectedGameType: GameType = .colorOnly
   @State private var selectedMistakeTolerance: MistakeTolerance = .easy
 
@@ -119,9 +120,46 @@ struct LeaderboardView: View {
           )
           .frame(width: 280)
 
-          Spacer()
-            .frame(height: 20)
+          // Inline rank pill — visible only when authenticated and a rank
+          // has been fetched for the currently selected bucket.
+          if gameCenter.isAuthenticated,
+             let rank = gameCenter.ranks[
+              LeaderboardKey(
+                gameType: selectedGameType,
+                mistakeTolerance: selectedMistakeTolerance
+              )
+             ] {
+            HStack(spacing: 8) {
+              Text("🌍")
+                .font(.system(size: 16))
+              Text("Rank #\(rank.rank) of \(rank.totalPlayers)")
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .foregroundStyle(
+                  LinearGradient(
+                    gradient: Gradient(colors: [.blue, .purple]),
+                    startPoint: .leading,
+                    endPoint: .trailing
+                  )
+                )
+            }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 11)
+            .background(Capsule().fill(Color.white))
+            .overlay(
+              Capsule()
+                .stroke(
+                  LinearGradient(
+                    gradient: Gradient(colors: [.blue, .purple]),
+                    startPoint: .leading,
+                    endPoint: .trailing
+                  ),
+                  lineWidth: 2
+                )
+            )
+            .shadow(color: .blue.opacity(0.15), radius: 6, x: 0, y: 3)
+          }
         }
+        .padding(.bottom, 16)
 
         // Scores list (top 5 only, no scrolling)
         VStack(spacing: 12) {
@@ -165,6 +203,57 @@ struct LeaderboardView: View {
         .padding(.horizontal, 20)
         .frame(maxHeight: .infinity)
 
+        // Global Ranking CTA — opens the native Game Center view scoped
+        // to the currently selected (gameType, mistakeTolerance) bucket.
+        VStack(spacing: 6) {
+          Button(action: {
+            gameCenter.presentLeaderboard(
+              gameType: selectedGameType,
+              mistakeTolerance: selectedMistakeTolerance
+            )
+          }) {
+            HStack(spacing: 8) {
+              Text("🌍")
+                .font(.system(size: 16))
+              Text("Global Ranking")
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .foregroundStyle(
+                  LinearGradient(
+                    gradient: Gradient(colors: [.blue, .purple]),
+                    startPoint: .leading,
+                    endPoint: .trailing
+                  )
+                )
+            }
+            .frame(width: 220, height: 44)
+            .background(Capsule().fill(Color.white))
+            .overlay(
+              Capsule()
+                .stroke(
+                  LinearGradient(
+                    gradient: Gradient(colors: [.blue, .purple]),
+                    startPoint: .leading,
+                    endPoint: .trailing
+                  ),
+                  lineWidth: 2
+                )
+            )
+            .shadow(color: .blue.opacity(0.2), radius: 8, x: 0, y: 4)
+            .opacity(gameCenter.isAuthenticated ? 1.0 : 0.5)
+          }
+          .disabled(!gameCenter.isAuthenticated)
+          .buttonStyle(PlainButtonStyle())
+
+          if !gameCenter.isAuthenticated {
+            Text("Sign in to Game Center to see the global ranking")
+              .font(.system(size: 11))
+              .foregroundColor(.secondary)
+              .multilineTextAlignment(.center)
+              .padding(.horizontal, 32)
+          }
+        }
+        .padding(.top, 8)
+
         Spacer()
           .frame(height: 60)
       }
@@ -172,6 +261,27 @@ struct LeaderboardView: View {
     #if !os(macOS)
     .navigationBarHidden(true)
     #endif
+    .onAppear {
+      refreshCurrentRank()
+    }
+    .onChange(of: selectedGameType) { _, _ in
+      refreshCurrentRank()
+    }
+    .onChange(of: selectedMistakeTolerance) { _, _ in
+      refreshCurrentRank()
+    }
+    .onChange(of: gameCenter.isAuthenticated) { _, isAuth in
+      if isAuth { refreshCurrentRank() }
+    }
+  }
+
+  private func refreshCurrentRank() {
+    Task {
+      await gameCenter.refreshRank(
+        for: selectedGameType,
+        mistakeTolerance: selectedMistakeTolerance
+      )
+    }
   }
 }
 

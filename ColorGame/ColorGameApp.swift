@@ -14,6 +14,9 @@ struct ColorRushApp: App {
     // Force the StoreService singleton to initialise so it loads the IAP
     // product and refreshes the entitlement state at app launch.
     _ = StoreService.shared
+    // Same pattern for GameCenterService: kicks off the
+    // GKLocalPlayer.authenticateHandler and reports auth state.
+    _ = GameCenterService.shared
   }
 
   var body: some Scene {

@@ -88,6 +88,11 @@ struct LevelGameView: View {
                   levelRun.globalScore,
                   gameType: levelRun.gameType, mistakeTolerance: levelRun.mistakeTolerance
                 )
+                GameCenterService.shared.submitScore(
+                  levelRun.globalScore,
+                  gameType: levelRun.gameType,
+                  mistakeTolerance: levelRun.mistakeTolerance
+                )
                 // Reset everything
                 levelRun.resetRunStats()
                 levelRun.currentLevel = 1
@@ -104,6 +109,11 @@ struct LevelGameView: View {
                 LeaderboardStore.shared.addScore(
                   levelRun.globalScore,
                   gameType: levelRun.gameType, mistakeTolerance: levelRun.mistakeTolerance
+                )
+                GameCenterService.shared.submitScore(
+                  levelRun.globalScore,
+                  gameType: levelRun.gameType,
+                  mistakeTolerance: levelRun.mistakeTolerance
                 )
                 // Reset everything
                 levelRun.resetRunStats()
@@ -132,6 +142,11 @@ struct LevelGameView: View {
                     levelRun.globalScore,
                     gameType: levelRun.gameType, mistakeTolerance: levelRun.mistakeTolerance
                   )
+                  GameCenterService.shared.submitScore(
+                    levelRun.globalScore,
+                    gameType: levelRun.gameType,
+                    mistakeTolerance: levelRun.mistakeTolerance
+                  )
                   // Show run complete screen
                   dismiss()
                 } else {
@@ -145,6 +160,11 @@ struct LevelGameView: View {
                   LeaderboardStore.shared.addScore(
                     totalScore,
                     gameType: levelRun.gameType, mistakeTolerance: levelRun.mistakeTolerance
+                  )
+                  GameCenterService.shared.submitScore(
+                    totalScore,
+                    gameType: levelRun.gameType,
+                    mistakeTolerance: levelRun.mistakeTolerance
                   )
                 }
                 levelRun.resetRunStats()
@@ -176,6 +196,11 @@ struct LevelGameView: View {
                     totalScore,
                     gameType: levelRun.gameType, mistakeTolerance: levelRun.mistakeTolerance
                   )
+                  GameCenterService.shared.submitScore(
+                    totalScore,
+                    gameType: levelRun.gameType,
+                    mistakeTolerance: levelRun.mistakeTolerance
+                  )
                 }
                 // Reset everything when going back to home after game over
                 levelRun.resetRunStats()
@@ -205,6 +230,11 @@ struct LevelGameView: View {
                     totalScore,
                     gameType: levelRun.gameType, mistakeTolerance: levelRun.mistakeTolerance
                   )
+                  GameCenterService.shared.submitScore(
+                    totalScore,
+                    gameType: levelRun.gameType,
+                    mistakeTolerance: levelRun.mistakeTolerance
+                  )
                 }
                 levelRun.resetRunStats()
                 levelRun.currentLevel = 1
@@ -232,6 +262,11 @@ struct LevelGameView: View {
                     LeaderboardStore.shared.addScore(
                       totalScore,
                       gameType: levelRun.gameType, mistakeTolerance: levelRun.mistakeTolerance
+                    )
+                    GameCenterService.shared.submitScore(
+                      totalScore,
+                      gameType: levelRun.gameType,
+                      mistakeTolerance: levelRun.mistakeTolerance
                     )
                   }
                   levelRun.resetRunStats()
