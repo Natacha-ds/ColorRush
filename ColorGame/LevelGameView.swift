@@ -563,6 +563,12 @@ struct LevelGameView: View {
           }
         }
       }
+      .onChange(of: isLevelComplete) { _, isComplete in
+        if isComplete { AdsService.shared.recordLevelPlayed() }
+      }
+      .onChange(of: isLevelFailed) { _, isFailed in
+        if isFailed { AdsService.shared.recordLevelPlayed() }
+      }
     }
     #if !os(macOS)
     .navigationViewStyle(StackNavigationViewStyle())

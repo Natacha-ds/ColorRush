@@ -18,7 +18,8 @@ final class AdsService: NSObject, ObservableObject {
     private let interstitialAdUnitID = "ca-app-pub-9259578521352937/6262225438"
   #endif
 
-  /// Show an interstitial at most once every `frequency` end-of-run events.
+  /// Show an interstitial at most once every `frequency` levels played
+  /// (a level "played" = the player either completed it or failed it).
   private let frequency: Int = 3
 
   // MARK: - State
@@ -26,7 +27,7 @@ final class AdsService: NSObject, ObservableObject {
   @Published private(set) var isReady: Bool = false
 
   private var interstitial: InterstitialAd?
-  private var runsSinceLastAd: Int = 0
+  private var levelsSinceLastAd: Int = 0
   private var pendingDismissCallback: (() -> Void)?
 
   override private init() {
@@ -86,25 +87,34 @@ final class AdsService: NSObject, ObservableObject {
     }
   }
 
+  // MARK: - Counter
+
+  /// Increment the "levels played" counter — call once when a level
+  /// finishes (complete or failed). Suppressed entirely for Remove Ads
+  /// holders so the counter never accumulates while the entitlement is
+  /// held; if it ever lapses, ads start fresh from zero rather than
+  /// firing a backlog.
+  func recordLevelPlayed() {
+    guard !StoreService.shared.hasRemoveAds else { return }
+    levelsSinceLastAd += 1
+  }
+
   // MARK: - Presentation
 
   /// Frequency-capped interstitial presentation. The `onDismiss` callback
-  /// always fires — either after the ad's dismissal, or immediately when the
-  /// cap blocks the ad, when the ad has not yet loaded, or when no host view
-  /// controller is available. Callers can therefore unconditionally chain the
-  /// follow-up navigation inside `onDismiss` without branching themselves.
+  /// always fires — either after the ad's dismissal, or immediately when
+  /// the cap is not yet reached, when the ad has not yet loaded, or when
+  /// no host view controller is available. The counter is NOT mutated
+  /// here — call `recordLevelPlayed()` from the gameplay flow to drive
+  /// it. Callers can unconditionally chain the follow-up navigation in
+  /// `onDismiss` without branching themselves.
   func showInterstitialIfReady(onDismiss: @escaping () -> Void) {
-    // Suppress ads entirely for users who own the Remove Ads IAP.
-    // Counter is NOT incremented here, so an entitlement loss (refund etc.)
-    // doesn't produce a backlog of "owed" ads on the next eligible event.
     guard !StoreService.shared.hasRemoveAds else {
       onDismiss()
       return
     }
 
-    runsSinceLastAd += 1
-
-    guard runsSinceLastAd >= frequency else {
+    guard levelsSinceLastAd >= frequency else {
       onDismiss()
       return
     }
@@ -117,7 +127,7 @@ final class AdsService: NSObject, ObservableObject {
     }
 
     pendingDismissCallback = onDismiss
-    runsSinceLastAd = 0
+    levelsSinceLastAd = 0
     interstitial.present(from: rootVC)
   }
 

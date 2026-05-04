@@ -3,28 +3,42 @@
 ## Purpose
 TBD - created by archiving change feat-ads-v1-interstitial-end-of-run. Update Purpose after archive.
 ## Requirements
-### Requirement: An interstitial ad is considered for presentation at every end-of-run event
+### Requirement: A "level played" counter drives interstitial frequency
 
-At every end-of-run event in `LevelGameView` (in-game Back, level-failed Back to Home, level-complete Back to Home, level-game-over Back to Home, FinalWin play-harder, FinalWin see-leaderboard), the app SHALL invoke `AdsService.showInterstitialIfReady(from:onDismiss:)` after the score save and run reset, and SHALL run the post-presentation continuation (the `DismissToHome` cascade) only inside the `onDismiss` callback.
+The app SHALL increment an in-memory "levels played" counter on `AdsService` each time a level finishes — either successfully (`isLevelComplete` flips to `true`) or unsuccessfully (`isLevelFailed` flips to `true`). The counter SHALL reset to zero on app launch.
 
-#### Scenario: A normal end-of-run with the ad eligible
+#### Scenario: Counter increments on level complete
 
-- **WHEN** an end-of-run event fires and the frequency counter has reached the cap
-- **THEN** the interstitial ad is presented; on dismissal, the `onDismiss` callback runs and the `DismissToHome` notification is posted
+- **WHEN** the player finishes a level by reaching the required score and `isLevelComplete` flips to `true`
+- **THEN** `AdsService.recordLevelPlayed()` is invoked exactly once, incrementing the counter
 
-#### Scenario: A normal end-of-run with the cap not yet reached
+#### Scenario: Counter increments on level failed
 
-- **WHEN** an end-of-run event fires but the frequency counter is below the cap
-- **THEN** no ad is presented, the `onDismiss` callback runs immediately, and the `DismissToHome` notification is posted
+- **WHEN** the player finishes a level by losing all lives or by missing the required score, and `isLevelFailed` flips to `true`
+- **THEN** `AdsService.recordLevelPlayed()` is invoked exactly once, incrementing the counter
 
-### Requirement: Interstitial frequency is capped
+### Requirement: Interstitial is presented at the next user navigation when the cap is reached
 
-The interstitial ad SHALL be presented at most once every three end-of-run events. The counter SHALL be in-memory only and SHALL reset to zero on app launch.
+When the player triggers a navigation event in `LevelGameView` (in-game Back, level-failed Back to Home, level-complete Back to Home, level-complete Next Level, level-failed Retry, level-game-over Back to Home, FinalWin play-harder, FinalWin see-leaderboard), the app SHALL invoke `AdsService.showInterstitialIfReady(onDismiss:)`. The method SHALL present the interstitial only if the "levels played" counter has reached the cap; the counter SHALL NOT be mutated by this method itself (incrementing is the responsibility of the level-end hook).
 
-#### Scenario: Three end-of-run events trigger one ad
+#### Scenario: Navigation when the cap has been reached
 
-- **WHEN** the player completes three end-of-run events in a single launch
-- **THEN** an interstitial ad is presented exactly once (on the third event), the counter resets to zero, and the next eligible presentation is on the sixth event
+- **WHEN** the player taps a navigation button and the counter is ≥ 3
+- **THEN** the interstitial is presented, the counter resets to zero, and the navigation continuation runs from the `onDismiss` callback after the ad is dismissed
+
+#### Scenario: Navigation when the cap is not yet reached
+
+- **WHEN** the player taps a navigation button and the counter is < 3
+- **THEN** no ad is presented, the counter is unchanged, and the `onDismiss` callback runs immediately
+
+### Requirement: Interstitial frequency cap
+
+The interstitial ad SHALL be presented at most once every three levels played.
+
+#### Scenario: Three levels played trigger one ad on the next navigation
+
+- **WHEN** the player completes or fails three levels in a single launch and then taps a navigation button
+- **THEN** the interstitial is presented exactly once, the counter resets to zero, and the next presentation is gated by another three levels played
 
 ### Requirement: End-of-run flow is robust to ad failures
 
@@ -65,15 +79,20 @@ The interstitial ad unit ID SHALL be Google's documented test ID in DEBUG builds
 
 ### Requirement: Interstitial is suppressed when the Remove Ads entitlement is held
 
-`AdsService.showInterstitialIfReady(onDismiss:)` SHALL early-return (invoking `onDismiss()` immediately) when the player holds the Remove Ads entitlement (`StoreService.shared.hasRemoveAds == true`). The frequency counter SHALL NOT be incremented in that path, so a player whose entitlement later lapses does not see a backlog of "owed" ads.
+Both `AdsService.recordLevelPlayed()` and `AdsService.showInterstitialIfReady(onDismiss:)` SHALL early-return (the latter invoking `onDismiss()` immediately) when the player holds the Remove Ads entitlement (`StoreService.shared.hasRemoveAds == true`). The "levels played" counter SHALL NOT advance while the entitlement is held, so a player whose entitlement later lapses does not see a backlog of "owed" ads.
 
-#### Scenario: Entitled player at end of run
+#### Scenario: Entitled player finishes a level
 
-- **WHEN** an entitled player triggers any end-of-run event
-- **THEN** no interstitial is presented, `onDismiss()` is invoked immediately, and the `runsSinceLastAd` counter is unchanged
+- **WHEN** an entitled player finishes a level (complete or failed)
+- **THEN** the counter does NOT advance and no interstitial is queued
+
+#### Scenario: Entitled player triggers a navigation
+
+- **WHEN** an entitled player taps any navigation button
+- **THEN** no interstitial is presented, `onDismiss()` is invoked immediately, and the counter is unchanged
 
 #### Scenario: Entitlement loss reverts to ad gate
 
 - **WHEN** an entitled player loses the entitlement (e.g., refund) mid-session
-- **THEN** the next end-of-run event resumes the original frequency-cap behaviour, starting from whatever counter value the cap reset left
+- **THEN** the next level-finished event resumes incrementing the counter, starting from whatever value the cap reset last left it at
 
