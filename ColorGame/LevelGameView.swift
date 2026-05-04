@@ -150,7 +150,9 @@ struct LevelGameView: View {
                   // Show run complete screen
                   dismiss()
                 } else {
-                  startNewLevel()
+                  AdsService.shared.showInterstitialIfReady {
+                    startNewLevel()
+                  }
                 }
               },
               onBackToHome: {
@@ -219,7 +221,9 @@ struct LevelGameView: View {
               levelRun: levelRun,
               failedReason: failedReason,
               onRetry: {
-                startNewLevel()
+                AdsService.shared.showInterstitialIfReady {
+                  startNewLevel()
+                }
               },
               onBackToHome: {
                 // Save score to leaderboard if positive when run ends
