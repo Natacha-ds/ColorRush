@@ -35,6 +35,23 @@ Each bug is intended to become an individual OpenSpec change.
 | BUG-020 | P3 | ✅ Done | commit `4331f12` / archive `2026-05-03-fix-defensive-guards-batch` |
 | BUG-021 | P2 | ✅ Done | commit `39b54b2` / archive `2026-05-03-fix-bug-021-leaderboard-keyed-by-game-type-and-tolerance` |
 | BUG-022 | P0 | ✅ Done | commit `903c44e` / archive `2026-05-03-fix-bug-022-render-and-wire-back-to-home` |
+| BUG-023 | P2 | 🟡 Open (non-reproducible) | reported 2026-05-04 |
+
+---
+
+## 🟡 P2 — Degraded UX (non-blocking)
+
+### BUG-023 — Game timer perceived as ticking too fast on level 4
+- **File**: `LevelGameView.swift` (`gameTimer` lifecycle around `startLevel` / `endGameSession` / `pauseTimer` / `resumeTimer`)
+- **Symptom**: Tony reported on 2026-05-04 that the displayed seconds counter on level 4 felt like it ticked faster than 1/s. Levels 1-3 appeared normal.
+- **Status**: **non-reproducible**. After the report, Tony could not trigger the bug again. Static code review did not surface an obvious leak — `endGameSession` invalidates and nils both `gameTimer` and `roundTimer` between levels; `pauseTimer` / `resumeTimer` follow the same discipline. Level 4's `LevelConfig` is identical to level 3 except for `requiredScore` and `pointsPerRound`.
+- **Hypotheses worth probing if it recurs**:
+  1. Multiple `gameTimer` firing in parallel (would double the decrement rate). Could happen if a `Timer.scheduledTimer` assignment overrides a previous one without invalidation — but no such site is currently visible.
+  2. App lifecycle race: `willResignActive` → `didBecomeActive` firing in tight succession with the level transition could leave the resume path creating a timer while the previous one is still in the run loop.
+  3. SwiftUI view recycling causing `onAppear` to fire `startLevel()` twice without an intervening `onDisappear`.
+- **Repro tips when investigating**:
+  - Ask the player to log the level number and reproduce conditions (background/foreground, lock screen, OS notification interruption).
+  - Add a one-line `print("gameTimer tick \(timeRemaining)")` inside the `Timer.scheduledTimer` closures and watch the log frequency — if more than 10 prints/s arrive, two timers are running.
 
 ---
 
