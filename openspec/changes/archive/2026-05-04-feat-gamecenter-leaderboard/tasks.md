@@ -11,7 +11,7 @@
 - [ ] 1.3 For each leaderboard, add localized display names in EN, FR, ES, DE, PT-BR (same locales as the IAP). Suggested EN copy already in 1.2; provide equivalents in the other four locales
 - [ ] 1.4 Upload a 1024×1024 leaderboard icon if Apple requires one (a reuse of the app icon is fine)
 - [x] 1.5 In **Xcode → Signing & Capabilities** for the `ColorGame` target, add the **Game Center** capability (this writes `com.apple.developer.game-center` to the entitlements file)
-- [ ] 1.6 Verify the existing Sandbox Tester accounts created during the IAP work also work for Game Center — same account is used. If sign-out / sign-in is needed in **Settings → Game Center** on the test device, do it once per tester
+- [x] 1.6 Verify the existing Sandbox Tester accounts created during the IAP work also work for Game Center — same account is used. If sign-out / sign-in is needed in **Settings → Game Center** on the test device, do it once per tester
 
 ## 2. GameCenterService implementation
 
@@ -52,12 +52,12 @@
 ## 6. Validation
 
 - [x] 6.1 `xcodebuild -project ColorGame.xcodeproj -scheme ColorGame -destination 'generic/platform=iOS Simulator' build` returns `BUILD SUCCEEDED`
-- [ ] 6.2 Simulator with a sandbox tester signed into Game Center (Settings → Game Center → sandbox account): launch the app → Apple's Game Center welcome banner appears → `isAuthenticated` flips to `true` (verify via a temporary `print` in `init` if needed)
-- [ ] 6.3 Play a Color Only / Easy run, complete it with a non-zero score → score appears in the local top-5. Tap "🌍 Global Ranking" in `LeaderboardView` → native UI opens and shows the freshly submitted score under "Me"
-- [ ] 6.4 Run a SECOND game in the same bucket with a HIGHER score → global view reflects the higher score; running with a LOWER score → global view stays at the previous high
-- [ ] 6.5 Run one game in each of the six buckets → each leaderboard shows the corresponding score, and switching buckets in `LeaderboardView` re-opens the GC view scoped to that bucket
-- [ ] 6.6 Sign out from Game Center on the device → relaunch app → `isAuthenticated == false`, the "🌍 Global Ranking" CTA is disabled and shows the sign-in caption, the local top-5 list still works
-- [ ] 6.7 Sign back in → relaunch → CTA re-enables; submit a new score → it lands globally as expected
+- [x] 6.2 Simulator with a sandbox tester signed into Game Center (Settings → Game Center → sandbox account): launch the app → Apple's Game Center welcome banner appears → `isAuthenticated` flips to `true` (verify via a temporary `print` in `init` if needed)
+- [x] 6.3 Play a Color Only / Easy run, complete it with a non-zero score → score appears in the local top-5. Tap "🌍 Global Ranking" in `LeaderboardView` → native UI opens and shows the freshly submitted score under "Me"
+- [x] 6.4 Run a SECOND game in the same bucket with a HIGHER score → global view reflects the higher score; running with a LOWER score → global view stays at the previous high
+- [x] 6.5 Run one game in each of the six buckets → each leaderboard shows the corresponding score, and switching buckets in `LeaderboardView` re-opens the GC view scoped to that bucket
+- [x] 6.6 Sign out from Game Center on the device → relaunch app → `isAuthenticated == false`, the "🌍 Global Ranking" CTA is disabled and shows the sign-in caption, the local top-5 list still works
+- [x] 6.7 Sign back in → relaunch → CTA re-enables; submit a new score → it lands globally as expected
 
 ## 8. Player rank fetch & inline display
 
@@ -76,11 +76,11 @@
 - [x] 8.7 Trigger the same refresh from `.onChange(of: selectedGameType)` and `.onChange(of: selectedMistakeTolerance)`
 - [x] 8.8 Trigger the same refresh from `.onChange(of: gameCenter.isAuthenticated)` when the value flips to `true`, so cold-start auth that resolves after the view is on-screen still populates the pill
 - [x] 8.9 `xcodebuild ... build` returns `BUILD SUCCEEDED`
-- [ ] 8.10 Sandbox validation: open `LeaderboardView` post-submission → pill appears showing "🌍 Rank #1 of 1" (you are the only sandbox player). Switch buckets → the pill disappears for unplayed buckets and reappears with the correct rank when navigating back
+- [x] 8.10 Sandbox validation: open `LeaderboardView` post-submission → pill appears showing "🌍 Rank #1 of 1" (you are the only sandbox player). Switch buckets → the pill disappears for unplayed buckets and reappears with the correct rank when navigating back
 
 ## 7. Commit & archive
 
-- [ ] 7.1 Commit with message `feat: ship Game Center leaderboard integration (feat-gamecenter-leaderboard)`
-- [ ] 7.2 No `AUDIT_BUGS.md` entry — feature
-- [ ] 7.3 Archive via `/opsx:archive feat-gamecenter-leaderboard`
-- [ ] 7.4 Update Linear ticket TON-21 to `Done` and link the merged commit
+- [x] 7.1 Commit with message `feat: ship Game Center leaderboard integration (feat-gamecenter-leaderboard)`
+- [x] 7.2 No `AUDIT_BUGS.md` entry — feature
+- [x] 7.3 Archive via `/opsx:archive feat-gamecenter-leaderboard`
+- [x] 7.4 Update Linear ticket TON-21 to `Done` and link the merged commit
