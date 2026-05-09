@@ -47,14 +47,14 @@
 ## 5. Validation
 
 - [x] 5.1 `xcodebuild -project ColorGame.xcodeproj -scheme ColorGame -destination 'generic/platform=iOS Simulator' build` returns `BUILD SUCCEEDED`
-- [ ] 5.2 Simulator (DEBUG, no Remove Ads entitlement, Hard mode = 1 life): trigger a max-mistake game-over → `LevelGameOverView` shows "🎬 Continue — Watch Ad" (enabled) + "Back to Home". Tap Continue → Google test rewarded ad plays → on close: `livesLost` decrements, level restarts, the rewarded button is gone for the rest of the run
-- [ ] 5.3 Simulator (DEBUG, with Remove Ads entitlement granted): same flow but the button reads "✨ Continue (free)" and tapping it skips the ad entirely; one life is granted and the level restarts. Subsequent game-over within the same run shows no "Continue (free)" button
-- [ ] 5.4 Skip path: tap Continue → close the ad before earning the reward → verify `hasUsedRewardedRevive == true` and the button does NOT reappear; only "Back to Home" remains
-- [ ] 5.5 Cross-run: tap "Back to Home" after a run ends, then start a new run → `hasUsedRewardedRevive == false`, the rewarded button is available again on the next max-mistake game-over
-- [ ] 5.6 Regression: complete a normal Easy run (5 lives) without dying → interstitial behavior unchanged (counter increments per level played, fires every 3 transitions). Rewarded preload state is independent and does not interfere
+- [x] 5.2 Simulator (DEBUG, no Remove Ads entitlement, Hard mode = 1 life): trigger a max-mistake game-over → `LevelGameOverView` shows "🎬 Continue — Watch Ad" (enabled) + "Back to Home". Tap Continue → Google test rewarded ad plays → on close: `livesLost` decrements, level restarts, the rewarded button is gone for the rest of the run
+- [x] 5.3 Simulator (DEBUG, with Remove Ads entitlement granted): same flow but the button reads "✨ Continue (free)" and tapping it skips the ad entirely; one life is granted and the level restarts. Subsequent game-over within the same run shows no "Continue (free)" button
+- [x] 5.4 Skip path: tap Continue → close the ad before earning the reward → verify `hasUsedRewardedRevive == true` and the button does NOT reappear; only "Back to Home" remains
+- [x] 5.5 Cross-run: tap "Back to Home" after a run ends, then start a new run → `hasUsedRewardedRevive == false`, the rewarded button is available again on the next max-mistake game-over
+- [x] 5.6 Regression: complete a normal Easy run (5 lives) without dying → interstitial behavior unchanged (counter increments per level played, fires every 3 transitions). Rewarded preload state is independent and does not interfere
 
 ## 6. Commit & archive
 
-- [ ] 6.1 Commit with message `feat: ship rewarded-ad extra-life revive (feat-rewarded-ad-extra-life)`
-- [ ] 6.2 No `AUDIT_BUGS.md` entry — feature
-- [ ] 6.3 Archive via `/opsx:archive feat-rewarded-ad-extra-life`
+- [x] 6.1 Commit with message `feat: ship rewarded-ad extra-life revive (feat-rewarded-ad-extra-life)`
+- [x] 6.2 No `AUDIT_BUGS.md` entry — feature
+- [x] 6.3 Archive via `/opsx:archive feat-rewarded-ad-extra-life`
