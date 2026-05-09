@@ -42,10 +42,28 @@ final class SpeechService {
       "yellow": "Yellow-voice",
     ]
 
+    // Resolve via the user's first preferred localization explicitly. The
+    // implicit Bundle.url(forResource:withExtension:) overload mixed up
+    // resolution when CFBundleLocalizations and bundle-scanned lproj
+    // entries co-existed; the explicit `localization:` parameter avoids it.
+    let preferredLang = Bundle.main.preferredLocalizations.first
+      ?? Bundle.main.developmentLocalization
+      ?? "en"
+
     for (key, fileName) in mapping {
-      guard
-        let url = Bundle.main.url(forResource: fileName, withExtension: "mp3")
-      else {
+      let url = Bundle.main.url(
+        forResource: fileName,
+        withExtension: "mp3",
+        subdirectory: nil,
+        localization: preferredLang
+      ) ?? Bundle.main.url(
+        forResource: fileName,
+        withExtension: "mp3",
+        subdirectory: nil,
+        localization: "en"
+      )
+
+      guard let url else {
         print("Audio file not found in bundle: \(fileName).mp3")
         continue
       }

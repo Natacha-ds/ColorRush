@@ -12,18 +12,18 @@ enum GameType: String, CaseIterable, Identifiable {
   var displayName: String {
     switch self {
     case .colorOnly:
-      "🎨 Color Only"
+      String(localized: "🎨 Color Only")
     case .colorAndText:
-      "🎯 Color + Text"
+      String(localized: "🎯 Color + Text")
     }
   }
 
   var description: String {
     switch self {
     case .colorOnly:
-      "Match colors only"
+      String(localized: "Match colors only")
     case .colorAndText:
-      "Match colors and text labels"
+      String(localized: "Match colors and text labels")
     }
   }
 }
@@ -39,9 +39,9 @@ enum MistakeTolerance: String, CaseIterable, Identifiable {
 
   var displayName: String {
     switch self {
-    case .easy: "😊 Easy"
-    case .normal: "😐 Normal"
-    case .hard: "😤 Hard"
+    case .easy: String(localized: "😊 Easy")
+    case .normal: String(localized: "😐 Normal")
+    case .hard: String(localized: "😤 Hard")
     }
   }
 
@@ -55,9 +55,9 @@ enum MistakeTolerance: String, CaseIterable, Identifiable {
 
   var description: String {
     switch self {
-    case .easy: "5 lives"
-    case .normal: "3 lives"
-    case .hard: "1 life"
+    case .easy: String(localized: "5 lives")
+    case .normal: String(localized: "3 lives")
+    case .hard: String(localized: "1 life")
     }
   }
 }

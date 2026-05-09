@@ -260,7 +260,7 @@ struct HomeView: View {
     return score > 0 ? "\(score)" : "—"
   }
 
-  private var removeAdsButtonTitle: String {
+  private var removeAdsButtonTitle: LocalizedStringKey {
     if let package = store.package {
       "Remove Ads — \(package.storeProduct.localizedPriceString)"
     } else {

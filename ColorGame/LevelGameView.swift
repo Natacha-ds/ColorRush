@@ -1460,25 +1460,25 @@ struct LevelIntroView: View {
 
     // Special case for Levels 1 and 2
     if levelRun.currentLevel == 1 || levelRun.currentLevel == 2 {
-      return "Warm-up level"
+      return String(localized: "Warm-up level")
     }
 
     // Special case for Levels 9 and 10
     if levelRun.currentLevel == 9 || levelRun.currentLevel == 10 {
-      return "Colors will change every second"
+      return String(localized: "Colors will change every second")
     }
 
     var description = ""
 
     if levelConfig.hasTimeLimit {
       if levelConfig.isNonPunitiveRefresh {
-        description = "Colors change every second, but no points are lost if you don't tap."
+        description = String(localized: "Colors change every second, but no points are lost if you don't tap.")
       } else {
         let timeLimit = String(format: "%.1f", levelConfig.timePerResponse ?? 0)
-        description = "You have \(timeLimit)s to tap fast or lose 5 pts!"
+        description = String(localized: "You have \(timeLimit)s to tap fast or lose 5 pts!")
       }
     } else {
-      description = "No time limit per answer. Take your time!"
+      description = String(localized: "No time limit per answer. Take your time!")
     }
 
     return description
@@ -2327,7 +2327,7 @@ struct LevelGameOverView: View {
   @StateObject private var store = StoreService.shared
 
   // Label of the rewarded CTA varies by entitlement.
-  private var continueButtonTitle: String {
+  private var continueButtonTitle: LocalizedStringKey {
     store.hasRemoveAds ? "❤️ +1 Life (free)" : "❤️ +1 Life — Watch Ad"
   }
 
