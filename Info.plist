@@ -39,6 +39,14 @@
 	<dict/>
 	<key>UIStatusBarStyle</key>
 	<string>UIStatusBarStyleDefault</string>
+	<key>UIAppFonts</key>
+	<array>
+		<string>Montserrat-Regular.ttf</string>
+		<string>Montserrat-Medium.ttf</string>
+		<string>Montserrat-Bold.ttf</string>
+		<string>Montserrat-BoldItalic.ttf</string>
+		<string>Montserrat-BlackItalic.ttf</string>
+	</array>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

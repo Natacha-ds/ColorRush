@@ -17,6 +17,9 @@ struct ColorRushApp: App {
     // Same pattern for GameCenterService: kicks off the
     // GKLocalPlayer.authenticateHandler and reports auth state.
     _ = GameCenterService.shared
+    #if DEBUG
+    CRFontRegistration.verify()
+    #endif
   }
 
   var body: some Scene {
