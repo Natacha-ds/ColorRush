@@ -188,6 +188,15 @@ struct LevelGameView: View {
             LevelGameOverView(
               levelRun: levelRun,
               failedReason: failedReason,
+              onContinueWithExtraLife: {
+                // Reward earned: grant the life and resume the level fresh.
+                // The flag `hasUsedRewardedRevive` was already flipped on tap
+                // (anti-abuse), so the button is gone for the rest of the run.
+                levelRun.grantExtraLife()
+                // startNewLevel guards on isLevelFailed || isLevelComplete,
+                // and resets both flags + level stats + restarts the timer.
+                startNewLevel()
+              },
               onBackToHome: {
                 // Save score to leaderboard if positive when run ends (game
                 // over)
@@ -2311,7 +2320,21 @@ struct FinalWinView: View {
 struct LevelGameOverView: View {
   @ObservedObject var levelRun: LevelRun
   let failedReason: LevelFailureReason
+  let onContinueWithExtraLife: () -> Void
   let onBackToHome: () -> Void
+
+  @StateObject private var ads = AdsService.shared
+  @StateObject private var store = StoreService.shared
+
+  // Label of the rewarded CTA varies by entitlement.
+  private var continueButtonTitle: String {
+    store.hasRemoveAds ? "❤️ +1 Life (free)" : "❤️ +1 Life — Watch Ad"
+  }
+
+  // Disabled when not entitled AND no rewarded ad is loaded yet.
+  private var isContinueButtonEnabled: Bool {
+    store.hasRemoveAds || ads.rewardedReady
+  }
 
   // Calculate remaining lives (should be 0 for game over)
   private var remainingLives: Int {
@@ -2417,6 +2440,42 @@ struct LevelGameOverView: View {
         Spacer()
           .frame(height: 10)
 
+        // One-time rewarded revive — visible only if not yet used this run.
+        // Tapping flips `hasUsedRewardedRevive` immediately (anti-abuse:
+        // closing the ad early still burns the revive), then presents the
+        // rewarded ad. Remove Ads holders skip the ad and get the life
+        // for free.
+        if !levelRun.hasUsedRewardedRevive {
+          Button(action: handleContinueTap) {
+            Text(continueButtonTitle)
+              .font(.system(size: 17, weight: .semibold, design: .rounded))
+              .foregroundStyle(
+                LinearGradient(
+                  gradient: Gradient(colors: [.orange, .pink]),
+                  startPoint: .leading,
+                  endPoint: .trailing
+                )
+              )
+              .frame(width: 260, height: 50)
+              .background(Capsule().fill(Color.white))
+              .overlay(
+                Capsule()
+                  .stroke(
+                    LinearGradient(
+                      gradient: Gradient(colors: [.orange, .pink]),
+                      startPoint: .leading,
+                      endPoint: .trailing
+                    ),
+                    lineWidth: 2
+                  )
+              )
+              .shadow(color: .orange.opacity(0.25), radius: 10, x: 0, y: 5)
+              .opacity(isContinueButtonEnabled ? 1.0 : 0.5)
+          }
+          .disabled(!isContinueButtonEnabled)
+          .buttonStyle(PlainButtonStyle())
+        }
+
         // Start a new game button - same design as Next Level button
         Button(action: onBackToHome) {
           Text("Start a new game")
@@ -2445,6 +2504,24 @@ struct LevelGameOverView: View {
         20
       ) // Add horizontal padding for safety margin on sides
     }
+  }
+
+  // Anti-abuse: mark the revive consumed BEFORE presenting the ad, so a
+  // user who closes the ad early still loses the one-shot opportunity.
+  // Remove Ads holders short-circuit straight to onReward inside
+  // showRewardedAdIfReady — no ad shown.
+  private func handleContinueTap() {
+    levelRun.markReviveAttempted()
+    ads.showRewardedAdIfReady(
+      onReward: {
+        onContinueWithExtraLife()
+      },
+      onSkip: {
+        // Player closed the ad before earning the reward, or no ad/host
+        // VC available. The button is already gone (markReviveAttempted
+        // flipped the flag). Player can still tap "Start a new game".
+      }
+    )
   }
 }
 

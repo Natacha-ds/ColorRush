@@ -14,8 +14,11 @@ final class AdsService: NSObject, ObservableObject {
     // Google's documented test interstitial ID — always serves a test creative,
     // safe to use during development without impacting AdMob policy.
     private let interstitialAdUnitID = "ca-app-pub-3940256099942544/4411468910"
+    // Google's documented test rewarded ID — same guarantee.
+    private let rewardedAdUnitID = "ca-app-pub-3940256099942544/1712485313"
   #else
     private let interstitialAdUnitID = "ca-app-pub-9259578521352937/6262225438"
+    private let rewardedAdUnitID = "ca-app-pub-9259578521352937/2792777342"
   #endif
 
   /// Show an interstitial at most once every `frequency` levels played
@@ -25,10 +28,15 @@ final class AdsService: NSObject, ObservableObject {
   // MARK: - State
 
   @Published private(set) var isReady: Bool = false
+  @Published private(set) var rewardedReady: Bool = false
 
   private var interstitial: InterstitialAd?
   private var levelsSinceLastAd: Int = 0
   private var pendingDismissCallback: (() -> Void)?
+
+  private var rewardedAd: RewardedAd?
+  private var pendingRewardedReward: (() -> Void)?
+  private var pendingRewardedSkip: (() -> Void)?
 
   override private init() {
     super.init()
@@ -69,7 +77,9 @@ final class AdsService: NSObject, ObservableObject {
 
   private func startMobileAdsAndPreload() async {
     MobileAds.shared.start { _ in }
-    await preloadInterstitial()
+    async let interstitialLoad: () = preloadInterstitial()
+    async let rewardedLoad: () = preloadRewardedAd()
+    _ = await (interstitialLoad, rewardedLoad)
   }
 
   private func preloadInterstitial() async {
@@ -84,6 +94,21 @@ final class AdsService: NSObject, ObservableObject {
     } catch {
       print("Failed to preload interstitial: \(error)")
       isReady = false
+    }
+  }
+
+  private func preloadRewardedAd() async {
+    do {
+      let ad = try await RewardedAd.load(
+        with: rewardedAdUnitID,
+        request: Request()
+      )
+      ad.fullScreenContentDelegate = self
+      rewardedAd = ad
+      rewardedReady = true
+    } catch {
+      print("Failed to preload rewarded: \(error)")
+      rewardedReady = false
     }
   }
 
@@ -131,6 +156,44 @@ final class AdsService: NSObject, ObservableObject {
     interstitial.present(from: rootVC)
   }
 
+  // MARK: - Rewarded presentation
+
+  /// Presents the rewarded ad. The `onReward` callback fires only when the
+  /// SDK confirms the user earned the reward (watched the ad through). The
+  /// `onSkip` callback fires in three cases: the ad was not loaded, no
+  /// host view controller is available, or the user dismissed the ad
+  /// before the reward was earned. Remove Ads holders are short-circuited
+  /// straight to `onReward` with no ad shown.
+  func showRewardedAdIfReady(
+    onReward: @escaping () -> Void,
+    onSkip: @escaping () -> Void
+  ) {
+    if StoreService.shared.hasRemoveAds {
+      onReward()
+      return
+    }
+
+    guard let rewardedAd,
+          let rootVC = currentRootViewController()
+    else {
+      onSkip()
+      return
+    }
+
+    pendingRewardedReward = onReward
+    pendingRewardedSkip = onSkip
+
+    rewardedAd.present(from: rootVC) { [weak self] in
+      Task { @MainActor in
+        guard let self else { return }
+        let reward = self.pendingRewardedReward
+        self.pendingRewardedReward = nil
+        self.pendingRewardedSkip = nil
+        reward?()
+      }
+    }
+  }
+
   // MARK: - Helpers
 
   private func currentRootViewController() -> UIViewController? {
@@ -151,6 +214,22 @@ final class AdsService: NSObject, ObservableObject {
 extension AdsService: FullScreenContentDelegate {
   nonisolated func adDidDismissFullScreenContent(_ ad: FullScreenPresentingAd) {
     Task { @MainActor in
+      // Route to the matching cleanup path. The two ad formats use
+      // disjoint state and different callback semantics.
+      if let rewardedAd, ad === rewardedAd {
+        self.rewardedAd = nil
+        rewardedReady = false
+        // If the reward closure didn't fire (user closed early), invoke
+        // the skip callback. Otherwise the reward closure already cleared
+        // both pendings.
+        let skip = pendingRewardedSkip
+        pendingRewardedReward = nil
+        pendingRewardedSkip = nil
+        skip?()
+        await preloadRewardedAd()
+        return
+      }
+
       interstitial = nil
       isReady = false
       let callback = pendingDismissCallback
@@ -166,6 +245,13 @@ extension AdsService: FullScreenContentDelegate {
   ) {
     Task { @MainActor in
       print("Ad failed to present: \(error)")
+      if let rewardedAd, ad === rewardedAd {
+        let skip = pendingRewardedSkip
+        pendingRewardedReward = nil
+        pendingRewardedSkip = nil
+        skip?()
+        return
+      }
       let callback = pendingDismissCallback
       pendingDismissCallback = nil
       callback?()

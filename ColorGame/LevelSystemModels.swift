@@ -242,6 +242,10 @@ class LevelRun: ObservableObject {
   @Published var levelScores: [Int: Int] = [:] // Track score for each level
   @Published var globalScore: Int = 0 // Total cumulative score for leaderboard
 
+  // Rewarded-ad revive: once-per-run, set on tap (anti-abuse), reset on
+  // startRun / resetRunStats.
+  @Published private(set) var hasUsedRewardedRevive: Bool = false
+
   private let config = LevelSystemConfig.shared
 
   // Dev tools flag - only enabled in DEBUG builds
@@ -385,6 +389,7 @@ class LevelRun: ObservableObject {
     completedLevels = []
     failedLevels = []
     levelScores = [:] // Clear previous level scores
+    hasUsedRewardedRevive = false
   }
 
   func resetLevelStats() {
@@ -475,6 +480,19 @@ class LevelRun: ObservableObject {
   // Lose a life when failing a level (not reaching required score)
   func loseLife() {
     livesLost += 1
+  }
+
+  // Marks the rewarded revive as consumed for the current run. Called on
+  // tap, before the ad presents — the one-shot is enforced even if the
+  // player closes the ad before earning the reward (anti-abuse).
+  func markReviveAttempted() {
+    hasUsedRewardedRevive = true
+  }
+
+  // Restore one life. Symmetric inverse of `loseLife()`. Called from the
+  // rewarded ad's reward-earned callback.
+  func grantExtraLife() {
+    livesLost = max(0, livesLost - 1)
   }
 
   // Get remaining lives
