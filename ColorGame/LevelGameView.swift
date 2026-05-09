@@ -1455,149 +1455,136 @@ struct LevelIntroView: View {
   @ObservedObject var levelRun: LevelRun
   let onDismiss: () -> Void
 
-  private var levelDescription: String {
-    guard let levelConfig = levelRun.currentLevelConfig else { return "" }
+  static let autoPlayDuration: TimeInterval = 3.0
 
-    // Special case for Levels 1 and 2
+  @State private var progress: Double = 1.0
+
+  private var subtitle: String {
+    let levelStr = String(format: "Level %02d", levelRun.currentLevel)
     if levelRun.currentLevel == 1 || levelRun.currentLevel == 2 {
-      return String(localized: "Warm-up level")
+      return "\(levelStr) - Warm up"
     }
+    return levelStr
+  }
 
-    // Special case for Levels 9 and 10
-    if levelRun.currentLevel == 9 || levelRun.currentLevel == 10 {
-      return String(localized: "Colors will change every second")
+  private var formattedTime: String {
+    guard let duration = levelRun.currentLevelConfig?.durationSeconds else {
+      return "—:—"
     }
-
-    var description = ""
-
-    if levelConfig.hasTimeLimit {
-      if levelConfig.isNonPunitiveRefresh {
-        description = String(localized: "Colors change every second, but no points are lost if you don't tap.")
-      } else {
-        let timeLimit = String(format: "%.1f", levelConfig.timePerResponse ?? 0)
-        description = String(localized: "You have \(timeLimit)s to tap fast or lose 5 pts!")
-      }
-    } else {
-      description = String(localized: "No time limit per answer. Take your time!")
-    }
-
-    return description
+    return String(format: "%02d:%02d", duration / 60, duration % 60)
   }
 
   var body: some View {
     ZStack {
-      // Semi-transparent background
-      Color.black.opacity(0.5)
-        .ignoresSafeArea()
+      Color.black.opacity(0.6).ignoresSafeArea()
 
-      VStack(spacing: 0) {
-        // Three stars at the top - middle star larger and elevated
-        ZStack(alignment: .bottom) {
-          // Side stars aligned horizontally
-          HStack(spacing: 8) {
-            Image("Mediumstar")
-              .resizable()
-              .scaledToFit()
-              .frame(width: 40, height: 40)
+      VStack(spacing: Theme.Spacing.lg) {
+        timerLine
 
-            Spacer()
-              .frame(width: 60) // Space for middle star
+        Text(subtitle)
+          .font(.crLabel)
+          .textCase(.uppercase)
+          .foregroundStyle(Theme.Colors.textSecondary)
+          .multilineTextAlignment(.center)
 
-            Image("Mediumstar")
-              .resizable()
-              .scaledToFit()
-              .frame(width: 40, height: 40)
-          }
+        beatHeadline
 
-          // Middle star - larger and slightly higher
-          Image("Bigstar")
-            .resizable()
-            .scaledToFit()
-            .frame(width: 70, height: 70)
-            .offset(y: -8) // Slightly elevated
+        HStack(spacing: Theme.Spacing.md) {
+          timeCard
+          livesCard
         }
-        .frame(height: 70)
-        .padding(.bottom, 16)
 
-        // Pop-in card with light pink background
-        ZStack(alignment: .topTrailing) {
-          VStack(spacing: 20) {
-            // "Targeted score" text - split into two lines, extra bold, 30%
-            // larger, minimal spacing
-            VStack(spacing: -3) { // Negative spacing to bring lines closer (10%
-              // reduction from 0)
-              Text("Targeted")
-                .font(.system(
-                  size: 30,
-                  weight: .black
-                )) // 23 * 1.3 = 29.9 ≈ 30, extra bold
-                .foregroundColor(Color(hex: "E60076"))
-
-              Text("score")
-                .font(.system(size: 30, weight: .black))
-                .foregroundColor(Color(hex: "E60076"))
-            }
-            .padding(.top, 8)
-
-            // Score container with light pink background - reduced height by
-            // 15%
-            Text("\(levelRun.getRequiredScore())")
-              .font(.system(size: 48, weight: .bold))
-              .foregroundColor(Color(hex: "E60076"))
-              .frame(minWidth: 120)
-              .padding(.horizontal, 24)
-              .padding(.vertical, 10) // Reduced by 15% (12 * 0.85 = 10.2 ≈ 10)
-              .background(
-                RoundedRectangle(cornerRadius: 12)
-                  .fill(Color(hex: "FFC9C9"))
-                  .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
-              )
-
-            // Level description with bomb icon - 20% larger, text horizontally
-            // aligned with icon
-            if !levelDescription.isEmpty {
-              HStack(alignment: .center, spacing: 8) {
-                Image("Bomb")
-                  .resizable()
-                  .scaledToFit()
-                  .frame(width: 29, height: 29) // 24 * 1.2 = 28.8 ≈ 29
-
-                Text(levelDescription)
-                  .font(.system(size: 14, weight: .regular))
-                  .foregroundColor(.primary)
-                  .multilineTextAlignment(.leading)
-                  .frame(maxWidth: .infinity, alignment: .leading)
-              }
-              .padding(.horizontal, 20)
-              .padding(.bottom, 8)
-            }
+        Button {
+          onDismiss()
+        } label: {
+          HStack(spacing: Theme.Spacing.sm) {
+            Image(systemName: "play.fill")
+              .font(.system(size: 18, weight: .bold))
+            Text("Play")
           }
-
-          // Close button (X) - simple icon, fully top-right corner, reduced
-          // size
-          Button(action: onDismiss) {
-            Image(systemName: "xmark")
-              .font(.system(
-                size: 18,
-                weight: .semibold
-              )) // Reduced by 10% (20 * 0.9 = 18)
-              .foregroundColor(.gray)
-          }
-          .offset(
-            x: 8,
-            y: -8
-          ) // Move further right and up to be fully in corner
         }
-        .padding(24)
-        .frame(width: 224) // Reduced by 30% (320 * 0.7 = 224)
-        .background(
-          RoundedRectangle(cornerRadius: 20)
-            .fill(Color(hex: "FEF2F2"))
-            .shadow(color: .black.opacity(0.2), radius: 20, x: 0, y: 10)
-        )
+        .buttonStyle(.crPrimary)
       }
+      .padding(Theme.Spacing.lg)
+      .frame(maxWidth: 320)
+      .background(
+        RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous)
+          .fill(Theme.Colors.surface)
+      )
+      .overlay(
+        RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous)
+          .strokeBorder(Theme.Colors.border, lineWidth: 1)
+      )
       .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
+    .onAppear {
+      withAnimation(.linear(duration: Self.autoPlayDuration)) {
+        progress = 0.0
+      }
+    }
+  }
+
+  private var timerLine: some View {
+    GeometryReader { geo in
+      RoundedRectangle(cornerRadius: 2, style: .continuous)
+        .fill(Theme.Gradient.primary)
+        .frame(width: geo.size.width * CGFloat(progress), height: 3)
+    }
+    .frame(height: 3)
+    .clipShape(RoundedRectangle(cornerRadius: 2, style: .continuous))
+  }
+
+  private var beatHeadline: some View {
+    (
+      Text("BEAT ").foregroundStyle(Theme.Colors.textPrimary)
+        + Text("\(levelRun.getRequiredScore())").foregroundStyle(Theme.Colors.accentSecondary)
+    )
+    .font(.crDisplay)
+    .multilineTextAlignment(.center)
+  }
+
+  private var timeCard: some View {
+    VStack(spacing: Theme.Spacing.xs) {
+      Text("TIME")
+        .font(.crLabel)
+        .textCase(.uppercase)
+        .foregroundStyle(Theme.Colors.textSecondary)
+      Text(formattedTime)
+        .font(.crTitle)
+        .foregroundStyle(Theme.Colors.textPrimary)
+    }
+    .frame(maxWidth: .infinity)
+    .padding(Theme.Spacing.md)
+    .background(
+      RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
+        .fill(Theme.Colors.surfaceElevated)
+    )
+  }
+
+  private var livesCard: some View {
+    let total = levelRun.mistakeTolerance.totalLives
+    let remaining = levelRun.remainingLives
+    return VStack(spacing: Theme.Spacing.xs) {
+      Text("LIVES")
+        .font(.crLabel)
+        .textCase(.uppercase)
+        .foregroundStyle(Theme.Colors.textSecondary)
+      HStack(spacing: 3) {
+        ForEach(0..<total, id: \.self) { index in
+          Image(systemName: "heart.fill")
+            .font(.system(size: 13, weight: .bold))
+            .foregroundStyle(
+              index < remaining ? Theme.Colors.danger : Theme.Colors.danger.opacity(0.18)
+            )
+        }
+      }
+    }
+    .frame(maxWidth: .infinity)
+    .padding(Theme.Spacing.md)
+    .background(
+      RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
+        .fill(Theme.Colors.surfaceElevated)
+    )
   }
 }
 
