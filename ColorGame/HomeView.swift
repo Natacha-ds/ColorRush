@@ -82,11 +82,11 @@ struct HomeView: View {
     HStack {
       VStack(alignment: .leading, spacing: 0) {
         Text("BEST")
-          .font(.crLabel)
+          .font(.crLabelUpright)
           .textCase(.uppercase)
           .foregroundStyle(Theme.Colors.textSecondary)
         Text(currentBestScore)
-          .font(.crHeadline)
+          .font(.crHeadlineUpright)
           .foregroundStyle(Theme.Colors.pro)
       }
       Spacer()
@@ -106,7 +106,7 @@ struct HomeView: View {
       Text("A color is called.\nTap ").foregroundStyle(Theme.Colors.textPrimary)
         + Text("everything else.").foregroundStyle(Theme.Colors.accentSecondary)
     )
-    .font(.crTitle)
+    .font(.crTitleUpright)
     .multilineTextAlignment(.leading)
     .frame(maxWidth: .infinity, alignment: .leading)
   }
@@ -119,7 +119,7 @@ struct HomeView: View {
         Image(systemName: "play.fill")
           .font(.system(size: 56, weight: .bold))
         Text("Play")
-          .font(.crTitle)
+          .font(.crTitleUpright)
       }
     }
     .buttonStyle(.crPrimaryCircular)
@@ -139,7 +139,7 @@ struct HomeView: View {
               .foregroundStyle(Theme.Colors.accentSecondary)
           }
           Text(removeAdsButtonTitle)
-            .font(.crCaption)
+            .font(.crCaptionUpright)
             .foregroundStyle(Theme.Colors.textPrimary)
         }
         .padding(.vertical, Theme.Spacing.md - 2)
@@ -160,7 +160,7 @@ struct HomeView: View {
               .tint(Theme.Colors.textSecondary)
           }
           Text("Restore Purchases")
-            .font(.crCaption)
+            .font(.crCaptionUpright)
             .foregroundStyle(Theme.Colors.textSecondary)
             .underline()
         }

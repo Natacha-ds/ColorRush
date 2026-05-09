@@ -1,306 +1,300 @@
 import SwiftUI
 
+// MARK: - View-layer brand labels & tones
+
+private extension GameType {
+  var brandLabel: String {
+    switch self {
+    case .colorOnly: "PURE"
+    case .colorAndText: "COLOR+WORD"
+    }
+  }
+}
+
+private extension MistakeTolerance {
+  var brandLabel: String {
+    switch self {
+    case .easy: "ROOKIE"
+    case .normal: "PRO"
+    case .hard: "INSANE"
+    }
+  }
+
+  var difficultyTone: Color {
+    switch self {
+    case .easy: Theme.Colors.success
+    case .normal: Theme.Colors.pro
+    case .hard: Theme.Colors.danger
+    }
+  }
+
+  var totalLivesCount: Int {
+    switch self {
+    case .easy: 5
+    case .normal: 3
+    case .hard: 1
+    }
+  }
+}
+
+// MARK: - LevelSystemSelectionView
+
 struct LevelSystemSelectionView: View {
   @StateObject private var levelRun: LevelRun = {
     let run = LevelRun()
     run.mistakeTolerance = .easy
     return run
   }()
+  @StateObject private var leaderboardStore = LeaderboardStore.shared
+
+  @AppStorage("cr.preferredGameType")
+  private var storedGameTypeRaw: String = GameType.colorOnly.rawValue
 
   @State private var currentStep: SelectionStep = .gameType
   @State private var isGameViewPresented = false
-  @State private var selectedGameType: GameType?
-  @State private var selectedMistakeTolerance: MistakeTolerance? =
-    .easy // Pre-select Easy
-  @State private var isRulesViewPresented = false
+  @State private var selectedMistakeTolerance: MistakeTolerance? = .easy
   @Binding var isPresented: Bool
+
+  private var selectedGameType: GameType {
+    GameType(rawValue: storedGameTypeRaw) ?? .colorOnly
+  }
 
   enum SelectionStep {
     case gameType
     case mistakeTolerance
   }
 
+  private var shouldRecommendColorOnly: Bool {
+    MistakeTolerance.allCases.allSatisfy { tolerance in
+      leaderboardStore.getScores(
+        gameType: .colorAndText,
+        mistakeTolerance: tolerance
+      ).isEmpty
+    }
+  }
+
   var body: some View {
-    NavigationView {
-      ZStack {
-        // Background gradient
-        LinearGradient(
-          gradient: Gradient(colors: [Color.purple.opacity(0.1), Color.white]),
-          startPoint: .top,
-          endPoint: .bottom
+    ZStack {
+      Theme.Colors.background.ignoresSafeArea()
+
+      VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
+        CRSectionHeader(
+          title: currentStep == .gameType ? "Pick a Mode" : "How Hard?",
+          step: currentStep == .gameType ? "Step 1/2" : "Step 2/2",
+          onBack: handleBack
         )
-        .ignoresSafeArea()
+        .padding(.horizontal, Theme.Spacing.lg)
+        .padding(.top, Theme.Spacing.lg)
 
-        VStack(spacing: 0) {
-          // Top section with progress and back button
-          VStack(spacing: 0) {
-            Spacer()
-              .frame(height: 60)
-
-            // Progress indicator
-            HStack(spacing: 8) {
-              ForEach(0 ..< 2, id: \.self) { index in
-                Circle()
-                  .fill(index <= (currentStep == .gameType ? 0 : 1) ? Color
-                    .purple : Color.gray.opacity(0.3))
-                  .frame(width: 8, height: 8)
-              }
-            }
-            .padding(.bottom, 20)
-
-            // Step title with back arrow
-            HStack {
-              Button(action: {
-                if currentStep == .mistakeTolerance {
-                  withAnimation { currentStep = .gameType }
-                } else {
-                  isPresented = false
-                }
-              }) {
-                Image(systemName: "arrow.left")
-                  .font(.system(size: 18, weight: .medium))
-                  .foregroundColor(.primary)
-                  .frame(width: 32, height: 32)
-                  .background(
-                    Circle()
-                      .fill(Color.white.opacity(0.8))
-                      .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
-                  )
-              }
-
-              Spacer()
-
-              Text(currentStep == .gameType ? "Choose Game Type" :
-                "Choose Difficulty")
-                .font(.system(size: 24, weight: .bold, design: .rounded))
-                .foregroundColor(.primary)
-                .multilineTextAlignment(.center)
-
-              Spacer()
-
-              // Invisible spacer to balance the back button
-              Color.clear
-                .frame(width: 32, height: 32)
-            }
-            .padding(.horizontal, 20)
-
-            Spacer()
-              .frame(height: 40)
-          }
-
-          // Content based on current step
-          if currentStep == .gameType {
-            gameTypeSelectionView
-          } else {
-            mistakeToleranceSelectionView
-          }
-
-          Spacer()
-
-          // Navigation buttons
-          VStack(spacing: 16) {
-            if currentStep == .mistakeTolerance {
-              // How to play button - above Start now button
-              Button(action: {
-                isRulesViewPresented = true
-              }) {
-                Text("How to play?")
-                  .font(.system(size: 16, weight: .regular))
-                  .foregroundColor(.primary)
-                  .underline()
-              }
-              .padding(
-                .bottom,
-                20
-              ) // Space between "How to play?" and "Start now!"
-
-              // Start Game button
-              Button(action: startLevelRun) {
-                HStack(spacing: 10) {
-                  Text("🚀")
-                    .font(.system(size: 20))
-
-                  Text("Start now!")
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
-                    .foregroundColor(.white)
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: 55)
-                .background(
-                  LinearGradient(
-                    gradient: Gradient(colors: canStartGame ? [
-                      .blue,
-                      .purple,
-                      .pink,
-                    ] : [.gray, .gray.opacity(0.7)]),
-                    startPoint: .leading,
-                    endPoint: .trailing
-                  )
-                )
-                .cornerRadius(27)
-                .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
-              }
-              .disabled(!canStartGame)
-            }
-          }
-          .padding(.horizontal, 40)
-          .padding(.bottom, 60)
+        if currentStep == .gameType {
+          gameTypeSelectionView
+            .padding(.horizontal, Theme.Spacing.lg)
+            .transition(.opacity)
+        } else {
+          mistakeToleranceSelectionView
+            .padding(.horizontal, Theme.Spacing.lg)
+            .transition(.opacity)
         }
+
+        Spacer(minLength: 0)
+
+        ctaButton
+          .padding(.horizontal, Theme.Spacing.lg)
+          .padding(.bottom, Theme.Spacing.lg)
       }
-      #if !os(macOS)
-      .navigationBarHidden(true)
-      .navigationBarBackButtonHidden(true)
-      .fullScreenCover(isPresented: $isGameViewPresented) {
-        LevelGameView(levelRun: levelRun)
-      }
-      .fullScreenCover(isPresented: $isRulesViewPresented) {
-        RulesView(
-          isPresented: $isRulesViewPresented,
-          gameType: selectedGameType
-        )
-      }
-      #else
-      .sheet(isPresented: $isGameViewPresented) {
-            LevelGameView(levelRun: levelRun)
-          }
-          .sheet(isPresented: $isRulesViewPresented) {
-            RulesView(
-              isPresented: $isRulesViewPresented,
-              gameType: selectedGameType
-            )
-          }
-      #endif
+    }
+    .preferredColorScheme(.dark)
+    .onAppear {
+      levelRun.gameType = selectedGameType
     }
     #if !os(macOS)
-    .navigationViewStyle(StackNavigationViewStyle())
+    .fullScreenCover(isPresented: $isGameViewPresented) {
+      LevelGameView(levelRun: levelRun)
+    }
+    #else
+    .sheet(isPresented: $isGameViewPresented) {
+      LevelGameView(levelRun: levelRun)
+    }
     #endif
   }
 
-  // MARK: - Game Type Selection View
+  // MARK: Step 1 — Pick a Mode
 
   private var gameTypeSelectionView: some View {
-    VStack(spacing: 30) {
-      Text("How do you want to play?")
-        .font(.system(size: 18, weight: .medium))
-        .foregroundColor(.secondary)
-        .multilineTextAlignment(.center)
-
-      VStack(spacing: 20) {
-        ForEach(GameType.allCases) { gameType in
-          Button(action: {
-            selectedGameType = gameType
-            levelRun.gameType = gameType
-            nextStep()
-          }) {
-            VStack(spacing: 12) {
-              HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                  Text(gameType.displayName)
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(.primary)
-
-                  Text(gameType.description)
-                    .font(.system(size: 14))
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.leading)
-                }
-
-                Spacer()
-
-                Image(systemName: "chevron.right")
-                  .font(.system(size: 16, weight: .medium))
-                  .foregroundColor(.purple)
-              }
-            }
-            .padding(.horizontal, 24)
-            .padding(.vertical, 20)
-            .background(
-              RoundedRectangle(cornerRadius: 16)
-                .fill(selectedGameType == gameType ? Color.purple
-                  .opacity(0.1) : Color.white)
-                .overlay(
-                  RoundedRectangle(cornerRadius: 16)
-                    .stroke(
-                      selectedGameType == gameType ? Color.purple : Color.clear,
-                      lineWidth: 2
-                    )
-                )
-                .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
-            )
-          }
-          .buttonStyle(PlainButtonStyle())
-        }
+    VStack(spacing: Theme.Spacing.md) {
+      ForEach(GameType.allCases) { gameType in
+        modeCard(for: gameType)
       }
-      .padding(.horizontal, 20)
     }
   }
 
-  // MARK: - Mistake Tolerance Selection View
+  private func modeCard(for gameType: GameType) -> some View {
+    let isSelected = selectedGameType == gameType
+    let isRecommended = gameType == .colorOnly && shouldRecommendColorOnly
+    return Button {
+      withAnimation(.easeOut(duration: 0.15)) {
+        storedGameTypeRaw = gameType.rawValue
+        levelRun.gameType = gameType
+      }
+    } label: {
+      HStack(alignment: .center, spacing: Theme.Spacing.md) {
+        ModeSwatchGrid(showsLabels: gameType == .colorAndText)
+          .frame(width: 76, height: 76)
+
+        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+          Text(modeTitle(for: gameType))
+            .font(.crHeadline)
+            .foregroundStyle(Theme.Colors.textPrimary)
+          Text(modeDescription(for: gameType))
+            .font(.crBody)
+            .foregroundStyle(Theme.Colors.textSecondary)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+        Spacer(minLength: 0)
+      }
+      .padding(.vertical, Theme.Spacing.md)
+      .padding(.horizontal, Theme.Spacing.lg)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .background(
+        RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
+          .fill(Theme.Colors.surface)
+      )
+      .overlay(
+        RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
+          .strokeBorder(
+            isSelected ? Theme.Colors.accentSecondary : Theme.Colors.border,
+            lineWidth: isSelected ? 1.5 : 1
+          )
+      )
+      .overlay(alignment: .topTrailing) {
+        if isRecommended {
+          CRChip(title: "Recommended to start", tone: .accent)
+            .background(
+              Capsule(style: .continuous)
+                .fill(Theme.Colors.background)
+            )
+            .offset(x: -Theme.Spacing.lg, y: -12)
+        }
+      }
+    }
+    .buttonStyle(.plain)
+  }
+
+  private func modeTitle(for gameType: GameType) -> String {
+    switch gameType {
+    case .colorOnly: "Color ONLY"
+    case .colorAndText: "Color and Text"
+    }
+  }
+
+  private func modeDescription(for gameType: GameType) -> String {
+    switch gameType {
+    case .colorOnly:
+      "A color is called. Tap any square that's not that color."
+    case .colorAndText:
+      "Each square has a color and a word. Tap only when neither matches the called color."
+    }
+  }
+
+  // MARK: Step 2 — How Hard?
 
   private var mistakeToleranceSelectionView: some View {
-    VStack(spacing: 30) {
-      Text("How many lives will you play with?")
-        .font(.system(size: 18, weight: .medium))
-        .foregroundColor(.secondary)
-        .multilineTextAlignment(.center)
-
-      VStack(spacing: 20) {
-        ForEach(MistakeTolerance.allCases) { tolerance in
-          Button(action: {
-            selectedMistakeTolerance = tolerance
-            levelRun.mistakeTolerance = tolerance
-            // Ready to start game
-          }) {
-            VStack(spacing: 12) {
-              HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                  Text(tolerance.displayName)
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(.primary)
-
-                  Text(tolerance.description)
-                    .font(.system(size: 14))
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.leading)
-                }
-
-                Spacer()
-
-                Image(systemName: "chevron.right")
-                  .font(.system(size: 16, weight: .medium))
-                  .foregroundColor(.purple)
-              }
-            }
-            .padding(.horizontal, 24)
-            .padding(.vertical, 20)
-            .background(
-              RoundedRectangle(cornerRadius: 16)
-                .fill(selectedMistakeTolerance == tolerance ? Color.purple
-                  .opacity(0.1) : Color.white)
-                .overlay(
-                  RoundedRectangle(cornerRadius: 16)
-                    .stroke(
-                      selectedMistakeTolerance == tolerance ? Color
-                        .purple : Color.clear,
-                      lineWidth: 2
-                    )
-                )
-                .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
-            )
-          }
-          .buttonStyle(PlainButtonStyle())
-        }
+    VStack(spacing: Theme.Spacing.md) {
+      ForEach(MistakeTolerance.allCases) { tolerance in
+        difficultyCard(for: tolerance)
       }
-      .padding(.horizontal, 20)
     }
   }
 
-  // MARK: - Navigation Functions
+  private func difficultyCard(for tolerance: MistakeTolerance) -> some View {
+    let isSelected = selectedMistakeTolerance == tolerance
+    let tone = tolerance.difficultyTone
+    return Button {
+      withAnimation(.easeOut(duration: 0.15)) {
+        selectedMistakeTolerance = tolerance
+        levelRun.mistakeTolerance = tolerance
+      }
+    } label: {
+      HStack(alignment: .center, spacing: Theme.Spacing.md) {
+        RoundedRectangle(cornerRadius: 2, style: .continuous)
+          .fill(tone)
+          .frame(width: 4, height: 36)
 
-  private func nextStep() {
-    withAnimation(.easeInOut(duration: 0.3)) {
+        VStack(alignment: .leading, spacing: 2) {
+          Text(tolerance.brandLabel)
+            .font(.crHeadline)
+            .foregroundStyle(Theme.Colors.textPrimary)
+          Text(difficultyDescription(for: tolerance))
+            .font(.crBody)
+            .foregroundStyle(Theme.Colors.textSecondary)
+        }
+
+        Spacer(minLength: 0)
+
+        HeartsRow(count: tolerance.totalLivesCount)
+      }
+      .padding(.vertical, Theme.Spacing.md)
+      .padding(.horizontal, Theme.Spacing.lg)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .background(
+        RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
+          .fill(Theme.Colors.surface)
+      )
+      .overlay(
+        RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
+          .strokeBorder(
+            isSelected ? tone : Theme.Colors.border,
+            lineWidth: isSelected ? 1.5 : 1
+          )
+      )
+    }
+    .buttonStyle(.plain)
+  }
+
+  private func difficultyDescription(for tolerance: MistakeTolerance) -> String {
+    switch tolerance {
+    case .easy: "5 lives - good to start"
+    case .normal: "3 lives - the real deal"
+    case .hard: "1 life - 1 mistake, game over"
+    }
+  }
+
+  // MARK: CTA
+
+  @ViewBuilder
+  private var ctaButton: some View {
+    switch currentStep {
+    case .gameType:
+      Button("Continue") {
+        advanceToDifficulty()
+      }
+      .buttonStyle(.crPrimary)
+    case .mistakeTolerance:
+      Button("Let's go") {
+        startLevelRun()
+      }
+      .buttonStyle(.crPrimary)
+      .disabled(selectedMistakeTolerance == nil)
+      .opacity(selectedMistakeTolerance == nil ? 0.5 : 1.0)
+    }
+  }
+
+  // MARK: Navigation
+
+  private func handleBack() {
+    switch currentStep {
+    case .gameType:
+      isPresented = false
+    case .mistakeTolerance:
+      withAnimation(.easeInOut(duration: 0.25)) {
+        currentStep = .gameType
+      }
+    }
+  }
+
+  private func advanceToDifficulty() {
+    withAnimation(.easeInOut(duration: 0.25)) {
       currentStep = .mistakeTolerance
-      // Ensure Easy is selected when arriving at this step
       if selectedMistakeTolerance == nil {
         selectedMistakeTolerance = .easy
         levelRun.mistakeTolerance = .easy
@@ -309,21 +303,69 @@ struct LevelSystemSelectionView: View {
   }
 
   private func startLevelRun() {
-    // Validate that both selections are made
-    guard let gameType = selectedGameType,
-          let mistakeTolerance = selectedMistakeTolerance
-    else {
-      // Should not happen with pre-selection, but safety check
-      return
-    }
-
-    levelRun.startRun(gameType: gameType, mistakeTolerance: mistakeTolerance)
+    guard let mistakeTolerance = selectedMistakeTolerance else { return }
+    levelRun.startRun(gameType: selectedGameType, mistakeTolerance: mistakeTolerance)
     isGameViewPresented = true
   }
+}
 
-  // Computed property to check if game can start
-  private var canStartGame: Bool {
-    selectedGameType != nil && selectedMistakeTolerance != nil
+// MARK: - Mode swatch grid
+
+private struct ModeSwatchGrid: View {
+  let showsLabels: Bool
+
+  private struct Tile: Identifiable {
+    let id = UUID()
+    let color: Color
+    let label: String
+  }
+
+  /// Tiles for the Color and Text variant — each label intentionally
+  /// mismatches its tile color to illustrate the gameplay quirk.
+  private var tiles: [Tile] {
+    [
+      .init(color: Theme.Colors.Tile.red, label: "BLUE"),
+      .init(color: Theme.Colors.Tile.blue, label: "RED"),
+      .init(color: Theme.Colors.Tile.green, label: "GREEN"),
+      .init(color: Theme.Colors.Tile.yellow, label: "RED"),
+    ]
+  }
+
+  var body: some View {
+    let columns = [
+      GridItem(.flexible(), spacing: Theme.Spacing.xs),
+      GridItem(.flexible(), spacing: Theme.Spacing.xs),
+    ]
+    LazyVGrid(columns: columns, spacing: Theme.Spacing.xs) {
+      ForEach(tiles) { tile in
+        ZStack {
+          RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)
+            .fill(tile.color)
+          if showsLabels {
+            Text(tile.label)
+              .font(.crPill)
+              .foregroundStyle(Theme.Colors.textPrimary)
+          }
+        }
+        .aspectRatio(1, contentMode: .fit)
+      }
+    }
+  }
+}
+
+// MARK: - Hearts row
+
+private struct HeartsRow: View {
+  let count: Int
+
+  var body: some View {
+    HStack(spacing: 3) {
+      ForEach(0..<max(0, count), id: \.self) { _ in
+        Image(systemName: "heart.fill")
+          .font(.system(size: 13, weight: .bold))
+          .foregroundStyle(Theme.Colors.danger)
+      }
+    }
   }
 }
 

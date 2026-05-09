@@ -14,7 +14,7 @@ struct CRSectionHeader: View {
     VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
       if let step {
         Text(step)
-          .font(.crLabel)
+          .font(.crLabelUpright)
           .textCase(.uppercase)
           .foregroundStyle(Theme.Colors.textSecondary)
       }

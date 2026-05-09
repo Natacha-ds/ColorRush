@@ -11,7 +11,9 @@ import UIKit
 enum CRFontRegistration {
   static let expectedFontNames: [String] = [
     CRFontName.regular,
+    CRFontName.italic,
     CRFontName.medium,
+    CRFontName.mediumItalic,
     CRFontName.bold,
     CRFontName.boldItalic,
     CRFontName.black,
