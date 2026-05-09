@@ -5,22 +5,34 @@ struct MainTabView: View {
   @State private var selectedTab = 0
 
   var body: some View {
-    TabView(selection: $selectedTab) {
+    ZStack {
       HomeView()
-        .tabItem {
-          Image(systemName: "house.fill")
-          Text("Home")
-        }
-        .tag(0)
-
+        .opacity(selectedTab == 0 ? 1 : 0)
+        .allowsHitTesting(selectedTab == 0)
       LeaderboardView()
-        .tabItem {
-          Image(systemName: "trophy.fill")
-          Text("Leaderboard")
-        }
-        .tag(1)
+        .opacity(selectedTab == 1 ? 1 : 0)
+        .allowsHitTesting(selectedTab == 1)
     }
-    .accentColor(.purple)
+    .safeAreaInset(edge: .bottom) {
+      CRTabBar(
+        items: [
+          CRTabBarItem(
+            id: 0,
+            icon: Image(systemName: "house.fill"),
+            selectedTint: Theme.Colors.accent,
+            accessibilityLabel: "Home"
+          ),
+          CRTabBarItem(
+            id: 1,
+            icon: Image(systemName: "trophy.fill"),
+            selectedTint: Theme.Colors.pro,
+            accessibilityLabel: "Leaderboard"
+          ),
+        ],
+        selection: $selectedTab
+      )
+    }
+    .background(Theme.Colors.background.ignoresSafeArea())
     .onReceive(NotificationCenter.default
       .publisher(for: NSNotification.Name("SwitchToLeaderboard")))
     { _ in

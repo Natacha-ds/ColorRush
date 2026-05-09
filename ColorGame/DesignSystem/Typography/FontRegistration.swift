@@ -14,6 +14,7 @@ enum CRFontRegistration {
     CRFontName.medium,
     CRFontName.bold,
     CRFontName.boldItalic,
+    CRFontName.black,
     CRFontName.blackItalic,
   ]
 

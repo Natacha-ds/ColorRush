@@ -16,6 +16,14 @@ extension ButtonStyle where Self == PrimaryGradientButtonStyle {
   }
 }
 
+extension ButtonStyle where Self == PrimaryCircularButtonStyle {
+  static var crPrimaryCircular: PrimaryCircularButtonStyle { PrimaryCircularButtonStyle() }
+
+  static func crPrimaryCircular(diameter: CGFloat) -> PrimaryCircularButtonStyle {
+    PrimaryCircularButtonStyle(diameter: diameter)
+  }
+}
+
 extension ButtonStyle where Self == DangerGradientButtonStyle {
   static var crDanger: DangerGradientButtonStyle { DangerGradientButtonStyle() }
 

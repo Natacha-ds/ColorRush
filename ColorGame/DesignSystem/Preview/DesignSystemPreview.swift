@@ -38,11 +38,44 @@ struct DesignSystemPreview: View {
         section("Components") {
           componentsSection
         }
+        section("Tab bar") {
+          tabBarSection
+        }
       }
       .padding(Theme.Spacing.xl)
     }
     .background(Theme.Colors.background.ignoresSafeArea())
     .preferredColorScheme(.dark)
+  }
+
+  // MARK: Tab bar (stateful demo)
+
+  private var tabBarSection: some View {
+    TabBarPreviewRow()
+  }
+
+  private struct TabBarPreviewRow: View {
+    @State private var selection: Int = 0
+    var body: some View {
+      CRTabBar(
+        items: [
+          CRTabBarItem(
+            id: 0,
+            icon: Image(systemName: "house.fill"),
+            selectedTint: Theme.Colors.accent,
+            accessibilityLabel: "Home"
+          ),
+          CRTabBarItem(
+            id: 1,
+            icon: Image(systemName: "trophy.fill"),
+            selectedTint: Theme.Colors.pro,
+            accessibilityLabel: "Leaderboard"
+          ),
+        ],
+        selection: $selection
+      )
+      .background(Theme.Colors.background)
+    }
   }
 
   // MARK: Section helper
@@ -264,6 +297,14 @@ struct DesignSystemPreview: View {
         .buttonStyle(.crPrimary)
       Button("Start Over") {}
         .buttonStyle(.crDanger)
+      Button { } label: {
+        HStack(spacing: Theme.Spacing.md) {
+          Image(systemName: "play.fill")
+            .font(.system(size: 28, weight: .bold))
+          Text("Play")
+        }
+      }
+      .buttonStyle(.crPrimaryCircular)
       HStack(spacing: Theme.Spacing.md) {
         Button { } label: {
           Image(systemName: "xmark")

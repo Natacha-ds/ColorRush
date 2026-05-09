@@ -16,244 +16,160 @@ enum Difficulty: String, CaseIterable {
 
 struct HomeView: View {
   @State private var isLevelSystemSelectionPresented = false
-  @State private var isRulesViewPresented = false
   @StateObject private var leaderboardStore = LeaderboardStore.shared
   @StateObject private var store = StoreService.shared
   @State private var isPurchasing = false
   @State private var isRestoring = false
 
   var body: some View {
-    NavigationView {
-      ZStack {
-        // Background gradient
-        LinearGradient(
-          gradient: Gradient(colors: [Color.purple.opacity(0.1), Color.white]),
-          startPoint: .top,
-          endPoint: .bottom
-        )
+    ZStack {
+      Theme.Colors.background
         .ignoresSafeArea()
-        .preferredColorScheme(.light)
-        VStack(spacing: 0) {
-          // Top section with Best Score
-          VStack(spacing: 0) {
-            Spacer()
-              .frame(height: 60)
 
-            // Best Score Display with trophy icon
-            HStack(spacing: 8) {
-              Text("🏆")
-                .font(.system(size: 16))
+      VStack(spacing: 0) {
+        bestScoreHeader
+          .padding(.horizontal, Theme.Spacing.xl)
+          .padding(.top, Theme.Spacing.lg)
 
-              Text("Best Score:")
-                .font(.system(size: 16, weight: .medium))
-                .foregroundColor(.primary)
+        Spacer(minLength: Theme.Spacing.xxl)
 
-              Text(currentBestScore)
-                .font(.system(size: 16, weight: .bold))
-                .foregroundColor(.orange)
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
-            .background(
-              Capsule()
-                .fill(Color.white)
-                .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
-            )
+        logo
 
-            Spacer()
-              .frame(height: 50) // Increased spacing
-          }
+        Spacer().frame(height: Theme.Spacing.xl)
 
-          // Title & Branding Area
-          VStack(spacing: 20) {
-            // 4 Color swatches above the title
-            HStack(spacing: 16) {
-              RoundedRectangle(cornerRadius: 10)
-                .fill(Color.red.opacity(0.8))
-                .frame(width: 28, height: 28)
+        tagline
+          .padding(.horizontal, Theme.Spacing.xl)
 
-              RoundedRectangle(cornerRadius: 10)
-                .fill(Color.blue.opacity(0.8))
-                .frame(width: 28, height: 28)
+        Spacer(minLength: Theme.Spacing.xxxl)
 
-              RoundedRectangle(cornerRadius: 10)
-                .fill(Color.yellow.opacity(0.8))
-                .frame(width: 28, height: 28)
+        playButton
 
-              RoundedRectangle(cornerRadius: 10)
-                .fill(Color.green.opacity(0.8))
-                .frame(width: 28, height: 28)
-            }
+        Spacer(minLength: Theme.Spacing.xl)
 
-            // Game Title with gradient
-            Text("ColorRush")
-              .font(.system(size: 48, weight: .bold, design: .rounded))
-              .foregroundStyle(
-                LinearGradient(
-                  gradient: Gradient(colors: [.purple, .pink, .blue]),
-                  startPoint: .leading,
-                  endPoint: .trailing
-                )
-              )
-
-            Spacer()
-              .frame(height: 25) // More space between title and instructions
-
-            // Instructions with highlighted "DON'T"
-            VStack(spacing: 0) {
-              HStack(spacing: 0) {
-                Text("Tap the squares that ")
-                  .font(.system(size: 16, weight: .medium))
-                  .foregroundColor(.primary)
-
-                Text("DON'T")
-                  .font(.system(size: 16, weight: .bold))
-                  .foregroundColor(.blue) // Changed to blue like the color
-                // square
-              }
-
-              Text("match the announced color!")
-                .font(.system(size: 16, weight: .medium))
-                .foregroundColor(.primary)
-            }
-            .multilineTextAlignment(.center)
-            .padding(.horizontal, 20)
-          }
-
-          Spacer()
-            .frame(minHeight: 40) // More balanced spacing
-
-          // Play Button (Centered CTA)
-          Button(action: {
-            isLevelSystemSelectionPresented = true
-          }) {
-            HStack(spacing: 10) {
-              Text("⚡️")
-                .font(.system(size: 20))
-
-              Text("Play now")
-                .font(.system(size: 24, weight: .bold, design: .rounded))
-                .foregroundColor(.white)
-            }
-            .frame(width: 200, height: 60)
-            .background(
-              LinearGradient(
-                gradient: Gradient(colors: [.blue, .purple, .pink]),
-                startPoint: .leading,
-                endPoint: .trailing
-              )
-            )
-            .cornerRadius(30)
-            .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
-          }
-
-          Spacer()
-            .frame(minHeight: 40) // More balanced spacing
-
-          // Remove Ads IAP — hidden once the entitlement is held.
-          if !store.hasRemoveAds {
-            VStack(spacing: 14) {
-              // Primary IAP button: capsule with gradient stroke, matches the
-              // visual language of the Best Score pill at the top.
-              Button(action: triggerPurchase) {
-                HStack(spacing: 8) {
-                  if isPurchasing {
-                    ProgressView()
-                      .progressViewStyle(.circular)
-                      .tint(.purple)
-                  } else {
-                    Text("✨")
-                      .font(.system(size: 16))
-                  }
-                  Text(removeAdsButtonTitle)
-                    .font(.system(size: 15, weight: .semibold, design: .rounded))
-                    .foregroundStyle(
-                      LinearGradient(
-                        gradient: Gradient(colors: [.purple, .pink]),
-                        startPoint: .leading,
-                        endPoint: .trailing
-                      )
-                    )
-                }
-                .frame(width: 220, height: 44)
-                .background(
-                  Capsule()
-                    .fill(Color.white)
-                )
-                .overlay(
-                  Capsule()
-                    .stroke(
-                      LinearGradient(
-                        gradient: Gradient(colors: [.purple, .pink]),
-                        startPoint: .leading,
-                        endPoint: .trailing
-                      ),
-                      lineWidth: 2
-                    )
-                )
-                .shadow(color: .purple.opacity(0.2), radius: 8, x: 0, y: 4)
-              }
-              .disabled(store.package == nil || isPurchasing || isRestoring)
-              .opacity(store.package == nil ? 0.6 : 1)
-
-              // Secondary action: restore previous purchases.
-              Button(action: triggerRestore) {
-                HStack(spacing: 6) {
-                  if isRestoring {
-                    ProgressView()
-                      .progressViewStyle(.circular)
-                      .tint(.secondary)
-                  }
-                  Text("Restore Purchases")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.secondary)
-                    .underline()
-                }
-              }
-              .disabled(isPurchasing || isRestoring)
-            }
-          }
-
-          Spacer()
-            .frame(height: 60)
+        if !store.hasRemoveAds {
+          iapFooter
+            .padding(.horizontal, Theme.Spacing.xl)
         }
+
+        Spacer().frame(height: Theme.Spacing.xl)
       }
-      #if !os(macOS)
-      .navigationBarHidden(true)
-      .fullScreenCover(isPresented: $isLevelSystemSelectionPresented) {
-        LevelSystemSelectionView(isPresented: $isLevelSystemSelectionPresented)
-      }
-      .onReceive(NotificationCenter.default
-        .publisher(for: NSNotification.Name("SwitchToLeaderboard")))
-      { _ in
-        // Dismiss the selection view if it's presented
-        isLevelSystemSelectionPresented = false
-        // Switch to leaderboard tab (handled by MainTabView)
-      }
-      .onReceive(NotificationCenter.default
-        .publisher(for: NSNotification.Name("DismissToHome")))
-      { _ in
-        // Dismiss the selection view so the player lands on the Home tab
-        isLevelSystemSelectionPresented = false
-      }
-      .fullScreenCover(isPresented: $isRulesViewPresented) {
-        RulesView(isPresented: $isRulesViewPresented)
-      }
-      #else
-      .sheet(isPresented: $isLevelSystemSelectionPresented) {
-            LevelSystemSelectionView(
-              isPresented: $isLevelSystemSelectionPresented
-            )
-          }
-          .sheet(isPresented: $isRulesViewPresented) {
-            RulesView(isPresented: $isRulesViewPresented)
-          }
-      #endif
     }
+    .preferredColorScheme(.dark)
     #if !os(macOS)
-    .navigationViewStyle(StackNavigationViewStyle()) // Ensures portrait mode
+    .fullScreenCover(isPresented: $isLevelSystemSelectionPresented) {
+      LevelSystemSelectionView(isPresented: $isLevelSystemSelectionPresented)
+    }
+    .onReceive(NotificationCenter.default
+      .publisher(for: NSNotification.Name("SwitchToLeaderboard")))
+    { _ in
+      isLevelSystemSelectionPresented = false
+    }
+    .onReceive(NotificationCenter.default
+      .publisher(for: NSNotification.Name("DismissToHome")))
+    { _ in
+      isLevelSystemSelectionPresented = false
+    }
+    #else
+    .sheet(isPresented: $isLevelSystemSelectionPresented) {
+      LevelSystemSelectionView(isPresented: $isLevelSystemSelectionPresented)
+    }
     #endif
   }
+
+  // MARK: Sections
+
+  private var bestScoreHeader: some View {
+    HStack {
+      VStack(alignment: .leading, spacing: 0) {
+        Text("BEST")
+          .font(.crLabel)
+          .textCase(.uppercase)
+          .foregroundStyle(Theme.Colors.textSecondary)
+        Text(currentBestScore)
+          .font(.crHeadline)
+          .foregroundStyle(Theme.Colors.pro)
+      }
+      Spacer()
+    }
+  }
+
+  private var logo: some View {
+    Image("CRLogo")
+      .resizable()
+      .scaledToFit()
+      .frame(maxWidth: 280)
+      .accessibilityLabel("Color Rush")
+  }
+
+  private var tagline: some View {
+    (
+      Text("A color is called.\nTap ").foregroundStyle(Theme.Colors.textPrimary)
+        + Text("everything else.").foregroundStyle(Theme.Colors.accentSecondary)
+    )
+    .font(.crTitle)
+    .multilineTextAlignment(.leading)
+    .frame(maxWidth: .infinity, alignment: .leading)
+  }
+
+  private var playButton: some View {
+    Button {
+      isLevelSystemSelectionPresented = true
+    } label: {
+      HStack(spacing: Theme.Spacing.md) {
+        Image(systemName: "play.fill")
+          .font(.system(size: 56, weight: .bold))
+        Text("Play")
+          .font(.crTitle)
+      }
+    }
+    .buttonStyle(.crPrimaryCircular)
+  }
+
+  private var iapFooter: some View {
+    VStack(spacing: Theme.Spacing.md) {
+      Button(action: triggerPurchase) {
+        HStack(spacing: Theme.Spacing.sm) {
+          if isPurchasing {
+            ProgressView()
+              .progressViewStyle(.circular)
+              .tint(Theme.Colors.textPrimary)
+          } else {
+            Image(systemName: "sparkles")
+              .font(.system(size: 14, weight: .bold))
+              .foregroundStyle(Theme.Colors.accentSecondary)
+          }
+          Text(removeAdsButtonTitle)
+            .font(.crCaption)
+            .foregroundStyle(Theme.Colors.textPrimary)
+        }
+        .padding(.vertical, Theme.Spacing.md - 2)
+        .padding(.horizontal, Theme.Spacing.lg)
+        .background(
+          Capsule(style: .continuous)
+            .fill(Theme.Colors.surfaceElevated)
+        )
+      }
+      .disabled(store.package == nil || isPurchasing || isRestoring)
+      .opacity(store.package == nil ? 0.6 : 1)
+
+      Button(action: triggerRestore) {
+        HStack(spacing: Theme.Spacing.xs) {
+          if isRestoring {
+            ProgressView()
+              .progressViewStyle(.circular)
+              .tint(Theme.Colors.textSecondary)
+          }
+          Text("Restore Purchases")
+            .font(.crCaption)
+            .foregroundStyle(Theme.Colors.textSecondary)
+            .underline()
+        }
+      }
+      .disabled(isPurchasing || isRestoring)
+    }
+  }
+
+  // MARK: Derived state
 
   private var currentBestScore: String {
     let score = leaderboardStore.getOverallBestScore()
@@ -267,6 +183,8 @@ struct HomeView: View {
       "Loading…"
     }
   }
+
+  // MARK: Actions
 
   private func triggerPurchase() {
     guard !isPurchasing else { return }
