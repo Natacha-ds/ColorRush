@@ -9,12 +9,21 @@ struct GameCenterRank: Equatable {
   let formattedScore: String
 }
 
+struct GameCenterEntry: Equatable, Identifiable {
+  let id: String
+  let rank: Int
+  let displayName: String
+  let formattedScore: String
+  let isLocalPlayer: Bool
+}
+
 @MainActor
 final class GameCenterService: NSObject, ObservableObject {
   static let shared = GameCenterService()
 
   @Published private(set) var isAuthenticated: Bool = false
   @Published private(set) var ranks: [LeaderboardKey: GameCenterRank] = [:]
+  @Published private(set) var topEntries: [LeaderboardKey: [GameCenterEntry]] = [:]
 
   override init() {
     super.init()
@@ -109,6 +118,52 @@ final class GameCenterService: NSObject, ObservableObject {
       }
     } catch {
       print("Game Center refreshRank failed for \(id): \(error.localizedDescription)")
+    }
+  }
+
+  // MARK: - Top entries fetch
+
+  /// Loads up to `limit` global all-time entries for the given bucket from
+  /// Game Center and updates `topEntries[key]` reactively. Silent no-op when
+  /// not authenticated; errors are logged. Empty leaderboards write `[]`.
+  func refreshTopEntries(
+    for gameType: GameType,
+    mistakeTolerance: MistakeTolerance,
+    limit: Int = 5
+  ) async {
+    guard isAuthenticated else { return }
+    let id = Self.leaderboardID(
+      for: gameType,
+      mistakeTolerance: mistakeTolerance
+    )
+    let key = LeaderboardKey(
+      gameType: gameType,
+      mistakeTolerance: mistakeTolerance
+    )
+
+    do {
+      let leaderboards = try await GKLeaderboard.loadLeaderboards(IDs: [id])
+      guard let leaderboard = leaderboards.first else { return }
+
+      let (_, entries, _) = try await leaderboard.loadEntries(
+        for: .global,
+        timeScope: .allTime,
+        range: NSRange(location: 1, length: limit)
+      )
+
+      let localPlayerID = GKLocalPlayer.local.gamePlayerID
+      let mapped = entries.map { entry in
+        GameCenterEntry(
+          id: entry.player.gamePlayerID,
+          rank: entry.rank,
+          displayName: entry.player.displayName,
+          formattedScore: entry.formattedScore,
+          isLocalPlayer: entry.player.gamePlayerID == localPlayerID
+        )
+      }
+      topEntries[key] = mapped
+    } catch {
+      print("Game Center refreshTopEntries failed for \(id): \(error.localizedDescription)")
     }
   }
 

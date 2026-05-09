@@ -45,6 +45,9 @@ struct CRTabBar: View {
     }
     .padding(.horizontal, Theme.Spacing.lg)
     .padding(.vertical, Theme.Spacing.xs)
-    .glassEffect(.regular, in: Capsule(style: .continuous))
+    .glassEffect(
+      .regular.tint(Theme.Colors.surfaceElevated.opacity(0.5)),
+      in: Capsule(style: .continuous)
+    )
   }
 }

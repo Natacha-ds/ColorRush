@@ -1,356 +1,394 @@
 import SwiftUI
 
+// MARK: - View-layer brand labels
+
+private extension GameType {
+  var brandLabel: String {
+    switch self {
+    case .colorOnly: "PURE"
+    case .colorAndText: "COLOR+WORD"
+    }
+  }
+}
+
+private extension MistakeTolerance {
+  var brandLabel: String {
+    switch self {
+    case .easy: "ROOKIE"
+    case .normal: "PRO"
+    case .hard: "INSANE"
+    }
+  }
+}
+
+// MARK: - Display row union
+
+private enum DisplayRow: Identifiable {
+  case gc(GameCenterEntry)
+  case local(rank: Int, score: Int)
+
+  var id: String {
+    switch self {
+    case let .gc(entry): "gc-\(entry.id)"
+    case let .local(rank, _): "local-\(rank)"
+    }
+  }
+
+  var rank: Int {
+    switch self {
+    case let .gc(entry): entry.rank
+    case let .local(rank, _): rank
+    }
+  }
+
+  var displayName: String? {
+    switch self {
+    case let .gc(entry): entry.displayName
+    case .local: nil
+    }
+  }
+
+  var formattedScore: String {
+    switch self {
+    case let .gc(entry): entry.formattedScore
+    case let .local(_, score): "\(score)"
+    }
+  }
+
+  var isLocalPlayer: Bool {
+    switch self {
+    case let .gc(entry): entry.isLocalPlayer
+    case .local: false
+    }
+  }
+}
+
+// MARK: - LeaderboardView
+
 struct LeaderboardView: View {
   @StateObject private var leaderboardStore = LeaderboardStore.shared
   @StateObject private var gameCenter = GameCenterService.shared
   @State private var selectedGameType: GameType = .colorOnly
   @State private var selectedMistakeTolerance: MistakeTolerance = .easy
 
-  var body: some View {
-    ZStack {
-      // Background gradient (same as HomeView)
-      LinearGradient(
-        gradient: Gradient(colors: [Color.purple.opacity(0.1), Color.white]),
-        startPoint: .top,
-        endPoint: .bottom
-      )
-      .ignoresSafeArea()
+  private var currentKey: LeaderboardKey {
+    LeaderboardKey(
+      gameType: selectedGameType,
+      mistakeTolerance: selectedMistakeTolerance
+    )
+  }
 
-      VStack(spacing: 0) {
-        // Top section with title and difficulty selector
-        VStack(spacing: 20) {
-          Spacer()
-            .frame(height: 40)
-
-          // Title with trophy icon and gradient
-          Text("🏆 Leaderboard")
-            .font(.system(size: 36, weight: .bold, design: .rounded))
-            .foregroundStyle(
-              LinearGradient(
-                gradient: Gradient(colors: [.pink, .purple, .blue]),
-                startPoint: .leading,
-                endPoint: .trailing
-              )
-            )
-            .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
-
-          // Game Type selector (Color Only / Color + Text)
-          HStack(spacing: 0) {
-            ForEach(GameType.allCases) { gameType in
-              Button(action: {
-                withAnimation(.easeInOut(duration: 0.3)) {
-                  selectedGameType = gameType
-                }
-              }) {
-                Text(gameType.displayName)
-                  .font(.system(size: 14, weight: .medium))
-                  .foregroundColor(selectedGameType == gameType ?
-                    Color.purple :
-                    Color.gray)
-                  .frame(width: 140, height: 36)
-                  .background(
-                    selectedGameType == gameType ?
-                      RoundedRectangle(cornerRadius: 18)
-                      .fill(Color.white)
-                      .overlay(
-                        RoundedRectangle(cornerRadius: 18)
-                          .stroke(
-                            LinearGradient(
-                              gradient: Gradient(colors: [.blue, .pink]),
-                              startPoint: .leading,
-                              endPoint: .trailing
-                            ),
-                            lineWidth: 2
-                          )
-                      ) :
-                      nil
-                  )
-              }
-              .buttonStyle(PlainButtonStyle())
-            }
-          }
-          .background(
-            RoundedRectangle(cornerRadius: 18)
-              .fill(Color.white)
-              .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
-          )
-          .frame(width: 280)
-
-          // Mistake Tolerance selector with capsule style
-          HStack(spacing: 0) {
-            ForEach(MistakeTolerance.allCases, id: \.self) { tolerance in
-              Button(action: {
-                withAnimation(.easeInOut(duration: 0.3)) {
-                  selectedMistakeTolerance = tolerance
-                }
-              }) {
-                Text(tolerance.displayName)
-                  .font(.system(size: 16, weight: .medium))
-                  .foregroundColor(selectedMistakeTolerance == tolerance ?
-                    Color.purple :
-                    Color.gray)
-                  .frame(width: 93, height: 36)
-                  .background(
-                    // Individual button background - only for selected state
-                    selectedMistakeTolerance == tolerance ?
-                      RoundedRectangle(cornerRadius: 18)
-                      .fill(Color.white)
-                      .overlay(
-                        RoundedRectangle(cornerRadius: 18)
-                          .stroke(
-                            LinearGradient(
-                              gradient: Gradient(colors: [.blue, .pink]),
-                              startPoint: .leading,
-                              endPoint: .trailing
-                            ),
-                            lineWidth: 2
-                          )
-                      ) :
-                      nil
-                  )
-              }
-              .buttonStyle(PlainButtonStyle())
-            }
-          }
-          .background(
-            // Single white container for all buttons
-            RoundedRectangle(cornerRadius: 18)
-              .fill(Color.white)
-              .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
-          )
-          .frame(width: 280)
-
-          // Inline rank pill — visible only when authenticated and a rank
-          // has been fetched for the currently selected bucket.
-          if gameCenter.isAuthenticated,
-             let rank = gameCenter.ranks[
-              LeaderboardKey(
-                gameType: selectedGameType,
-                mistakeTolerance: selectedMistakeTolerance
-              )
-             ] {
-            HStack(spacing: 8) {
-              Text("🌍")
-                .font(.system(size: 16))
-              Text("Rank #\(rank.rank) of \(rank.totalPlayers)")
-                .font(.system(size: 15, weight: .semibold, design: .rounded))
-                .foregroundStyle(
-                  LinearGradient(
-                    gradient: Gradient(colors: [.blue, .purple]),
-                    startPoint: .leading,
-                    endPoint: .trailing
-                  )
-                )
-            }
-            .padding(.horizontal, 18)
-            .padding(.vertical, 11)
-            .background(Capsule().fill(Color.white))
-            .overlay(
-              Capsule()
-                .stroke(
-                  LinearGradient(
-                    gradient: Gradient(colors: [.blue, .purple]),
-                    startPoint: .leading,
-                    endPoint: .trailing
-                  ),
-                  lineWidth: 2
-                )
-            )
-            .shadow(color: .blue.opacity(0.15), radius: 6, x: 0, y: 3)
-          }
-        }
-        .padding(.bottom, 16)
-
-        // Scores list (top 5 only, no scrolling)
-        VStack(spacing: 12) {
-          let scores = leaderboardStore.getScores(
-            gameType: selectedGameType,
-            mistakeTolerance: selectedMistakeTolerance
-          )
-          let topFiveScores = Array(scores.prefix(5)) // Show only top 5
-
-          if scores.isEmpty {
-            // Empty state
-            VStack(spacing: 16) {
-              Image(systemName: "trophy")
-                .font(.system(size: 48))
-                .foregroundColor(.gray.opacity(0.6))
-
-              Text("No scores yet")
-                .font(.system(size: 18, weight: .medium))
-                .foregroundColor(.secondary)
-
-              Text("Play some games to see your scores here!")
-                .font(.system(size: 14))
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
-            }
-            .frame(maxHeight: .infinity)
-          } else {
-            ForEach(
-              Array(topFiveScores.enumerated()),
-              id: \.element.id
-            ) { index, scoreEntry in
-              ScoreRowView(
-                rank: index + 1,
-                score: scoreEntry.score,
-                isTopThree: index < 3
-              )
-            }
-          }
-        }
-        .padding(.horizontal, 20)
-        .frame(maxHeight: .infinity)
-
-        // Global Ranking CTA — opens the native Game Center view scoped
-        // to the currently selected (gameType, mistakeTolerance) bucket.
-        VStack(spacing: 6) {
-          Button(action: {
-            gameCenter.presentLeaderboard(
-              gameType: selectedGameType,
-              mistakeTolerance: selectedMistakeTolerance
-            )
-          }) {
-            HStack(spacing: 8) {
-              Text("🌍")
-                .font(.system(size: 16))
-              Text("Global Ranking")
-                .font(.system(size: 15, weight: .semibold, design: .rounded))
-                .foregroundStyle(
-                  LinearGradient(
-                    gradient: Gradient(colors: [.blue, .purple]),
-                    startPoint: .leading,
-                    endPoint: .trailing
-                  )
-                )
-            }
-            .frame(width: 220, height: 44)
-            .background(Capsule().fill(Color.white))
-            .overlay(
-              Capsule()
-                .stroke(
-                  LinearGradient(
-                    gradient: Gradient(colors: [.blue, .purple]),
-                    startPoint: .leading,
-                    endPoint: .trailing
-                  ),
-                  lineWidth: 2
-                )
-            )
-            .shadow(color: .blue.opacity(0.2), radius: 8, x: 0, y: 4)
-            .opacity(gameCenter.isAuthenticated ? 1.0 : 0.5)
-          }
-          .disabled(!gameCenter.isAuthenticated)
-          .buttonStyle(PlainButtonStyle())
-
-          if !gameCenter.isAuthenticated {
-            Text("Sign in to Game Center to see the global ranking")
-              .font(.system(size: 11))
-              .foregroundColor(.secondary)
-              .multilineTextAlignment(.center)
-              .padding(.horizontal, 32)
-          }
-        }
-        .padding(.top, 8)
-
-        Spacer()
-          .frame(height: 60)
-      }
+  /// Hybrid data resolution: GC top entries when available, local top-5 as fallback.
+  private var displayedRows: [DisplayRow] {
+    if gameCenter.isAuthenticated,
+       let gcEntries = gameCenter.topEntries[currentKey],
+       !gcEntries.isEmpty {
+      return gcEntries.map { .gc($0) }
     }
-    #if !os(macOS)
-    .navigationBarHidden(true)
-    #endif
-    .onAppear {
-      refreshCurrentRank()
-    }
-    .onChange(of: selectedGameType) { _, _ in
-      refreshCurrentRank()
-    }
-    .onChange(of: selectedMistakeTolerance) { _, _ in
-      refreshCurrentRank()
-    }
-    .onChange(of: gameCenter.isAuthenticated) { _, isAuth in
-      if isAuth { refreshCurrentRank() }
+    let localScores = leaderboardStore.getScores(
+      gameType: selectedGameType,
+      mistakeTolerance: selectedMistakeTolerance
+    )
+    return localScores.enumerated().map { index, entry in
+      .local(rank: index + 1, score: entry.score)
     }
   }
 
-  private func refreshCurrentRank() {
-    Task {
-      await gameCenter.refreshRank(
-        for: selectedGameType,
-        mistakeTolerance: selectedMistakeTolerance
-      )
+  var body: some View {
+    ZStack {
+      Theme.Colors.background.ignoresSafeArea()
+
+      VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
+        Text("RANKS")
+          .font(.crTitle)
+          .textCase(.uppercase)
+          .foregroundStyle(Theme.Colors.textPrimary)
+          .padding(.top, Theme.Spacing.lg)
+          .padding(.horizontal, Theme.Spacing.xl)
+
+        modeSelector
+          .padding(.horizontal, Theme.Spacing.xl)
+
+        difficultySelector
+          .padding(.horizontal, Theme.Spacing.xl)
+
+        if let rankPill {
+          rankPill
+            .padding(.horizontal, Theme.Spacing.xl)
+        }
+
+        scoreList
+          .padding(.horizontal, Theme.Spacing.xl)
+
+        Spacer(minLength: 0)
+
+        globalRankingCTA
+          .padding(.horizontal, Theme.Spacing.xl)
+          .padding(.bottom, Theme.Spacing.lg)
+      }
     }
+    .preferredColorScheme(.dark)
+    .task {
+      await refreshAll()
+    }
+    .onChange(of: selectedGameType) { _, _ in
+      Task { await refreshAll() }
+    }
+    .onChange(of: selectedMistakeTolerance) { _, _ in
+      Task { await refreshAll() }
+    }
+    .onChange(of: gameCenter.isAuthenticated) { _, isAuth in
+      if isAuth {
+        Task { await refreshAll() }
+      }
+    }
+  }
+
+  // MARK: Mode selector
+
+  private var modeSelector: some View {
+    HStack(spacing: 0) {
+      ForEach(GameType.allCases) { gameType in
+        modeTab(for: gameType)
+      }
+    }
+    .padding(Theme.Spacing.xs)
+    .background(
+      Capsule(style: .continuous)
+        .fill(Theme.Colors.surface)
+    )
+    .frame(maxWidth: .infinity)
+  }
+
+  private func modeTab(for gameType: GameType) -> some View {
+    let isActive = gameType == selectedGameType
+    return Button {
+      withAnimation(.easeOut(duration: 0.15)) {
+        selectedGameType = gameType
+      }
+    } label: {
+      Text(gameType.brandLabel)
+        .font(.crLabel)
+        .textCase(.uppercase)
+        .foregroundStyle(
+          isActive ? Theme.Colors.textPrimary : Theme.Colors.textSecondary
+        )
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, Theme.Spacing.sm)
+        .background(
+          Capsule(style: .continuous)
+            .fill(isActive ? Theme.Colors.surfaceElevated : Color.clear)
+        )
+        .overlay(
+          Capsule(style: .continuous)
+            .strokeBorder(
+              isActive ? Theme.Colors.accentSecondary : Color.clear,
+              lineWidth: 1
+            )
+        )
+    }
+    .buttonStyle(.plain)
+  }
+
+  // MARK: Difficulty selector
+
+  private var difficultySelector: some View {
+    HStack(spacing: Theme.Spacing.sm) {
+      ForEach(MistakeTolerance.allCases) { tolerance in
+        difficultyChip(for: tolerance)
+      }
+    }
+  }
+
+  private func difficultyChip(for tolerance: MistakeTolerance) -> some View {
+    let isActive = tolerance == selectedMistakeTolerance
+    return Button {
+      withAnimation(.easeOut(duration: 0.15)) {
+        selectedMistakeTolerance = tolerance
+      }
+    } label: {
+      Text(tolerance.brandLabel)
+        .font(.crLabel)
+        .textCase(.uppercase)
+        .foregroundStyle(
+          isActive ? Theme.Colors.textPrimary : Theme.Colors.textSecondary
+        )
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, Theme.Spacing.sm + 2)
+        .background(
+          Capsule(style: .continuous)
+            .fill(Theme.Colors.surface)
+        )
+        .overlay(
+          Capsule(style: .continuous)
+            .strokeBorder(
+              isActive ? Theme.Colors.accent : Theme.Colors.border,
+              lineWidth: isActive ? 2 : 1
+            )
+        )
+    }
+    .buttonStyle(.plain)
+  }
+
+  // MARK: Rank pill
+
+  private var rankPill: AnyView? {
+    guard gameCenter.isAuthenticated,
+          let rank = gameCenter.ranks[currentKey] else { return nil }
+    let label = "YOU · RANK #\(rank.rank) OF \(rank.totalPlayers)"
+    return AnyView(
+      HStack {
+        CRChip(title: label, tone: .accent)
+        Spacer()
+      }
+    )
+  }
+
+  // MARK: Score list
+
+  @ViewBuilder
+  private var scoreList: some View {
+    let rows = displayedRows
+    if rows.isEmpty {
+      emptyState
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, Theme.Spacing.xxxl)
+    } else {
+      VStack(spacing: Theme.Spacing.sm) {
+        ForEach(rows) { row in
+          ScoreRowView(row: row)
+        }
+      }
+    }
+  }
+
+  // MARK: Empty state
+
+  private var emptyState: some View {
+    VStack(spacing: Theme.Spacing.md) {
+      Image(systemName: "trophy")
+        .font(.system(size: 48, weight: .regular))
+        .foregroundStyle(Theme.Colors.textMuted)
+      Text("No scores yet")
+        .font(.crHeadline)
+        .foregroundStyle(Theme.Colors.textPrimary)
+      Text("Play a level to land on the board.")
+        .font(.crBody)
+        .foregroundStyle(Theme.Colors.textSecondary)
+        .multilineTextAlignment(.center)
+    }
+  }
+
+  // MARK: Global Ranking CTA
+
+  private var globalRankingCTA: some View {
+    VStack(spacing: Theme.Spacing.xs) {
+      Button {
+        gameCenter.presentLeaderboard(
+          gameType: selectedGameType,
+          mistakeTolerance: selectedMistakeTolerance
+        )
+      } label: {
+        HStack(spacing: Theme.Spacing.sm) {
+          Image(systemName: "globe")
+            .font(.system(size: 14, weight: .bold))
+          Text("Global Ranking")
+            .font(.crButtonLabel)
+            .textCase(.uppercase)
+        }
+        .foregroundStyle(Theme.Colors.textPrimary)
+        .padding(.vertical, Theme.Spacing.md)
+        .padding(.horizontal, Theme.Spacing.xl)
+        .background(
+          Capsule(style: .continuous)
+            .fill(Theme.Colors.surfaceElevated)
+        )
+      }
+      .buttonStyle(.plain)
+      .disabled(!gameCenter.isAuthenticated)
+      .opacity(gameCenter.isAuthenticated ? 1.0 : 0.5)
+
+      if !gameCenter.isAuthenticated {
+        Text("Sign in to Game Center to see the global ranking")
+          .font(.crCaption)
+          .foregroundStyle(Theme.Colors.textSecondary)
+          .multilineTextAlignment(.center)
+      }
+    }
+    .frame(maxWidth: .infinity)
+  }
+
+  // MARK: Refresh
+
+  private func refreshAll() async {
+    await gameCenter.refreshRank(
+      for: selectedGameType,
+      mistakeTolerance: selectedMistakeTolerance
+    )
+    await gameCenter.refreshTopEntries(
+      for: selectedGameType,
+      mistakeTolerance: selectedMistakeTolerance
+    )
   }
 }
 
-struct ScoreRowView: View {
-  let rank: Int
-  let score: Int
-  let isTopThree: Bool
+// MARK: - Score row
 
-  private var rankIcon: String {
-    switch rank {
-    case 1: "🥇"
-    case 2: "🥈"
-    case 3: "🥉"
-    default: "\(rank)"
-    }
+private struct ScoreRowView: View {
+  let row: DisplayRow
+
+  private var rankColor: Color {
+    if row.isLocalPlayer { return Theme.Colors.accent }
+    if row.rank == 1 { return Theme.Colors.pro }
+    return Theme.Colors.textSecondary
   }
 
-  private var backgroundColor: Color {
-    switch rank {
-    case 1: Color(red: 1.0, green: 0.96, blue: 0.85) // #FFF6DA - light gold
-    case 2: Color(red: 0.96, green: 0.96, blue: 0.97) // #F5F5F7 - light silver
-    case 3: Color(red: 0.98, green: 0.90, blue: 0.82) // #F9E5D0 - light bronze
-    default: Color(red: 0.98, green: 0.98, blue: 0.99) // #FAFAFA - off-white
-    }
+  private var borderColor: Color {
+    if row.isLocalPlayer { return Theme.Colors.accent }
+    if row.rank == 1 { return Theme.Colors.pro.opacity(0.6) }
+    return Theme.Colors.border
+  }
+
+  private var borderWidth: CGFloat {
+    row.isLocalPlayer || row.rank == 1 ? 2 : 1
   }
 
   var body: some View {
-    HStack(spacing: 16) {
-      // Rank with medal/number (left side)
-      HStack(spacing: 8) {
-        if isTopThree {
-          Text(rankIcon)
-            .font(.system(size: 24))
-        } else {
-          Text("\(rank)")
-            .font(.system(size: 18, weight: .bold))
-            .foregroundColor(.primary)
-        }
-      }
-      .frame(width: 50, alignment: .leading)
+    HStack(spacing: Theme.Spacing.md) {
+      Text(String(format: "%02d", row.rank))
+        .font(.crLabel)
+        .foregroundStyle(rankColor)
+        .frame(width: 28, alignment: .leading)
 
-      // Score (center, expanding)
-      Text("\(score)")
-        .font(.system(size: isTopThree ? 28 : 22, weight: .bold))
-        .foregroundColor(.primary)
-        .frame(maxWidth: .infinity, alignment: .leading)
-
-      // Crown icon for 1st place (far right)
-      if rank == 1 {
-        Text("👑")
-          .font(.system(size: 24))
-          .padding(.leading, 8)
-      } else {
-        // Spacer to maintain alignment
-        Spacer()
-          .frame(width: 32)
+      if let name = row.displayName {
+        Text(name)
+          .font(.crBody)
+          .foregroundStyle(Theme.Colors.textPrimary)
+          .lineLimit(1)
+          .truncationMode(.tail)
       }
+
+      if row.rank == 1 {
+        Image(systemName: "crown.fill")
+          .font(.system(size: 14, weight: .bold))
+          .foregroundStyle(Theme.Colors.pro)
+      }
+
+      Spacer(minLength: Theme.Spacing.sm)
+
+      Text(row.formattedScore)
+        .font(.crTitle)
+        .foregroundStyle(row.rank == 1 ? Theme.Colors.pro : Theme.Colors.textPrimary)
     }
-    .padding(.horizontal, 20)
-    .padding(.vertical, isTopThree ? 18 : 14)
+    .padding(.vertical, Theme.Spacing.md)
+    .padding(.horizontal, Theme.Spacing.lg)
     .background(
-      RoundedRectangle(cornerRadius: isTopThree ? 16 : 12)
-        .fill(backgroundColor)
-        .shadow(
-          color: .black.opacity(0.15),
-          radius: isTopThree ? 8 : 4,
-          x: 0,
-          y: isTopThree ? 4 : 2
-        )
+      RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
+        .fill(Theme.Colors.surface)
+    )
+    .overlay(
+      RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
+        .strokeBorder(borderColor, lineWidth: borderWidth)
     )
   }
 }
