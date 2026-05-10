@@ -299,8 +299,11 @@ struct DesignSystemPreview: View {
         .buttonStyle(.crDanger)
       Button { } label: {
         HStack(spacing: Theme.Spacing.md) {
-          Image(systemName: "play.fill")
-            .font(.system(size: 28, weight: .bold))
+          Image("CRPlay")
+            .renderingMode(.template)
+            .resizable()
+            .scaledToFit()
+            .frame(width: 28, height: 28)
           Text("Play")
         }
       }

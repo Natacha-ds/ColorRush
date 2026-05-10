@@ -116,8 +116,11 @@ struct HomeView: View {
       isLevelSystemSelectionPresented = true
     } label: {
       HStack(spacing: Theme.Spacing.md) {
-        Image(systemName: "play.fill")
-          .font(.system(size: 56, weight: .bold))
+        Image("CRPlay")
+          .renderingMode(.template)
+          .resizable()
+          .scaledToFit()
+          .frame(width: 48, height: 48)
         Text("Play")
           .font(.crTitleUpright)
       }

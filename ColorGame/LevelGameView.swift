@@ -15,9 +15,12 @@ private let crTileSide: CGFloat = 150
 
 // Tap burst (correct-tap only): UIKit CAEmitterLayer-driven spark burst
 // emanating from BEHIND the tapped tile, base color derived from the tile.
-private let crBurstAreaSize: CGFloat = 420
-private let crBurstOriginEdgeOffset: CGFloat =
-  (crBurstAreaSize - (crTileSide * 2 + crTileGridSpacing)) / 2
+// Canvas matches the tile grid exactly so it never forces the parent VStack
+// wider than the screen. CAEmitterLayer particles can still fly outside the
+// canvas bounds — both the host UIView and the emitter layer keep
+// masksToBounds = false (default), so nothing clips the visible burst.
+private let crBurstAreaSize: CGFloat = crTileSide * 2 + crTileGridSpacing
+private let crBurstOriginEdgeOffset: CGFloat = 0
 
 private struct CRSparkBurstSpec: Equatable, Identifiable {
   let id: Int
@@ -1715,8 +1718,11 @@ struct LevelIntroView: View {
           onDismiss()
         } label: {
           HStack(spacing: Theme.Spacing.sm) {
-            Image(systemName: "play.fill")
-              .font(.system(size: 18, weight: .bold))
+            Image("CRPlay")
+              .renderingMode(.template)
+              .resizable()
+              .scaledToFit()
+              .frame(width: 16, height: 16)
             Text("Play")
           }
         }
@@ -1862,6 +1868,133 @@ struct StreakAnimationView: View {
   }
 }
 
+// MARK: - Level Result Layout (shared between Complete + Failed)
+
+/// Shared layout for the post-level result screens (Frames 6 + 7). The two
+/// views differ only in tone color, icon, headline, subtitle suffix, and
+/// primary CTA — everything else is identical.
+private struct LevelResultBody<PrimaryButton: View, Icon: View>: View {
+  let totalScore: Int
+  let remainingLives: Int
+  let totalLives: Int
+  let icon: Icon
+  let headline: String
+  let headlineColor: Color
+  let subtitle: String
+  let dividerColor: Color
+  let levelScore: Int
+  let requiredScore: Int
+  let hitsPoints: Int
+  let missesPoints: Int
+  let streakBonus: Int
+  let primaryButton: PrimaryButton
+  let onBackToHome: () -> Void
+
+  var body: some View {
+    ZStack {
+      Theme.Colors.background.ignoresSafeArea()
+
+      VStack(spacing: Theme.Spacing.lg) {
+        // Top row: TOTAL SCORE on left, hearts pill on right
+        HStack(alignment: .top) {
+          VStack(alignment: .leading, spacing: 2) {
+            Text("Total Score")
+              .font(.crLabel)
+              .textCase(.uppercase)
+              .foregroundStyle(Theme.Colors.textSecondary)
+            Text("\(totalScore)")
+              .font(.crTitle)
+              .foregroundStyle(Theme.Colors.textPrimary)
+          }
+          Spacer()
+          CRHeartsPill(remaining: remainingLives, total: totalLives)
+        }
+        .padding(.horizontal, Theme.Spacing.xl)
+        .padding(.top, Theme.Spacing.lg)
+
+        Spacer(minLength: Theme.Spacing.md)
+
+        // Centered icon + headline + subtitle
+        VStack(spacing: Theme.Spacing.sm) {
+          icon
+          Text(headline)
+            .font(.crDisplay)
+            .textCase(.uppercase)
+            .foregroundStyle(headlineColor)
+            .multilineTextAlignment(.center)
+          Text(subtitle)
+            .font(.crLabel)
+            .textCase(.uppercase)
+            .foregroundStyle(Theme.Colors.textSecondary)
+        }
+
+        // Tone-coloured divider
+        Rectangle()
+          .fill(dividerColor)
+          .frame(height: 2)
+          .padding(.horizontal, Theme.Spacing.xxxl)
+
+        // YOUR SCORE card
+        VStack(spacing: Theme.Spacing.xs) {
+          Text("Your Score")
+            .font(.crLabel)
+            .textCase(.uppercase)
+            .foregroundStyle(Theme.Colors.textSecondary)
+          Text("\(levelScore)")
+            .font(.crScoreHero)
+            .foregroundStyle(Theme.Colors.textPrimary)
+          Text("Of \(requiredScore)")
+            .font(.crBody)
+            .textCase(.uppercase)
+            .foregroundStyle(Theme.Colors.textSecondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, Theme.Spacing.lg)
+        .background(
+          RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous)
+            .fill(Theme.Colors.surface)
+        )
+        .padding(.horizontal, Theme.Spacing.xl)
+
+        // Stats trio
+        HStack(spacing: Theme.Spacing.md) {
+          CRStatBadge(
+            label: "Hits",
+            value: hitsPoints > 0 ? "+\(hitsPoints)" : "0",
+            tone: .success
+          )
+          CRStatBadge(
+            label: "Misses",
+            value: missesPoints == 0 ? "0" : "\(missesPoints)",
+            tone: .warning
+          )
+          CRStatBadge(
+            label: "Streak",
+            value: streakBonus > 0 ? "+\(streakBonus)" : "0",
+            tone: .info
+          )
+        }
+        .padding(.horizontal, Theme.Spacing.xl)
+
+        Spacer(minLength: Theme.Spacing.md)
+
+        primaryButton
+          .padding(.horizontal, Theme.Spacing.xl)
+
+        Button(action: onBackToHome) {
+          Text("Home")
+            .font(.crButtonLabel)
+            .textCase(.uppercase)
+            .foregroundStyle(Theme.Colors.textPrimary)
+        }
+        .buttonStyle(.plain)
+        .padding(.bottom, Theme.Spacing.lg)
+      }
+    }
+    .preferredColorScheme(.dark)
+  }
+}
+
 // MARK: - Level Complete View
 
 struct LevelCompleteView: View {
@@ -1869,291 +2002,49 @@ struct LevelCompleteView: View {
   let onNextLevel: () -> Void
   let onBackToHome: () -> Void
 
-  // Calculate final score (streak bonuses are already included in currentScore)
   private var finalLevelScore: Int {
-    // currentScore already includes all points, penalties, and streak bonuses
     levelRun.getCurrentLevelScore()
   }
 
-  // Score breakdown components
-  private var correctAnswersPoints: Int {
-    levelRun
-      .levelBasePoints // Only base points from correct answers, excluding
-    // bonuses
-  }
-
-  private var mistakesPenalty: Int {
-    // Show penalties from wrong taps (only point deductions, no life cost)
-    levelRun.levelWrongTaps * -10
-  }
-
-  // Display value for correct answers (points, not count)
-  private var correctAnswersDisplayValue: String {
-    let points = correctAnswersPoints
-    return points > 0 ? "+\(points)" : "0"
-  }
-
-  private var timeoutsPenalty: Int {
-    levelRun.levelTimeouts * -5
-  }
-
-  // Computed property for total score including current level's positive points
-  // (before completeLevel() adds them to globalScore)
   private var totalScoreWithCurrentLevel: Int {
-    // levelPositivePoints already includes streak bonuses, so we don't need to
-    // add them separately
     levelRun.globalScore + levelRun.levelPositivePoints
   }
 
-  // Calculate remaining lives
-  private var remainingLives: Int {
-    levelRun.remainingLives
-  }
-
-  // Check if we should show bonus stat block (all levels 1-10)
-  private var shouldShowBonus: Bool {
-    levelRun.currentLevel >= 1 && levelRun.currentLevel <= 10
-  }
-
-  // Check if we should show missed stat block (levels 3-8)
-  private var shouldShowMissed: Bool {
-    levelRun.currentLevel >= 3 && levelRun.currentLevel <= 8
-  }
-
   var body: some View {
-    ZStack {
-      // Global background: subtle light gradient
-      LinearGradient(
-        gradient: Gradient(colors: [
-          Color(hex: "F5F0FF").opacity(0.3),
-          Color.white,
-        ]),
-        startPoint: .top,
-        endPoint: .bottom
-      )
-      .ignoresSafeArea()
-
-      VStack(spacing: 28) {
-        // Top right: Remaining lives in custom gradient capsule
-        HStack {
-          Spacer()
-          HStack(spacing: 8) {
-            Image("Heart")
-              .resizable()
-              .scaledToFit()
-              .frame(width: 24, height: 24)
-            Text("\(remainingLives)")
-              .font(.system(size: 20, weight: .semibold))
-              .foregroundColor(.white)
-          }
-          .padding(.horizontal, 16)
-          .padding(.vertical, 10)
-          .background(
-            Capsule()
-              .fill(
-                LinearGradient(
-                  gradient: Gradient(stops: [
-                    .init(color: Color(hex: "C27AFF"), location: 0.42),
-                    .init(color: Color(hex: "FF8FCA"), location: 1.0),
-                  ]),
-                  startPoint: .leading,
-                  endPoint: .trailing
-                )
-              )
-          )
-        }
-        .padding(.trailing, 20)
-        .padding(.top, 10)
-        .padding(.leading, 20) // Add left padding for safety margin
-
-        // Title: Crown + "Level X Complete!" - increased by 15% again
-        HStack(spacing: 8) {
-          Image("Crown")
-            .resizable()
-            .scaledToFit()
-            .frame(width: 53, height: 53)
-          Text("Level \(levelRun.currentLevel) Complete!")
-            .font(.system(size: 37, weight: .bold))
-            .foregroundStyle(
-              LinearGradient(
-                gradient: Gradient(colors: [.purple, .pink]),
-                startPoint: .leading,
-                endPoint: .trailing
-              )
-            )
-        }
-        .padding(.horizontal, 20) // Add horizontal padding for safety margin
-
-        // Your Score: XX / YY with 3-color gradient and adaptive sizing
-        VStack(spacing: 4) {
-          Text("Your Score")
-            .font(.system(size: 15, weight: .regular))
-            .foregroundColor(.secondary)
-
-          HStack(spacing: 4) {
-            Text("\(finalLevelScore)")
-              .font(.system(size: 40, weight: .black))
-              .foregroundColor(.white)
-            Text("/\(levelRun.getRequiredScore())")
-              .font(.system(size: 12, weight: .bold))
-              .foregroundColor(.white.opacity(0.9))
-          }
-          .padding(.horizontal, 20)
-          .padding(.vertical, 14)
-          .background(
-            LinearGradient(
-              gradient: Gradient(stops: [
-                .init(color: Color(hex: "278310"), location: 0.0),
-                .init(color: Color(hex: "10DA38"), location: 0.5),
-                .init(color: Color(hex: "64FB8A"), location: 1.0),
-              ]),
-              startPoint: .leading,
-              endPoint: .trailing
-            )
-          )
-          .cornerRadius(30)
-          .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
-        }
-
-        // 4 Stat Blocks in a row
-        HStack(spacing: 12) {
-          // Cup - Correct (always shown) - show points - icon +20% more
-          StatBlock(
-            iconName: "Cup",
-            value: correctAnswersDisplayValue,
-            color: .green,
-            backgroundColor: Color(hex: "F0FDF4"),
-            strokeColor: Color(hex: "B9F8CF"),
-            iconSize: 34.56
-          )
-
-          // Fail - Mistakes (always shown) - show penalty points - icon +20%
-          // more
-          StatBlock(
-            iconName: "Fail",
-            value: mistakesPenalty != 0 ? "\(mistakesPenalty)" : "0",
-            color: .pink,
-            backgroundColor: Color(hex: "FEF2F2"),
-            strokeColor: Color(hex: "FFC9C9"),
-            iconSize: 34.56
-          )
-
-          // Stars - Bonus (levels 3-10 only) - show bonus points - icon +20%
-          if shouldShowBonus {
-            StatBlock(
-              iconName: "Stars",
-              value: levelRun
-                .getLevelStreakBonuses() > 0 ?
-                "+\(levelRun.getLevelStreakBonuses())" : "0",
-              color: .orange,
-              backgroundColor: Color(hex: "FFF7ED"),
-              strokeColor: Color(hex: "FFD6A7"),
-              iconSize: 28.8
-            )
-          }
-
-          // Timing - Missed (levels 3-8 only) - show penalty points - icon +20%
-          if shouldShowMissed {
-            StatBlock(
-              iconName: "Timing",
-              value: timeoutsPenalty != 0 ? "\(timeoutsPenalty)" : "0",
-              color: .purple,
-              backgroundColor: Color(hex: "FAF5FF"),
-              strokeColor: Color(hex: "E9D4FF"),
-              iconSize: 28.8
-            )
-          }
-        }
-        .padding(.horizontal, 20)
-
-        // Total Score
-        VStack(spacing: 4) {
-          Text("Total Score")
-            .font(.system(size: 14, weight: .regular))
-            .foregroundColor(.secondary)
-          Text("\(totalScoreWithCurrentLevel)")
-            .font(.system(size: 20, weight: .bold))
-            .foregroundColor(.primary)
-        }
-
-        Spacer()
-          .frame(height: 10)
-
-        // Next Level button - 3-color gradient, reduced width, text +15%
-        Button(action: onNextLevel) {
-          Text(levelRun.isCompleted ? "Finish Run" : "Next Level")
-            .font(.system(size: 21, weight: .bold))
-            .foregroundColor(.white)
-            .padding(.horizontal, 40)
-            .padding(.vertical, 14)
-            .background(
-              LinearGradient(
-                gradient: Gradient(stops: [
-                  .init(color: Color(hex: "2B7FFF"), location: 0.0),
-                  .init(color: Color(hex: "AD46FF"), location: 0.5),
-                  .init(color: Color(hex: "F6339A"), location: 1.0),
-                ]),
-                startPoint: .leading,
-                endPoint: .trailing
-              )
-            )
-            .cornerRadius(25)
-            .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
-        }
-
-        // Back to Home — secondary exit (saves accumulated score)
-        Button(action: onBackToHome) {
-          Text("Back to Home")
-            .font(.system(size: 16, weight: .medium))
-            .foregroundColor(.secondary)
-            .padding(.vertical, 8)
-        }
-      }
-      .padding(.vertical)
-      .padding(
-        .horizontal,
-        20
-      ) // Add horizontal padding for safety margin on sides
-    }
-  }
-}
-
-// MARK: - Stat Block Component
-
-struct StatBlock: View {
-  let iconName: String // Image asset name
-  let value: String
-  let color: Color
-  let backgroundColor: Color
-  var strokeColor: Color? // Optional stroke color
-  var iconSize: CGFloat = 24 // Default size, can be customized
-
-  var body: some View {
-    VStack(spacing: 8) {
-      Image(iconName)
+    LevelResultBody(
+      totalScore: totalScoreWithCurrentLevel,
+      remainingLives: levelRun.remainingLives,
+      totalLives: levelRun.mistakeTolerance.totalLives,
+      icon: Image("CRLightning")
+        .renderingMode(.template)
         .resizable()
         .scaledToFit()
-        .frame(width: iconSize, height: iconSize)
-      Text(value)
-        .font(.system(size: 18, weight: .bold))
-        .foregroundColor(color)
-    }
-    .frame(maxWidth: .infinity)
-    .padding(.vertical, 16)
-    .frame(height: 90) // Fixed height to ensure all blocks are exactly the same
-    // size (includes padding)
-    .background(
-      RoundedRectangle(cornerRadius: 12)
-        .fill(backgroundColor)
+        .frame(width: 120, height: 120)
+        .foregroundStyle(Theme.Colors.success),
+      headline: "Amazing",
+      headlineColor: Theme.Colors.success,
+      subtitle: String(format: "Level %02d - Succeed", levelRun.currentLevel),
+      dividerColor: Theme.Colors.success,
+      levelScore: finalLevelScore,
+      requiredScore: levelRun.getRequiredScore(),
+      hitsPoints: levelRun.levelBasePoints,
+      missesPoints: levelRun.levelWrongTaps * -10,
+      streakBonus: levelRun.levelStreakBonuses,
+      primaryButton: Button(action: onNextLevel) {
+        HStack(spacing: Theme.Spacing.sm) {
+          if !levelRun.isCompleted {
+            Image("CRPlay")
+              .renderingMode(.template)
+              .resizable()
+              .scaledToFit()
+              .frame(width: 18, height: 18)
+          }
+          Text(levelRun.isCompleted ? "Finish Run" : "Next Level")
+        }
+      }
+      .buttonStyle(.crPrimary),
+      onBackToHome: onBackToHome
     )
-    .overlay(
-      RoundedRectangle(cornerRadius: 12)
-        .stroke(
-          strokeColor ?? Color.clear,
-          lineWidth: strokeColor != nil ? 2 : 0
-        )
-    )
-    .shadow(color: .black.opacity(0.08), radius: 4, x: 0, y: 2)
   }
 }
 
@@ -2165,249 +2056,47 @@ struct LevelFailedView: View {
   let onRetry: () -> Void
   let onBackToHome: () -> Void
 
-  // Check if we should show bonus stat block (all levels 1-10)
-  private var shouldShowBonus: Bool {
-    levelRun.currentLevel >= 1 && levelRun.currentLevel <= 10
-  }
-
-  // Check if we should show missed stat block (levels 3-8)
-  private var shouldShowMissed: Bool {
-    levelRun.currentLevel >= 3 && levelRun.currentLevel <= 8
-  }
-
-  // Calculate remaining lives
-  private var remainingLives: Int {
-    levelRun.remainingLives
-  }
-
-  // Computed property for total score including current level's positive points
   private var totalScoreWithCurrentLevel: Int {
-    // levelPositivePoints already includes streak bonuses, so we don't need to
-    // add them separately
     levelRun.globalScore + levelRun.levelPositivePoints
   }
 
-  // Final level score (streak bonuses are already included in currentScore)
   private var finalLevelScore: Int {
     levelRun.getCurrentLevelScore()
   }
 
-  // Calculate mistakes penalty
-  private var mistakesPenalty: Int {
-    // Show penalties from wrong taps (only point deductions, no life cost)
-    levelRun.levelWrongTaps * -10
-  }
-
-  // Calculate timeouts penalty
-  private var timeoutsPenalty: Int {
-    levelRun.levelTimeouts * -5
-  }
-
-  // Display value for correct answers (points, not count)
-  private var correctAnswersDisplayValue: String {
-    // Calculate points from correct answers (base points only, excluding
-    // bonuses)
-    let points = levelRun.levelBasePoints
-    return points > 0 ? "+\(points)" : "0"
-  }
-
   var body: some View {
-    ZStack {
-      // Global background: subtle light gradient
-      LinearGradient(
-        gradient: Gradient(colors: [
-          Color(hex: "F5F0FF").opacity(0.3),
-          Color.white,
-        ]),
-        startPoint: .top,
-        endPoint: .bottom
-      )
-      .ignoresSafeArea()
-
-      VStack(spacing: 28) {
-        // Top right: Remaining lives in custom gradient capsule
-        HStack {
-          Spacer()
-          HStack(spacing: 8) {
-            Image("Heart")
-              .resizable()
-              .scaledToFit()
-              .frame(width: 24, height: 24)
-            Text("\(remainingLives)")
-              .font(.system(size: 20, weight: .semibold))
-              .foregroundColor(.white)
-          }
-          .padding(.horizontal, 16)
-          .padding(.vertical, 10)
-          .background(
-            Capsule()
-              .fill(
-                LinearGradient(
-                  gradient: Gradient(stops: [
-                    .init(color: Color(hex: "C27AFF"), location: 0.42),
-                    .init(color: Color(hex: "FF8FCA"), location: 1.0),
-                  ]),
-                  startPoint: .leading,
-                  endPoint: .trailing
-                )
-              )
-          )
-        }
-        .padding(.trailing, 20)
-        .padding(.top, 10)
-        .padding(.leading, 20) // Add left padding for safety margin
-
-        // Title: Fail icon + "Level X Failed!" - same size as Complete
-        HStack(spacing: 8) {
-          Image("Fail")
+    LevelResultBody(
+      totalScore: totalScoreWithCurrentLevel,
+      remainingLives: levelRun.remainingLives,
+      totalLives: levelRun.mistakeTolerance.totalLives,
+      icon: Image("CRSkull")
+        .renderingMode(.template)
+        .resizable()
+        .scaledToFit()
+        .frame(width: 120, height: 120)
+        .foregroundStyle(Theme.Colors.warning),
+      headline: "Too slow",
+      headlineColor: Theme.Colors.textPrimary,
+      subtitle: String(format: "Level %02d - Failed", levelRun.currentLevel),
+      dividerColor: Theme.Colors.warning,
+      levelScore: finalLevelScore,
+      requiredScore: levelRun.getRequiredScore(),
+      hitsPoints: levelRun.levelBasePoints,
+      missesPoints: levelRun.levelWrongTaps * -10,
+      streakBonus: levelRun.levelStreakBonuses,
+      primaryButton: Button(action: onRetry) {
+        HStack(spacing: Theme.Spacing.sm) {
+          Image("CRRetry")
+            .renderingMode(.template)
             .resizable()
             .scaledToFit()
-            .frame(width: 53, height: 53)
-          Text("Level \(levelRun.currentLevel) Failed!")
-            .font(.system(size: 37, weight: .bold))
-            .foregroundStyle(
-              LinearGradient(
-                gradient: Gradient(colors: [.purple, .pink]),
-                startPoint: .leading,
-                endPoint: .trailing
-              )
-            )
-        }
-        .padding(.horizontal, 20) // Add horizontal padding for safety margin
-
-        // Your Score: XX / YY with 3-color red gradient and adaptive sizing
-        VStack(spacing: 4) {
-          Text("Your Score")
-            .font(.system(size: 15, weight: .regular))
-            .foregroundColor(.secondary)
-
-          HStack(spacing: 4) {
-            Text("\(finalLevelScore)")
-              .font(.system(size: 40, weight: .black))
-              .foregroundColor(.white)
-            Text("/\(levelRun.getRequiredScore())")
-              .font(.system(size: 12, weight: .bold))
-              .foregroundColor(.white.opacity(0.9))
-          }
-          .padding(.horizontal, 20)
-          .padding(.vertical, 14)
-          .background(
-            LinearGradient(
-              gradient: Gradient(stops: [
-                .init(color: Color(hex: "FD0000"), location: 0.0),
-                .init(color: Color(hex: "FF4B04"), location: 0.5),
-                .init(color: Color(hex: "FB6466"), location: 1.0),
-              ]),
-              startPoint: .leading,
-              endPoint: .trailing
-            )
-          )
-          .cornerRadius(30)
-          .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
-        }
-
-        // 4 Stat Blocks in a row - same as Complete view
-        HStack(spacing: 12) {
-          // Cup - Correct (always shown) - show points - icon +20% more
-          StatBlock(
-            iconName: "Cup",
-            value: correctAnswersDisplayValue,
-            color: .green,
-            backgroundColor: Color(hex: "F0FDF4"),
-            strokeColor: Color(hex: "B9F8CF"),
-            iconSize: 34.56
-          )
-
-          // Fail - Mistakes (always shown) - show penalty points - icon +20%
-          // more
-          StatBlock(
-            iconName: "Fail",
-            value: mistakesPenalty != 0 ? "\(mistakesPenalty)" : "0",
-            color: .pink,
-            backgroundColor: Color(hex: "FEF2F2"),
-            strokeColor: Color(hex: "FFC9C9"),
-            iconSize: 34.56
-          )
-
-          // Stars - Bonus (levels 3-10 only) - show bonus points - icon +20%
-          if shouldShowBonus {
-            StatBlock(
-              iconName: "Stars",
-              value: levelRun
-                .getLevelStreakBonuses() > 0 ?
-                "+\(levelRun.getLevelStreakBonuses())" : "0",
-              color: .orange,
-              backgroundColor: Color(hex: "FFF7ED"),
-              strokeColor: Color(hex: "FFD6A7"),
-              iconSize: 28.8
-            )
-          }
-
-          // Timing - Missed (levels 3-8 only) - show penalty points - icon +20%
-          if shouldShowMissed {
-            StatBlock(
-              iconName: "Timing",
-              value: timeoutsPenalty != 0 ? "\(timeoutsPenalty)" : "0",
-              color: .purple,
-              backgroundColor: Color(hex: "FAF5FF"),
-              strokeColor: Color(hex: "E9D4FF"),
-              iconSize: 28.8
-            )
-          }
-        }
-        .padding(.horizontal, 20)
-
-        // Total Score - same as Complete view
-        VStack(spacing: 4) {
-          Text("Total Score")
-            .font(.system(size: 14, weight: .regular))
-            .foregroundColor(.secondary)
-          Text("\(totalScoreWithCurrentLevel)")
-            .font(.system(size: 20, weight: .bold))
-            .foregroundColor(.primary)
-        }
-
-        Spacer()
-          .frame(height: 10)
-
-        // Try Again button - same styling as Next Level button
-        if failedReason == .insufficientScore {
-          Button(action: onRetry) {
-            Text("Try Again")
-              .font(.system(size: 21, weight: .bold))
-              .foregroundColor(.white)
-              .padding(.horizontal, 40)
-              .padding(.vertical, 14)
-              .background(
-                LinearGradient(
-                  gradient: Gradient(stops: [
-                    .init(color: Color(hex: "2B7FFF"), location: 0.0),
-                    .init(color: Color(hex: "AD46FF"), location: 0.5),
-                    .init(color: Color(hex: "F6339A"), location: 1.0),
-                  ]),
-                  startPoint: .leading,
-                  endPoint: .trailing
-                )
-              )
-              .cornerRadius(25)
-              .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
-          }
-
-          // Back to Home — secondary exit (saves accumulated score)
-          Button(action: onBackToHome) {
-            Text("Back to Home")
-              .font(.system(size: 16, weight: .medium))
-              .foregroundColor(.secondary)
-              .padding(.vertical, 8)
-          }
+            .frame(width: 18, height: 18)
+          Text("Try Again")
         }
       }
-      .padding(.vertical)
-      .padding(
-        .horizontal,
-        20
-      ) // Add horizontal padding for safety margin on sides
-    }
+      .buttonStyle(.crPrimary),
+      onBackToHome: onBackToHome
+    )
   }
 }
 
