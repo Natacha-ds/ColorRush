@@ -1808,12 +1808,17 @@ struct LevelIntroView: View {
   }
 
   private var beatHeadline: some View {
-    (
-      Text("BEAT ").foregroundStyle(Theme.Colors.textPrimary)
-        + Text("\(levelRun.getRequiredScore())").foregroundStyle(Theme.Colors.accentSecondary)
-    )
-    .font(.crDisplay)
-    .multilineTextAlignment(.center)
+    // Score is the cyan accent in both locales — only the surrounding
+    // copy changes order ("BEAT 250" in EN vs "250 à battre" in FR).
+    let isFrench = Bundle.main.preferredLocalizations.first?.hasPrefix("fr") ?? false
+    let scoreText = Text(verbatim: "\(levelRun.getRequiredScore())")
+      .foregroundStyle(Theme.Colors.accentSecondary)
+    let composed: Text = isFrench
+      ? scoreText + Text(verbatim: " à battre").foregroundStyle(Theme.Colors.textPrimary)
+      : Text(verbatim: "BEAT ").foregroundStyle(Theme.Colors.textPrimary) + scoreText
+    return composed
+      .font(.crDisplay)
+      .multilineTextAlignment(.center)
   }
 
   private var timeCard: some View {

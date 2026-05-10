@@ -252,7 +252,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Génial"
+            "value": "Excellent"
           }
         }
       }
@@ -441,7 +441,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Couleur UNIQUEMENT"
+            "value": "Couleur SEULE"
           }
         }
       }
@@ -596,7 +596,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Chaque niveau a un score à atteindre. Ce mode est plus piégeux : reste hyper-concentré et entretiens ta série !"
+            "value": "Chaque niveau a un score à atteindre. Ce mode est plus piégeux : reste hyper-concentré et garde ta série !"
           }
         }
       }
@@ -630,7 +630,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Points bonus pour les bonnes réponses consécutives :"
+            "value": "Points bonus pour les séries :"
           }
         }
       }
@@ -762,7 +762,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Réussis"
+            "value": "Réussites"
           }
         }
       }
@@ -879,7 +879,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "DÉMENT"
+            "value": "INSANE"
           }
         }
       }
@@ -1125,7 +1125,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Manqués"
+            "value": "Ratés"
           }
         }
       }
@@ -1278,7 +1278,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Plus difficile"
+            "value": "Rejouer"
           }
         }
       }
@@ -1398,7 +1398,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "DÉBUTANT"
+            "value": "ROOKIE"
           }
         }
       }
@@ -1498,7 +1498,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Run terminé · Niveau %lld"
+            "value": "Partie terminée · Niveau %lld"
           }
         }
       }
@@ -2002,7 +2002,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "GAGNÉ !"
+            "value": "VICTOIRE !"
           }
         }
       }
@@ -2089,7 +2089,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "tout le reste."
+            "value": "toutes les autres."
           }
         }
       }
@@ -2221,7 +2221,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "• Échec d'un niveau → −1 vie."
+            "value": "• Niveau raté → −1 vie."
           }
         }
       }
@@ -2253,7 +2253,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "• Aucune réponse à temps → −5 pts"
+            "value": "• Trop tard → −5 pts"
           }
         }
       }
@@ -2365,7 +2365,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "❤️ +1 Vie (gratuit)"
+            "value": "❤️ +1 Vie (gratuite)"
           }
         }
       }
