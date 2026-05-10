@@ -2367,7 +2367,7 @@ struct LevelGameOverView: View {
               .font(.crHeadline)
               .textCase(.uppercase)
               .foregroundStyle(Theme.Colors.textPrimary)
-            Text("Watch an ad, get back in")
+            Text(store.hasRemoveAds ? "Get a free revive" : "Watch an ad, get back in")
               .font(.crBody)
               .foregroundStyle(Theme.Colors.textSecondary)
           }
@@ -2436,7 +2436,7 @@ struct LevelGameOverView: View {
 
         Spacer()
 
-        Text("Watch")
+        Text(store.hasRemoveAds ? "Claim" : "Watch")
           .font(.crLabel)
           .textCase(.uppercase)
           .foregroundStyle(Theme.Colors.textPrimary)
