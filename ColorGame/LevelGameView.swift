@@ -641,10 +641,13 @@ struct LevelGameView: View {
       }
       #endif
       .onChange(of: showLevelIntro) { _, isShowing in
-        // Wipe in-flight particles between levels so they don't leak
-        // across level transitions (new level OR retry).
+        // Wipe in-flight particles AND any lingering streak toast between
+        // levels so they don't leak across level transitions (new level OR
+        // retry).
         if isShowing {
           clearAllSparkBursts()
+          showStreakAnimation = false
+          streakDisplayCount = 0
         }
       }
       .onChange(of: levelRun.lastBonusEarned) { _, newValue in
@@ -2110,110 +2113,99 @@ struct FinalWinView: View {
   let onPlayHarder: () -> Void
   let onSeeLeaderboard: () -> Void
 
-  // Total score including current level's positive points
+  // Total score including current level's positive points.
   private var totalScoreWithCurrentLevel: Int {
     levelRun.globalScore + levelRun.levelPositivePoints
   }
 
   var body: some View {
     ZStack {
-      // Global background: subtle light gradient
-      LinearGradient(
-        gradient: Gradient(colors: [
-          Color(hex: "F5F0FF").opacity(0.3),
-          Color.white,
-        ]),
-        startPoint: .top,
-        endPoint: .bottom
-      )
-      .ignoresSafeArea()
+      Theme.Colors.background.ignoresSafeArea()
 
-      VStack(spacing: 28) {
-        Spacer()
-          .frame(height: 60)
-
-        // Title: "YOU WIN!"
-        Text("YOU WIN!")
-          .font(.system(size: 48, weight: .bold, design: .rounded))
-          .foregroundStyle(
-            LinearGradient(
-              gradient: Gradient(colors: [.purple, .pink]),
-              startPoint: .leading,
-              endPoint: .trailing
-            )
+      VStack(spacing: Theme.Spacing.lg) {
+        // Top row: hearts pill on the right (lives left = quality of the run).
+        HStack {
+          Spacer()
+          CRHeartsPill(
+            remaining: levelRun.remainingLives,
+            total: levelRun.mistakeTolerance.totalLives
           )
-
-        // Subtitle: "Well done."
-        Text("Well done.")
-          .font(.system(size: 20, weight: .regular))
-          .foregroundColor(.secondary)
-
-        // Final Score
-        VStack(spacing: 4) {
-          Text("Final Score")
-            .font(.system(size: 18, weight: .regular))
-            .foregroundColor(.secondary)
-          Text("\(totalScoreWithCurrentLevel)")
-            .font(.system(size: 32, weight: .bold))
-            .foregroundColor(.primary)
         }
-        .padding(.top, 20)
+        .padding(.horizontal, Theme.Spacing.xl)
+        .padding(.top, Theme.Spacing.lg)
 
-        Spacer()
+        Spacer(minLength: Theme.Spacing.md)
 
-        // Buttons
-        VStack(spacing: 16) {
-          // Play Harder button - most visible with color
-          Button {
-            SoundService.shared.play(.main)
-            onPlayHarder()
-          } label: {
-            Text("Play Harder")
-              .font(.system(size: 21, weight: .bold))
-              .foregroundColor(.white)
-              .frame(maxWidth: .infinity)
-              .frame(height: 55)
-              .background(
-                LinearGradient(
-                  gradient: Gradient(stops: [
-                    .init(color: Color(hex: "2B7FFF"), location: 0.0),
-                    .init(color: Color(hex: "AD46FF"), location: 0.5),
-                    .init(color: Color(hex: "F6339A"), location: 1.0),
-                  ]),
-                  startPoint: .leading,
-                  endPoint: .trailing
-                )
-              )
-              .cornerRadius(27)
-              .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
-          }
+        // Crown + headline + subtitle
+        VStack(spacing: Theme.Spacing.sm) {
+          Image(systemName: "crown.fill")
+            .resizable()
+            .scaledToFit()
+            .frame(width: 120, height: 120)
+            .foregroundStyle(Theme.Colors.pro)
 
-          // See Leaderboard button - less visible
-          Button {
-            SoundService.shared.play(.secondary)
-            onSeeLeaderboard()
-          } label: {
-            Text("See Leaderboard")
-              .font(.system(size: 18, weight: .semibold))
-              .foregroundColor(.primary)
-              .frame(maxWidth: .infinity)
-              .frame(height: 50)
-              .background(
-                RoundedRectangle(cornerRadius: 25)
-                  .fill(Color.white)
-                  .overlay(
-                    RoundedRectangle(cornerRadius: 25)
-                      .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                  )
-              )
-              .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
-          }
+          Text("YOU WIN!")
+            .font(.crDisplay)
+            .textCase(.uppercase)
+            .foregroundStyle(Theme.Colors.pro)
+            .multilineTextAlignment(.center)
+
+          Text("Run complete · Level \(levelRun.currentLevel)")
+            .font(.crLabel)
+            .textCase(.uppercase)
+            .foregroundStyle(Theme.Colors.textSecondary)
         }
-        .padding(.horizontal, 40)
-        .padding(.bottom, 60)
+
+        // Gold divider stuck to the Final Score card.
+        VStack(spacing: 0) {
+          Rectangle()
+            .fill(Theme.Colors.pro)
+            .frame(height: 2)
+            .padding(.horizontal, Theme.Spacing.xxxl)
+
+          VStack(spacing: Theme.Spacing.xs) {
+            Text("Final Score")
+              .font(.crLabel)
+              .textCase(.uppercase)
+              .foregroundStyle(Theme.Colors.textSecondary)
+            Text(verbatim: "\(totalScoreWithCurrentLevel)")
+              .font(.crScoreHero)
+              .foregroundStyle(Theme.Colors.textPrimary)
+          }
+          .frame(maxWidth: .infinity)
+          .padding(.vertical, Theme.Spacing.lg)
+          .background(
+            RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous)
+              .fill(Theme.Colors.surface)
+          )
+          .padding(.horizontal, Theme.Spacing.xl)
+        }
+
+        Spacer(minLength: Theme.Spacing.md)
+
+        Button {
+          SoundService.shared.play(.main)
+          onPlayHarder()
+        } label: {
+          Text("Play Harder")
+        }
+        .buttonStyle(.crPrimary)
+        .padding(.horizontal, Theme.Spacing.xl)
+
+        Button {
+          SoundService.shared.play(.secondary)
+          onSeeLeaderboard()
+        } label: {
+          Text("See Leaderboard")
+            .font(.crButtonLabel)
+            .textCase(.uppercase)
+            .foregroundStyle(Theme.Colors.textSecondary)
+        }
+        .buttonStyle(.plain)
+        .padding(.bottom, Theme.Spacing.lg)
       }
-      .padding(.horizontal, 20)
     }
+    .preferredColorScheme(.dark)
   }
 }
 
