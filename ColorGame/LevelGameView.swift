@@ -1928,33 +1928,34 @@ private struct LevelResultBody<PrimaryButton: View, Icon: View>: View {
             .foregroundStyle(Theme.Colors.textSecondary)
         }
 
-        // Tone-coloured divider
-        Rectangle()
-          .fill(dividerColor)
-          .frame(height: 2)
-          .padding(.horizontal, Theme.Spacing.xxxl)
+        // Tone-coloured divider stuck to the YOUR SCORE card (no gap)
+        VStack(spacing: 0) {
+          Rectangle()
+            .fill(dividerColor)
+            .frame(height: 2)
+            .padding(.horizontal, Theme.Spacing.xxxl)
 
-        // YOUR SCORE card
-        VStack(spacing: Theme.Spacing.xs) {
-          Text("Your Score")
-            .font(.crLabel)
-            .textCase(.uppercase)
-            .foregroundStyle(Theme.Colors.textSecondary)
-          Text("\(levelScore)")
-            .font(.crScoreHero)
-            .foregroundStyle(Theme.Colors.textPrimary)
-          Text("Of \(requiredScore)")
-            .font(.crBody)
-            .textCase(.uppercase)
-            .foregroundStyle(Theme.Colors.textSecondary)
+          VStack(spacing: Theme.Spacing.xs) {
+            Text("Your Score")
+              .font(.crLabel)
+              .textCase(.uppercase)
+              .foregroundStyle(Theme.Colors.textSecondary)
+            Text("\(levelScore)")
+              .font(.crScoreHero)
+              .foregroundStyle(Theme.Colors.textPrimary)
+            Text("Of \(requiredScore)")
+              .font(.crBody)
+              .textCase(.uppercase)
+              .foregroundStyle(Theme.Colors.textSecondary)
+          }
+          .frame(maxWidth: .infinity)
+          .padding(.vertical, Theme.Spacing.lg)
+          .background(
+            RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous)
+              .fill(Theme.Colors.surface)
+          )
+          .padding(.horizontal, Theme.Spacing.xl)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, Theme.Spacing.lg)
-        .background(
-          RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous)
-            .fill(Theme.Colors.surface)
-        )
-        .padding(.horizontal, Theme.Spacing.xl)
 
         // Stats trio
         HStack(spacing: Theme.Spacing.md) {
@@ -2229,174 +2230,163 @@ struct LevelGameOverView: View {
     store.hasRemoveAds || ads.rewardedReady
   }
 
-  // Calculate remaining lives (should be 0 for game over)
-  private var remainingLives: Int {
-    levelRun.remainingLives
-  }
-
-  // Total score including current level's positive points
   private var totalScoreWithCurrentLevel: Int {
     levelRun.globalScore + levelRun.levelPositivePoints
   }
 
-  // Reason for loss text
-  private var lossReason: String {
-    switch failedReason {
-    case .maxMistakes:
-      "You ran out of lives"
-    case .insufficientScore:
-      "" // Should not happen in LevelGameOverView
-    }
-  }
-
   var body: some View {
     ZStack {
-      // Global background: subtle light gradient
-      LinearGradient(
-        gradient: Gradient(colors: [
-          Color(hex: "F5F0FF").opacity(0.3),
-          Color.white,
-        ]),
-        startPoint: .top,
-        endPoint: .bottom
-      )
-      .ignoresSafeArea()
+      Theme.Colors.background.ignoresSafeArea()
+      Theme.Gradient.gameOverWash.ignoresSafeArea()
 
-      VStack(spacing: 28) {
-        // Top right: Remaining lives in custom gradient capsule (should be 0) -
-        // same as Complete
+      VStack(spacing: Theme.Spacing.lg) {
+        // Top row: dimmed empty hearts pill on the right
         HStack {
           Spacer()
-          HStack(spacing: 8) {
-            Image("Heart")
-              .resizable()
-              .scaledToFit()
-              .frame(width: 24, height: 24)
-            Text("\(remainingLives)")
-              .font(.system(size: 20, weight: .semibold))
-              .foregroundColor(.white)
-          }
-          .padding(.horizontal, 16)
-          .padding(.vertical, 10)
-          .background(
-            Capsule()
-              .fill(
-                LinearGradient(
-                  gradient: Gradient(stops: [
-                    .init(color: Color(hex: "C27AFF"), location: 0.42),
-                    .init(color: Color(hex: "FF8FCA"), location: 1.0),
-                  ]),
-                  startPoint: .leading,
-                  endPoint: .trailing
-                )
-              )
+          CRHeartsPill(
+            remaining: 0,
+            total: levelRun.mistakeTolerance.totalLives
           )
         }
-        .padding(.trailing, 20)
-        .padding(.leading, 20) // Add left padding for safety margin
-        .padding(.top, 10)
+        .padding(.horizontal, Theme.Spacing.xl)
+        .padding(.top, Theme.Spacing.lg)
 
-        // Game Over icon
-        Image("Game-Over")
-          .resizable()
-          .scaledToFit()
-          .frame(width: 60, height: 60)
+        Spacer(minLength: Theme.Spacing.md)
 
-        // Title: "GAME OVER" with gradient - increased by 30%
-        Text("GAME OVER")
-          .font(.system(size: 42, weight: .bold))
-          .foregroundStyle(
-            LinearGradient(
-              gradient: Gradient(colors: [.purple, .pink]),
-              startPoint: .leading,
-              endPoint: .trailing
-            )
+        // GAME OVER headline + subtitle + divider
+        VStack(spacing: Theme.Spacing.sm) {
+          Text("Game Over")
+            .font(.crDisplay)
+            .textCase(.uppercase)
+            .foregroundStyle(Theme.Colors.danger)
+          Text("No lives left")
+            .font(.crLabel)
+            .textCase(.uppercase)
+            .foregroundStyle(Theme.Colors.textSecondary)
+        }
+
+        // Tone-coloured divider stuck to the YOUR TOTAL SCORE card (no gap)
+        VStack(spacing: 0) {
+          Rectangle()
+            .fill(Theme.Colors.danger)
+            .frame(height: 2)
+            .padding(.horizontal, Theme.Spacing.xxxl)
+
+          VStack(spacing: Theme.Spacing.xs) {
+            Text("Your Total Score")
+              .font(.crLabel)
+              .textCase(.uppercase)
+              .foregroundStyle(Theme.Colors.textSecondary)
+            Text("\(totalScoreWithCurrentLevel)")
+              .font(.crScoreHero)
+              .foregroundStyle(Theme.Colors.textPrimary)
+          }
+          .frame(maxWidth: .infinity)
+          .padding(.vertical, Theme.Spacing.lg)
+          .background(
+            RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous)
+              .fill(Theme.Colors.surface)
           )
+          .padding(.horizontal, Theme.Spacing.xl)
+        }
 
-        // Reason for loss
-        Text(lossReason)
-          .font(.system(size: 16, weight: .regular))
-          .foregroundColor(.secondary)
-          .multilineTextAlignment(.center)
-          .padding(.horizontal, 20)
+        // DON'T STOP NOW prompt + +1 LIFE rewarded revive card
+        if !levelRun.hasUsedRewardedRevive {
+          VStack(spacing: Theme.Spacing.xs) {
+            Text("Don't stop now")
+              .font(.crHeadline)
+              .textCase(.uppercase)
+              .foregroundStyle(Theme.Colors.textPrimary)
+            Text("Watch an ad, get back in")
+              .font(.crBody)
+              .foregroundStyle(Theme.Colors.textSecondary)
+          }
+          .padding(.top, Theme.Spacing.sm)
 
-        // Final Score
-        VStack(spacing: 4) {
-          Text("Final Score")
-            .font(.system(size: 14, weight: .regular))
-            .foregroundColor(.secondary)
-          Text("\(totalScoreWithCurrentLevel)")
-            .font(.system(size: 20, weight: .bold))
-            .foregroundColor(.primary)
+          rewardedReviveCard
+            .padding(.horizontal, Theme.Spacing.xl)
+        }
+
+        Spacer(minLength: Theme.Spacing.md)
+
+        Button(action: onBackToHome) {
+          HStack(spacing: Theme.Spacing.sm) {
+            Image("CRRetry")
+              .renderingMode(.template)
+              .resizable()
+              .scaledToFit()
+              .frame(width: 18, height: 18)
+            Text("Start Over")
+          }
+        }
+        .buttonStyle(.crDanger)
+        .padding(.horizontal, Theme.Spacing.xl)
+
+        Button(action: onBackToHome) {
+          Text("Back to Home")
+            .font(.crButtonLabel)
+            .textCase(.uppercase)
+            .foregroundStyle(Theme.Colors.textSecondary)
+        }
+        .buttonStyle(.plain)
+        .padding(.bottom, Theme.Spacing.lg)
+      }
+    }
+    .preferredColorScheme(.dark)
+  }
+
+  /// +1 LIFE rewarded revive card. Heart icon on the left, label column in
+  /// the middle, "Watch" pill on the right. Disabled visually when neither
+  /// the Remove Ads entitlement is held nor a rewarded ad has loaded yet.
+  private var rewardedReviveCard: some View {
+    let enabled = isContinueButtonEnabled
+    return Button(action: handleContinueTap) {
+      HStack(spacing: Theme.Spacing.md) {
+        Image(systemName: "heart.fill")
+          .font(.system(size: 20, weight: .bold))
+          .foregroundStyle(Theme.Colors.accentSecondary)
+
+        VStack(alignment: .leading, spacing: 2) {
+          Text("+1 Life")
+            .font(.crLabel)
+            .textCase(.uppercase)
+            .foregroundStyle(Theme.Colors.textPrimary)
+          Text(store.hasRemoveAds ? "Free" : "Watch 1 Ad")
+            .font(.crCaption)
+            .foregroundStyle(Theme.Colors.textSecondary)
         }
 
         Spacer()
-          .frame(height: 10)
 
-        // One-time rewarded revive — visible only if not yet used this run.
-        // Tapping flips `hasUsedRewardedRevive` immediately (anti-abuse:
-        // closing the ad early still burns the revive), then presents the
-        // rewarded ad. Remove Ads holders skip the ad and get the life
-        // for free.
-        if !levelRun.hasUsedRewardedRevive {
-          Button(action: handleContinueTap) {
-            Text(continueButtonTitle)
-              .font(.system(size: 17, weight: .semibold, design: .rounded))
-              .foregroundStyle(
-                LinearGradient(
-                  gradient: Gradient(colors: [.orange, .pink]),
-                  startPoint: .leading,
-                  endPoint: .trailing
-                )
-              )
-              .frame(width: 260, height: 50)
-              .background(Capsule().fill(Color.white))
-              .overlay(
-                Capsule()
-                  .stroke(
-                    LinearGradient(
-                      gradient: Gradient(colors: [.orange, .pink]),
-                      startPoint: .leading,
-                      endPoint: .trailing
-                    ),
-                    lineWidth: 2
-                  )
-              )
-              .shadow(color: .orange.opacity(0.25), radius: 10, x: 0, y: 5)
-              .opacity(isContinueButtonEnabled ? 1.0 : 0.5)
-          }
-          .disabled(!isContinueButtonEnabled)
-          .buttonStyle(PlainButtonStyle())
-        }
-
-        // Start a new game button - same design as Next Level button
-        Button(action: onBackToHome) {
-          Text("Start a new game")
-            .font(.system(size: 21, weight: .bold))
-            .foregroundColor(.white)
-            .padding(.horizontal, 40)
-            .padding(.vertical, 14)
-            .background(
-              LinearGradient(
-                gradient: Gradient(stops: [
-                  .init(color: Color(hex: "2B7FFF"), location: 0.0),
-                  .init(color: Color(hex: "AD46FF"), location: 0.5),
-                  .init(color: Color(hex: "F6339A"), location: 1.0),
-                ]),
-                startPoint: .leading,
-                endPoint: .trailing
-              )
-            )
-            .cornerRadius(25)
-            .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
-        }
+        Text("Watch")
+          .font(.crLabel)
+          .textCase(.uppercase)
+          .foregroundStyle(Theme.Colors.textPrimary)
+          .padding(.horizontal, Theme.Spacing.md)
+          .padding(.vertical, Theme.Spacing.xs + 2)
+          .background(
+            Capsule(style: .continuous)
+              .fill(Theme.Colors.accentSecondary.opacity(0.18))
+          )
+          .overlay(
+            Capsule(style: .continuous)
+              .strokeBorder(Theme.Colors.accentSecondary, lineWidth: 1)
+          )
       }
-      .padding(.vertical)
-      .padding(
-        .horizontal,
-        20
-      ) // Add horizontal padding for safety margin on sides
+      .padding(Theme.Spacing.md)
+      .frame(maxWidth: .infinity)
+      .background(
+        RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
+          .fill(Theme.Colors.surface)
+      )
+      .overlay(
+        RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
+          .strokeBorder(Theme.Colors.accentSecondary.opacity(0.4), lineWidth: 1)
+      )
+      .opacity(enabled ? 1.0 : 0.5)
     }
+    .buttonStyle(.plain)
+    .disabled(!enabled)
   }
 
   // Anti-abuse: mark the revive consumed BEFORE presenting the ad, so a

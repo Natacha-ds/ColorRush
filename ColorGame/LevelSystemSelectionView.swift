@@ -345,6 +345,8 @@ private struct ModeSwatchGrid: View {
             Text(tile.label)
               .font(.crPill)
               .foregroundStyle(Theme.Colors.textPrimary)
+              .lineLimit(1)
+              .minimumScaleFactor(0.7)
           }
         }
         .aspectRatio(1, contentMode: .fit)
