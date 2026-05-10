@@ -1764,6 +1764,10 @@ struct LevelIntroView: View {
           livesCard
         }
 
+        if let timerCopy = perTapTimerCopy {
+          perTapTimerBanner(text: timerCopy)
+        }
+
         Button {
           onDismiss()
         } label: {
@@ -1863,6 +1867,34 @@ struct LevelIntroView: View {
       RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
         .fill(Theme.Colors.surfaceElevated)
     )
+  }
+
+  /// Localized banner copy keyed by the level's per-tap timer. Returns nil
+  /// for levels without a timer (1-2) so the banner is hidden.
+  private var perTapTimerCopy: LocalizedStringKey? {
+    guard let value = levelRun.currentLevelConfig?.timePerResponse else { return nil }
+    switch value {
+    case 1.8: return "1.8 seconds max per tap!"
+    case 1.5: return "1.5 seconds max per tap!"
+    case 1.2: return "1.2 seconds max per tap!"
+    case 1.0: return "1 second max per tap!"
+    default: return "1 second max per tap!"
+    }
+  }
+
+  private func perTapTimerBanner(text: LocalizedStringKey) -> some View {
+    HStack(spacing: Theme.Spacing.sm) {
+      Image("CRLightning")
+        .renderingMode(.template)
+        .resizable()
+        .scaledToFit()
+        .frame(width: 18, height: 18)
+        .foregroundStyle(Theme.Colors.pro)
+      Text(text)
+        .font(.crLabel)
+        .foregroundStyle(Theme.Colors.pro)
+        .multilineTextAlignment(.center)
+    }
   }
 }
 

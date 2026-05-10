@@ -16,10 +16,10 @@ enum Difficulty: String, CaseIterable {
 
 struct HomeView: View {
   @State private var isLevelSystemSelectionPresented = false
+  @State private var isSettingsPresented = false
   @StateObject private var leaderboardStore = LeaderboardStore.shared
   @StateObject private var store = StoreService.shared
   @State private var isPurchasing = false
-  @State private var isRestoring = false
 
   var body: some View {
     VStack(spacing: 0) {
@@ -52,6 +52,9 @@ struct HomeView: View {
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .background(Theme.Colors.background.ignoresSafeArea())
     .preferredColorScheme(.dark)
+    .sheet(isPresented: $isSettingsPresented) {
+      SettingsSheet()
+    }
     #if !os(macOS)
     .fullScreenCover(isPresented: $isLevelSystemSelectionPresented) {
       LevelSystemSelectionView(isPresented: $isLevelSystemSelectionPresented)
@@ -76,7 +79,7 @@ struct HomeView: View {
   // MARK: Sections
 
   private var bestScoreHeader: some View {
-    HStack {
+    HStack(alignment: .center) {
       VStack(alignment: .leading, spacing: 0) {
         Text("BEST")
           .font(.crLabelUpright)
@@ -87,6 +90,15 @@ struct HomeView: View {
           .foregroundStyle(Theme.Colors.pro)
       }
       Spacer()
+      Button {
+        LogService.shared.log("home_settings_pressed")
+        isSettingsPresented = true
+      } label: {
+        Image(systemName: "gearshape.fill")
+          .font(.system(size: 20, weight: .bold))
+      }
+      .buttonStyle(.crIcon)
+      .accessibilityLabel("Settings")
     }
   }
 
@@ -101,13 +113,13 @@ struct HomeView: View {
   private var tagline: some View {
     (
       Text("A color is called.\nTap ").foregroundStyle(Theme.Colors.textPrimary)
-        + Text("everything else.").foregroundStyle(Theme.Colors.accentSecondary)
+        + Text("anything else.").foregroundStyle(Theme.Colors.accentSecondary)
     )
     .font(.crTitleUpright)
-    .multilineTextAlignment(.leading)
+    .multilineTextAlignment(.center)
     .lineLimit(nil)
     .fixedSize(horizontal: false, vertical: true)
-    .frame(maxWidth: .infinity, alignment: .leading)
+    .frame(maxWidth: .infinity, alignment: .center)
   }
 
   private var playButton: some View {
@@ -129,47 +141,30 @@ struct HomeView: View {
   }
 
   private var iapFooter: some View {
-    VStack(spacing: Theme.Spacing.md) {
-      Button(action: triggerPurchase) {
-        HStack(spacing: Theme.Spacing.sm) {
-          if isPurchasing {
-            ProgressView()
-              .progressViewStyle(.circular)
-              .tint(Theme.Colors.textPrimary)
-          } else {
-            Image(systemName: "sparkles")
-              .font(.system(size: 14, weight: .bold))
-              .foregroundStyle(Theme.Colors.accentSecondary)
-          }
-          Text(removeAdsButtonTitle)
-            .font(.crCaptionUpright)
-            .foregroundStyle(Theme.Colors.textPrimary)
+    Button(action: triggerPurchase) {
+      HStack(spacing: Theme.Spacing.sm) {
+        if isPurchasing {
+          ProgressView()
+            .progressViewStyle(.circular)
+            .tint(Theme.Colors.textPrimary)
+        } else {
+          Image(systemName: "sparkles")
+            .font(.system(size: 14, weight: .bold))
+            .foregroundStyle(Theme.Colors.accentSecondary)
         }
-        .padding(.vertical, Theme.Spacing.md - 2)
-        .padding(.horizontal, Theme.Spacing.lg)
-        .background(
-          Capsule(style: .continuous)
-            .fill(Theme.Colors.surfaceElevated)
-        )
+        Text(removeAdsButtonTitle)
+          .font(.crCaptionUpright)
+          .foregroundStyle(Theme.Colors.textPrimary)
       }
-      .disabled(store.package == nil || isPurchasing || isRestoring)
-      .opacity(store.package == nil ? 0.6 : 1)
-
-      Button(action: triggerRestore) {
-        HStack(spacing: Theme.Spacing.xs) {
-          if isRestoring {
-            ProgressView()
-              .progressViewStyle(.circular)
-              .tint(Theme.Colors.textSecondary)
-          }
-          Text("Restore Purchases")
-            .font(.crCaptionUpright)
-            .foregroundStyle(Theme.Colors.textSecondary)
-            .underline()
-        }
-      }
-      .disabled(isPurchasing || isRestoring)
+      .padding(.vertical, Theme.Spacing.md - 2)
+      .padding(.horizontal, Theme.Spacing.lg)
+      .background(
+        Capsule(style: .continuous)
+          .fill(Theme.Colors.surfaceElevated)
+      )
     }
+    .disabled(store.package == nil || isPurchasing)
+    .opacity(store.package == nil ? 0.6 : 1)
   }
 
   // MARK: Derived state
@@ -206,28 +201,6 @@ struct HomeView: View {
       } catch {
         await MainActor.run {
           LogService.shared.error("purchase_failed", ["error": String(describing: error)])
-        }
-      }
-    }
-  }
-
-  private func triggerRestore() {
-    guard !isRestoring else { return }
-    SoundService.shared.play(.secondary)
-    LogService.shared.log("home_restore_purchases_pressed")
-    isRestoring = true
-    Task {
-      defer { isRestoring = false }
-      do {
-        try await store.restore()
-        await MainActor.run {
-          LogService.shared.log("restore_completed", [
-            "hasRemoveAds": store.hasRemoveAds,
-          ])
-        }
-      } catch {
-        await MainActor.run {
-          LogService.shared.error("restore_failed", ["error": String(describing: error)])
         }
       }
     }

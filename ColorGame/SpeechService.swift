@@ -22,8 +22,13 @@ final class SpeechService {
   private func configureAudioSession() {
     #if os(iOS)
     do {
+      // .playback (vs .ambient) so the called-color voice prompt — which is
+      // mechanically required to play — keeps playing even when the silent
+      // switch is on. .mixWithOthers preserves any music the player has
+      // running. The settings sheet exposes a volume slider as the user-facing
+      // mute path; warning copy makes that explicit.
       try AVAudioSession.sharedInstance().setCategory(
-        .ambient,
+        .playback,
         mode: .default,
         options: [.mixWithOthers]
       )
@@ -92,6 +97,14 @@ final class SpeechService {
       other.currentTime = 0
     }
     player.currentTime = 0
+    player.volume = Float(Self.currentAppVolume())
     player.play()
+  }
+
+  /// Reads the user's settings-sheet volume slider (0.0–1.0). Defaults to 1.0
+  /// when the key has never been written. Read at every play so a slider
+  /// adjustment takes effect immediately.
+  private static func currentAppVolume() -> Double {
+    UserDefaults.standard.object(forKey: "cr.appVolume") as? Double ?? 1.0
   }
 }

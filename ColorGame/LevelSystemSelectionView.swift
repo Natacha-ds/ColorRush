@@ -16,7 +16,7 @@ private extension MistakeTolerance {
     switch self {
     case .easy: "ROOKIE"
     case .normal: "PRO"
-    case .hard: "INSANE"
+    case .hard: "MASTER"
     }
   }
 
