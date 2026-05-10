@@ -112,6 +112,7 @@ struct HomeView: View {
 
   private var playButton: some View {
     Button {
+      LogService.shared.log("home_play_pressed")
       isLevelSystemSelectionPresented = true
     } label: {
       HStack(spacing: Theme.Spacing.md) {
@@ -191,13 +192,21 @@ struct HomeView: View {
   private func triggerPurchase() {
     guard !isPurchasing else { return }
     SoundService.shared.play(.secondary)
+    LogService.shared.log("home_remove_ads_pressed")
     isPurchasing = true
     Task {
       defer { isPurchasing = false }
       do {
         _ = try await store.purchase()
+        await MainActor.run {
+          LogService.shared.log("purchase_completed", [
+            "hasRemoveAds": store.hasRemoveAds,
+          ])
+        }
       } catch {
-        print("Purchase failed: \(error)")
+        await MainActor.run {
+          LogService.shared.error("purchase_failed", ["error": String(describing: error)])
+        }
       }
     }
   }
@@ -205,13 +214,21 @@ struct HomeView: View {
   private func triggerRestore() {
     guard !isRestoring else { return }
     SoundService.shared.play(.secondary)
+    LogService.shared.log("home_restore_purchases_pressed")
     isRestoring = true
     Task {
       defer { isRestoring = false }
       do {
         try await store.restore()
+        await MainActor.run {
+          LogService.shared.log("restore_completed", [
+            "hasRemoveAds": store.hasRemoveAds,
+          ])
+        }
       } catch {
-        print("Restore failed: \(error)")
+        await MainActor.run {
+          LogService.shared.error("restore_failed", ["error": String(describing: error)])
+        }
       }
     }
   }

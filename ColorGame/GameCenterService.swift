@@ -32,11 +32,18 @@ final class GameCenterService: NSObject, ObservableObject {
         guard let self else { return }
         if let error {
           print("Game Center auth error: \(error.localizedDescription)")
+          LogService.shared.error("gamecenter_authentication_failed", [
+            "error": error.localizedDescription,
+          ])
         }
         if let viewController {
           self.presentSignIn(viewController)
         }
+        let wasAuthenticated = self.isAuthenticated
         self.isAuthenticated = GKLocalPlayer.local.isAuthenticated
+        if !wasAuthenticated, self.isAuthenticated {
+          LogService.shared.log("gamecenter_authenticated")
+        }
       }
     }
   }
@@ -64,8 +71,17 @@ final class GameCenterService: NSObject, ObservableObject {
     ) { [weak self] error in
       if let error {
         print("Game Center submitScore failed for \(id): \(error.localizedDescription)")
+        LogService.shared.error("gamecenter_score_submit_failed", [
+          "leaderboardID": id,
+          "error": error.localizedDescription,
+        ])
         return
       }
+      LogService.shared.log("gamecenter_score_submitted", [
+        "gameType": gameType.rawValue,
+        "mistakeTolerance": mistakeTolerance.rawValue,
+        "score": score,
+      ])
       // Refresh the player's rank for this bucket so the inline pill in
       // LeaderboardView is current next time it appears.
       Task { @MainActor in

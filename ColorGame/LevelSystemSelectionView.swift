@@ -133,6 +133,7 @@ struct LevelSystemSelectionView: View {
     let isRecommended = gameType == .colorOnly && shouldRecommendColorOnly
     return Button {
       SoundService.shared.play(.secondary)
+      LogService.shared.log("mode_selected", ["gameType": gameType.rawValue])
       withAnimation(.easeOut(duration: 0.15)) {
         storedGameTypeRaw = gameType.rawValue
         levelRun.gameType = gameType
@@ -212,6 +213,9 @@ struct LevelSystemSelectionView: View {
     let tone = tolerance.difficultyTone
     return Button {
       SoundService.shared.play(.secondary)
+      LogService.shared.log("difficulty_selected", [
+        "mistakeTolerance": tolerance.rawValue,
+      ])
       withAnimation(.easeOut(duration: 0.15)) {
         selectedMistakeTolerance = tolerance
         levelRun.mistakeTolerance = tolerance
@@ -286,8 +290,10 @@ struct LevelSystemSelectionView: View {
   private func handleBack() {
     switch currentStep {
     case .gameType:
+      LogService.shared.log("selection_back_pressed", ["from": "mode"])
       isPresented = false
     case .mistakeTolerance:
+      LogService.shared.log("selection_back_pressed", ["from": "difficulty"])
       withAnimation(.easeInOut(duration: 0.25)) {
         currentStep = .gameType
       }
@@ -307,6 +313,11 @@ struct LevelSystemSelectionView: View {
   private func startLevelRun() {
     guard let mistakeTolerance = selectedMistakeTolerance else { return }
     levelRun.startRun(gameType: selectedGameType, mistakeTolerance: mistakeTolerance)
+    LogService.shared.log("run_started", [
+      "gameType": selectedGameType.rawValue,
+      "mistakeTolerance": mistakeTolerance.rawValue,
+      "totalLives": mistakeTolerance.totalLives,
+    ])
     isGameViewPresented = true
   }
 }

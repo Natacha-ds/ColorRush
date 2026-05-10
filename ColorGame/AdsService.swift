@@ -153,6 +153,9 @@ final class AdsService: NSObject, ObservableObject {
 
     pendingDismissCallback = onDismiss
     levelsSinceLastAd = 0
+    LogService.shared.log("interstitial_shown", [
+      "frequency": frequency,
+    ])
     interstitial.present(from: rootVC)
   }
 
@@ -183,6 +186,7 @@ final class AdsService: NSObject, ObservableObject {
     pendingRewardedReward = onReward
     pendingRewardedSkip = onSkip
 
+    LogService.shared.log("rewarded_ad_shown", ["context": "revive"])
     rewardedAd.present(from: rootVC) { [weak self] in
       Task { @MainActor in
         guard let self else { return }

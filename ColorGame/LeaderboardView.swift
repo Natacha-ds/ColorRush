@@ -126,6 +126,9 @@ struct LeaderboardView: View {
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .background(Theme.Colors.background.ignoresSafeArea())
     .preferredColorScheme(.dark)
+    .onAppear {
+      LogService.shared.log("leaderboard_opened")
+    }
     .task {
       await refreshAll()
     }
@@ -162,6 +165,9 @@ struct LeaderboardView: View {
     let isActive = gameType == selectedGameType
     return Button {
       SoundService.shared.play(.secondary)
+      LogService.shared.log("leaderboard_mode_changed", [
+        "gameType": gameType.rawValue,
+      ])
       withAnimation(.easeOut(duration: 0.15)) {
         selectedGameType = gameType
       }
@@ -203,6 +209,9 @@ struct LeaderboardView: View {
     let isActive = tolerance == selectedMistakeTolerance
     return Button {
       SoundService.shared.play(.secondary)
+      LogService.shared.log("leaderboard_difficulty_changed", [
+        "mistakeTolerance": tolerance.rawValue,
+      ])
       withAnimation(.easeOut(duration: 0.15)) {
         selectedMistakeTolerance = tolerance
       }
@@ -285,6 +294,11 @@ struct LeaderboardView: View {
     VStack(spacing: Theme.Spacing.xs) {
       Button {
         SoundService.shared.play(.secondary)
+        LogService.shared.log("leaderboard_global_ranking_pressed", [
+          "gameType": selectedGameType.rawValue,
+          "mistakeTolerance": selectedMistakeTolerance.rawValue,
+          "gcAuthenticated": gameCenter.isAuthenticated,
+        ])
         gameCenter.presentLeaderboard(
           gameType: selectedGameType,
           mistakeTolerance: selectedMistakeTolerance

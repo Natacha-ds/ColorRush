@@ -484,6 +484,9 @@ struct LevelGameView: View {
                 if levelRun.shouldShowDevTools, !levelRun.isCompleted {
                   Button(action: {
                     SoundService.shared.play(.secondary)
+                    LogService.shared.log("level_skipped", [
+                      "level": levelRun.currentLevel,
+                    ])
                     levelRun.skipToNextLevel()
                     startNewLevel()
                   }) {
@@ -654,6 +657,12 @@ struct LevelGameView: View {
         if newValue > 0 {
           streakDisplayCount = levelRun.currentStreak
           showStreakAnimation = true
+          LogService.shared.log("streak_bonus_earned", [
+            "level": levelRun.currentLevel,
+            "gameType": levelRun.gameType.rawValue,
+            "streakCount": levelRun.currentStreak,
+            "bonusValue": newValue,
+          ])
           // Visual celebration: 4 simultaneous bursts at the 4 tile centers.
           fireStreakCelebration()
           // Reset the trigger after a short delay
@@ -921,6 +930,15 @@ struct LevelGameView: View {
     showLevelIntro = false
 
     guard let levelConfig = levelRun.currentLevelConfig else { return }
+
+    LogService.shared.log("level_started", [
+      "level": levelRun.currentLevel,
+      "gameType": levelRun.gameType.rawValue,
+      "mistakeTolerance": levelRun.mistakeTolerance.rawValue,
+      "requiredScore": levelRun.getRequiredScore(),
+      "timePerResponse": levelConfig.timePerResponse as Any,
+      "durationSec": levelConfig.durationSeconds,
+    ])
 
     isGameSessionActive = true
     isGameActive = false
@@ -1554,8 +1572,20 @@ struct LevelGameView: View {
     // Check if score meets requirement (streak bonuses are already included in
     // currentScore)
     let requiredScore = levelRun.getRequiredScore()
+    let currentLevel = levelRun.currentLevel
     if levelRun.getCurrentLevelScore() >= requiredScore {
       isLevelComplete = true
+      LogService.shared.log("level_completed", [
+        "level": currentLevel,
+        "gameType": levelRun.gameType.rawValue,
+        "mistakeTolerance": levelRun.mistakeTolerance.rawValue,
+        "score": levelRun.getCurrentLevelScore(),
+        "requiredScore": requiredScore,
+        "hits": levelRun.levelBasePoints,
+        "misses": levelRun.levelWrongTaps,
+        "streakBonuses": levelRun.levelStreakBonuses,
+        "livesRemaining": levelRun.remainingLives,
+      ])
     } else {
       // Level failed due to insufficient score - lose 1 life
       levelRun.loseLife()
@@ -1566,6 +1596,23 @@ struct LevelGameView: View {
       // Check if no lives remaining (game over)
       if levelRun.isGameOver {
         failedReason = .maxMistakes // Reuse this reason for "out of lives"
+      }
+      LogService.shared.log("level_failed", [
+        "level": currentLevel,
+        "gameType": levelRun.gameType.rawValue,
+        "mistakeTolerance": levelRun.mistakeTolerance.rawValue,
+        "score": levelRun.getCurrentLevelScore(),
+        "requiredScore": requiredScore,
+        "reason": failedReason == .maxMistakes ? "maxMistakes" : "insufficientScore",
+        "livesRemaining": levelRun.remainingLives,
+      ])
+      if levelRun.isGameOver {
+        LogService.shared.log("run_game_over", [
+          "level": currentLevel,
+          "score": levelRun.globalScore,
+          "gameType": levelRun.gameType.rawValue,
+          "mistakeTolerance": levelRun.mistakeTolerance.rawValue,
+        ])
       }
     }
   }
@@ -1986,6 +2033,10 @@ private struct LevelResultBody<PrimaryButton: View, Icon: View>: View {
 
         Button {
           SoundService.shared.play(.secondary)
+          LogService.shared.log("run_abandoned", [
+            "totalScore": totalScore,
+            "reason": "level_result_home",
+          ])
           onBackToHome()
         } label: {
           Text("Home")
@@ -2185,6 +2236,11 @@ struct FinalWinView: View {
 
         Button {
           SoundService.shared.play(.main)
+          LogService.shared.log("final_win_play_harder_pressed", [
+            "gameType": levelRun.gameType.rawValue,
+            "mistakeTolerance": levelRun.mistakeTolerance.rawValue,
+            "finalScore": totalScoreWithCurrentLevel,
+          ])
           onPlayHarder()
         } label: {
           Text("Play Harder")
@@ -2194,6 +2250,11 @@ struct FinalWinView: View {
 
         Button {
           SoundService.shared.play(.secondary)
+          LogService.shared.log("final_win_see_leaderboard_pressed", [
+            "gameType": levelRun.gameType.rawValue,
+            "mistakeTolerance": levelRun.mistakeTolerance.rawValue,
+            "finalScore": totalScoreWithCurrentLevel,
+          ])
           onSeeLeaderboard()
         } label: {
           Text("See Leaderboard")
@@ -2206,6 +2267,14 @@ struct FinalWinView: View {
       }
     }
     .preferredColorScheme(.dark)
+    .onAppear {
+      LogService.shared.log("run_completed", [
+        "gameType": levelRun.gameType.rawValue,
+        "mistakeTolerance": levelRun.mistakeTolerance.rawValue,
+        "finalScore": totalScoreWithCurrentLevel,
+        "livesRemaining": levelRun.remainingLives,
+      ])
+    }
   }
 }
 
@@ -2324,6 +2393,11 @@ struct LevelGameOverView: View {
 
         Button {
           SoundService.shared.play(.secondary)
+          LogService.shared.log("run_abandoned", [
+            "level": levelRun.currentLevel,
+            "score": levelRun.globalScore,
+            "reason": "game_over_back_home",
+          ])
           onBackToHome()
         } label: {
           Text("Back to Home")
@@ -2398,15 +2472,27 @@ struct LevelGameOverView: View {
   // showRewardedAdIfReady — no ad shown.
   private func handleContinueTap() {
     SoundService.shared.play(.main)
+    LogService.shared.log("revive_attempt", [
+      "level": levelRun.currentLevel,
+      "hasRemoveAds": store.hasRemoveAds,
+      "adReady": ads.rewardedReady,
+    ])
     levelRun.markReviveAttempted()
     ads.showRewardedAdIfReady(
       onReward: {
+        LogService.shared.log("revive_completed", [
+          "level": levelRun.currentLevel,
+        ])
         onContinueWithExtraLife()
       },
       onSkip: {
         // Player closed the ad before earning the reward, or no ad/host
         // VC available. The button is already gone (markReviveAttempted
         // flipped the flag). Player can still tap "Start a new game".
+        LogService.shared.log("revive_skipped", [
+          "level": levelRun.currentLevel,
+          "reason": ads.rewardedReady ? "closed_early" : "no_ad",
+        ])
       }
     )
   }
