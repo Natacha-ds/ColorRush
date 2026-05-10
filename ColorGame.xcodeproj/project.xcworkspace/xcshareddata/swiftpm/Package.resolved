@@ -1,6 +1,15 @@
 {
-  "originHash" : "ca9dabe3f9323fcc8f9f3a1b3989369ef97726841d1d3a4ae69e980bc922f4f9",
+  "originHash" : "12cf2ec385591154c31d55db25f9937f83f5e70d9968708a52f1f769a7129aa4",
   "pins" : [
+    {
+      "identity" : "pow",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/EmergeTools/Pow",
+      "state" : {
+        "revision" : "1b4b1dda28c50b95f0872927ee2226fe8b58950e",
+        "version" : "1.0.6"
+      }
+    },
     {
       "identity" : "purchases-ios-spm",
       "kind" : "remoteSourceControl",

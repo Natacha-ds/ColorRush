@@ -10,6 +10,150 @@ enum LevelFailureReason {
   case insufficientScore
 }
 
+private let crTileGridSpacing: CGFloat = Theme.Spacing.lg
+private let crTileSide: CGFloat = 150
+
+// Tap burst (correct-tap only): UIKit CAEmitterLayer-driven spark burst
+// emanating from BEHIND the tapped tile, base color derived from the tile.
+private let crBurstAreaSize: CGFloat = 420
+private let crBurstOriginEdgeOffset: CGFloat =
+  (crBurstAreaSize - (crTileSide * 2 + crTileGridSpacing)) / 2
+
+private struct CRSparkBurstSpec: Equatable, Identifiable {
+  let id: Int
+  let origin: CGPoint
+  let baseColor: Color
+  let particleCount: Int
+}
+
+private let crSparkEmitWindow: TimeInterval = 0.05
+
+#if canImport(UIKit)
+
+/// Programmatic radial-gradient spark image (white center → transparent edge),
+/// generated once at first access and reused as the contents of every emitter
+/// cell. Avoids shipping an asset.
+private enum CRSparkAssets {
+  static let image: CGImage = {
+    let size = CGSize(width: 24, height: 24)
+    let renderer = UIGraphicsImageRenderer(size: size)
+    let uiImage = renderer.image { ctx in
+      let cg = ctx.cgContext
+      let center = CGPoint(x: size.width / 2, y: size.height / 2)
+      let cs = CGColorSpaceCreateDeviceRGB()
+      let colors = [
+        UIColor.white.cgColor,
+        UIColor.white.withAlphaComponent(0.7).cgColor,
+        UIColor.white.withAlphaComponent(0.0).cgColor,
+      ] as CFArray
+      if let gradient = CGGradient(
+        colorsSpace: cs,
+        colors: colors,
+        locations: [0, 0.4, 1]
+      ) {
+        cg.drawRadialGradient(
+          gradient,
+          startCenter: center, startRadius: 0,
+          endCenter: center, endRadius: size.width / 2,
+          options: []
+        )
+      }
+    }
+    return uiImage.cgImage ?? UIImage().cgImage!
+  }()
+}
+
+/// SwiftUI wrapper around a host UIView whose layer hosts ephemeral
+/// CAEmitterLayers — one per burst. Each new spec (identified by `id`)
+/// fires a new emitter with the snippet's parameters, then auto-removes
+/// after particles die. Supports a queue so multiple simultaneous bursts
+/// (e.g., streak celebration) fire in parallel.
+private struct CRSparkEmitterView: UIViewRepresentable {
+  let bursts: [CRSparkBurstSpec]
+  let clearToken: Int
+
+  func makeCoordinator() -> Coordinator { Coordinator() }
+
+  func makeUIView(context: Context) -> UIView {
+    let view = UIView()
+    view.backgroundColor = .clear
+    view.isUserInteractionEnabled = false
+    view.layer.masksToBounds = false
+    return view
+  }
+
+  func updateUIView(_ uiView: UIView, context: Context) {
+    // Clear all in-flight emitters when the parent bumps the clear token
+    // (e.g., between levels) so particles don't leak across level transitions.
+    if context.coordinator.lastClearToken != clearToken {
+      context.coordinator.lastClearToken = clearToken
+      uiView.layer.sublayers?.forEach { $0.removeFromSuperlayer() }
+    }
+
+    let unseen = bursts.filter { $0.id > context.coordinator.lastSeen }
+    guard !unseen.isEmpty else { return }
+    if let maxId = unseen.map(\.id).max() {
+      context.coordinator.lastSeen = maxId
+    }
+    for spec in unseen {
+      Self.fireBurst(spec: spec, in: uiView)
+    }
+  }
+
+  private static func fireBurst(spec: CRSparkBurstSpec, in container: UIView) {
+    let emitter = CAEmitterLayer()
+    emitter.frame = container.bounds
+    emitter.emitterPosition = spec.origin
+    emitter.emitterSize = .zero
+    emitter.emitterShape = .point
+    emitter.emitterMode = .surface
+    emitter.renderMode = .additive
+
+    let cell = CAEmitterCell()
+    cell.contents = CRSparkAssets.image
+    cell.name = "Spark"
+    cell.birthRate = Float(Double(spec.particleCount) / crSparkEmitWindow)
+    cell.lifetime = 3.0
+    cell.velocity = 55.0
+    cell.velocityRange = 280.0
+    cell.xAcceleration = 0.0
+    cell.yAcceleration = 50.0
+    cell.emissionLatitude = 0.0
+    cell.emissionLongitude = 0.0
+    cell.emissionRange = 360.0 * (.pi / 180.0)
+    cell.spin = 65.0 * (.pi / 180.0)
+    cell.spinRange = 314.0 * (.pi / 180.0)
+    cell.scale = 0.113
+    cell.scaleSpeed = -0.030
+    cell.alphaSpeed = 0.42
+
+    let uic = UIColor(spec.baseColor).withAlphaComponent(0.39)
+    cell.color = uic.cgColor
+    cell.redRange = 0.3
+    cell.greenRange = 0.21
+    cell.blueRange = 0.6
+
+    emitter.emitterCells = [cell]
+    container.layer.addSublayer(emitter)
+
+    // One-shot burst: stop emitting after a beat, then remove the layer
+    // once existing particles have died out.
+    DispatchQueue.main.asyncAfter(deadline: .now() + crSparkEmitWindow) { [weak emitter] in
+      emitter?.birthRate = 0
+    }
+    DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) { [weak emitter] in
+      emitter?.removeFromSuperlayer()
+    }
+  }
+
+  final class Coordinator {
+    var lastSeen: Int = -1
+    var lastClearToken: Int = 0
+  }
+}
+
+#endif
+
 struct LevelGameView: View {
   @ObservedObject var levelRun: LevelRun
   @Environment(\.dismiss) private var dismiss
@@ -52,6 +196,18 @@ struct LevelGameView: View {
   // Level intro pop-in state
   @State private var showLevelIntro = false
 
+  // Burst overlay state (purely visual). A new spark burst is appended to
+  // `sparkBursts` whenever the game-logic side reports a correct answer
+  // (observed via `levelRun.levelCorrectAnswers` change), at the canvas-space
+  // position captured from the tap gesture. Particle count scales with
+  // `levelRun.currentStreak` (capped). On a streak-bonus event, four bursts
+  // fire simultaneously at the four tile centers.
+  @State private var sparkBursts: [CRSparkBurstSpec] = []
+  @State private var sparkCounter: Int = 0
+  @State private var sparkClearToken: Int = 0
+  @State private var lastTappedIndex: Int? = nil
+  @State private var pendingBurstOrigin: CGPoint? = nil
+
   // Color repeat tracking
   @State private var recentAnnouncedColors: [Color] = []
 
@@ -70,11 +226,11 @@ struct LevelGameView: View {
   var body: some View {
     NavigationView {
       ZStack {
-        // Full screen background - use level-specific image for each level
-        Image("Level\(levelRun.currentLevel)")
-          .resizable()
-          .scaledToFill()
-          .ignoresSafeArea(.all)
+        // Pure black background — design-system token replaces the v1
+        // per-level cosmic image; the tap burst animation provides the
+        // dynamic visual element on the active gameplay state.
+        Theme.Colors.background
+          .ignoresSafeArea()
 
         if isLevelComplete {
           // Check if this is the final level (10) - show special win screen
@@ -264,9 +420,9 @@ struct LevelGameView: View {
         } else {
           // Active Game Screen
           ZStack {
-            VStack(spacing: 0) {
-              // Top header with back button
-              HStack {
+            VStack(spacing: Theme.Spacing.lg) {
+              // Top HUD: back arrow + SCORE on left, hearts pill on right
+              HStack(alignment: .top, spacing: Theme.Spacing.md) {
                 Button(action: {
                   endGameSession()
                   let totalScore = levelRun.globalScore + levelRun
@@ -274,7 +430,8 @@ struct LevelGameView: View {
                   if totalScore > 0 {
                     LeaderboardStore.shared.addScore(
                       totalScore,
-                      gameType: levelRun.gameType, mistakeTolerance: levelRun.mistakeTolerance
+                      gameType: levelRun.gameType,
+                      mistakeTolerance: levelRun.mistakeTolerance
                     )
                     GameCenterService.shared.submitScore(
                       totalScore,
@@ -298,211 +455,132 @@ struct LevelGameView: View {
                   }
                 }) {
                   Image(systemName: "chevron.left")
-                    .font(.system(size: 18, weight: .medium))
-                    .foregroundColor(.primary)
-                    .frame(width: 32, height: 32)
-                    .background(
-                      Circle()
-                        .fill(Color.white.opacity(0.8))
-                        .shadow(
-                          color: .black.opacity(0.1),
-                          radius: 4,
-                          x: 0,
-                          y: 2
-                        )
-                    )
+                    .font(.system(size: 18, weight: .bold))
                 }
+                .buttonStyle(.crIcon)
+
+                VStack(alignment: .leading, spacing: 2) {
+                  Text("SCORE")
+                    .font(.crLabel)
+                    .textCase(.uppercase)
+                    .foregroundStyle(Theme.Colors.textSecondary)
+                  Text("\(levelRun.currentScore)")
+                    .font(.crTitle)
+                    .foregroundStyle(Theme.Colors.textPrimary)
+                }
+                .padding(.top, Theme.Spacing.sm)
 
                 Spacer()
 
-                // Dev-only skip button
+                CRHeartsPill(
+                  remaining: levelRun.remainingLives,
+                  total: levelRun.mistakeTolerance.totalLives
+                )
+                .padding(.top, Theme.Spacing.md)
+
                 if levelRun.shouldShowDevTools, !levelRun.isCompleted {
                   Button(action: {
                     levelRun.skipToNextLevel()
                     startNewLevel()
                   }) {
-                    Text("🔧 Skip")
-                      .font(.system(size: 12, weight: .medium))
-                      .foregroundColor(.orange)
-                      .padding(.horizontal, 12)
-                      .padding(.vertical, 6)
+                    Text("Skip")
+                      .font(.crCaption)
+                      .foregroundStyle(Theme.Colors.warning)
+                      .padding(.horizontal, Theme.Spacing.sm)
+                      .padding(.vertical, Theme.Spacing.xs)
                       .background(
-                        RoundedRectangle(cornerRadius: 12)
-                          .fill(Color.orange.opacity(0.1))
-                          .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                              .stroke(Color.orange.opacity(0.3), lineWidth: 1)
+                        Capsule(style: .continuous)
+                          .strokeBorder(
+                            Theme.Colors.warning.opacity(0.4),
+                            lineWidth: 1
                           )
                       )
                   }
+                  .padding(.top, Theme.Spacing.md)
                 }
               }
-              .padding(.horizontal, 20)
-              .padding(.top, 10)
 
-              // Top bar: Score/Target on left, Lives on right
-              HStack {
-                // Top left: Score and Target
-                VStack(alignment: .leading, spacing: 4) {
-                  Text("Score: \(levelRun.currentScore)")
-                    .font(.title3)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.primary)
-
-                  Text("Target: \(levelRun.getRequiredScore())")
-                    .font(.title3)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.secondary)
-                }
-
-                Spacer()
-
-                // Top right: Heart icon with remaining lives (increased by 30%)
-                HStack(spacing: 6) {
-                  Image("Heart")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 26, height: 26)
-                  Text("\(levelRun.remainingLives)")
-                    .font(.title3)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.primary)
-                }
+              // TARGET label + progress bar
+              VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                Text("TARGET: \(levelRun.getRequiredScore())")
+                  .font(.crLabel)
+                  .textCase(.uppercase)
+                  .foregroundStyle(Theme.Colors.accentSecondary)
+                CRProgressBar(progress: targetProgress)
+                  .animation(.easeOut, value: levelRun.currentScore)
               }
-              .padding(.horizontal, 20)
-              .padding(.top, 20)
 
-              // Center: Level X title (styled like Level Complete, without icon)
-              Text("Level \(levelRun.currentLevel)")
-                .font(.system(size: 32, weight: .bold))
-                .foregroundStyle(
-                  LinearGradient(
-                    gradient: Gradient(colors: [.purple, .pink]),
-                    startPoint: .leading,
-                    endPoint: .trailing
+              Spacer(minLength: Theme.Spacing.lg)
+
+              // LEVEL XX title
+              Text(String(format: "LEVEL %02d", levelRun.currentLevel))
+                .font(.crDisplay)
+                .textCase(.uppercase)
+                .foregroundStyle(Theme.Colors.textPrimary)
+
+              // Hourglass + countdown
+              HStack(spacing: Theme.Spacing.sm) {
+                Image(systemName: "hourglass")
+                  .font(.system(size: 16, weight: .bold))
+                  .foregroundStyle(Theme.Colors.accentSecondary)
+                Text("\(Int(timeRemaining.rounded(.up))) SEC LEFT")
+                  .font(.crLabel)
+                  .textCase(.uppercase)
+                  .foregroundStyle(
+                    timeRemaining <= 5 ? Theme.Colors.danger : Theme.Colors.textSecondary
                   )
-                )
-                .padding(.top, 16) // Reduced by 20% (from 20 to 16)
-
-              Spacer()
-
-              // Timer
-              VStack(spacing: 8) {
-                Text("\(Int(timeRemaining.rounded(.up)))s")
-                  .font(.system(size: 64, weight: .bold, design: .rounded))
-                  .foregroundColor(timeRemaining <= 5 ? .red : .primary)
-                  .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
-
-                Text("Time Remaining")
-                  .font(.title3)
-                  .fontWeight(.medium)
-                  .foregroundColor(.secondary)
               }
-              .padding(.bottom, 30)
 
-              // Round Progress Bar (if level has time limit and is not
-              // non-punitive refresh)
+              Spacer(minLength: Theme.Spacing.lg)
+
+              // Round-time progress bar (conditional)
               if let levelConfig = levelRun.currentLevelConfig,
                  levelConfig.hasTimeLimit, !levelConfig.isNonPunitiveRefresh
               {
-                VStack(spacing: 8) {
-                  Text("Round Time")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-
-                  GeometryReader { geometry in
-                    ZStack(alignment: .leading) {
-                      // Background bar
-                      RoundedRectangle(cornerRadius: 4)
-                        .fill(Color.gray.opacity(0.3))
-                        .frame(height: 8)
-
-                      // Progress bar
-                      RoundedRectangle(cornerRadius: 4)
-                        .fill(roundTimeRemaining >
-                          (levelConfig.timePerResponse ?? 1.0) * 0.3 ? Color
-                          .green : Color.red)
-                        .frame(
-                          width: geometry.size
-                            .width *
-                            (roundTimeRemaining /
-                              (levelConfig.timePerResponse ?? 1.0)),
-                          height: 8
-                        )
-                        .animation(
-                          .linear(duration: 0.1),
-                          value: roundTimeRemaining
-                        )
-                    }
+                let timePerResponse = levelConfig.timePerResponse ?? 1.0
+                let roundProgress = max(0.0, min(1.0, roundTimeRemaining / timePerResponse))
+                let isLow = roundTimeRemaining <= timePerResponse * 0.3
+                GeometryReader { rg in
+                  ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 1.5, style: .continuous)
+                      .fill(Theme.Colors.surfaceElevated)
+                    RoundedRectangle(cornerRadius: 1.5, style: .continuous)
+                      .fill(isLow ? Theme.Colors.danger : Theme.Colors.success)
+                      .frame(width: rg.size.width * roundProgress)
                   }
-                  .frame(height: 8)
-                  .padding(.horizontal, 40)
                 }
-                .padding(.bottom, 20)
+                .frame(height: 3)
+                .padding(.horizontal, Theme.Spacing.lg)
+                .animation(.linear(duration: 0.1), value: roundTimeRemaining)
               }
 
-              // 2x2 Grid
-              VStack(spacing: 20) {
-                HStack(spacing: 20) {
-                  if levelRun.gameType == .colorOnly {
-                    ColorTile(
-                      color: tiles.count > 0 ? tiles[0] : .gray,
-                      action: { handleTileTap(0) }
-                    )
-                    ColorTile(
-                      color: tiles.count > 1 ? tiles[1] : .gray,
-                      action: { handleTileTap(1) }
-                    )
-                  } else {
-                    ColorAndTextTile(
-                      tile: tilesWithText.count > 0 ? tilesWithText[0] : Tile(
-                        backgroundColor: .gray,
-                        textLabel: "gray"
-                      ),
-                      action: { handleTileTap(0) }
-                    )
-                    ColorAndTextTile(
-                      tile: tilesWithText.count > 1 ? tilesWithText[1] : Tile(
-                        backgroundColor: .gray,
-                        textLabel: "gray"
-                      ),
-                      action: { handleTileTap(1) }
-                    )
-                  }
-                }
-                HStack(spacing: 20) {
-                  if levelRun.gameType == .colorOnly {
-                    ColorTile(
-                      color: tiles.count > 2 ? tiles[2] : .gray,
-                      action: { handleTileTap(2) }
-                    )
-                    ColorTile(
-                      color: tiles.count > 3 ? tiles[3] : .gray,
-                      action: { handleTileTap(3) }
-                    )
-                  } else {
-                    ColorAndTextTile(
-                      tile: tilesWithText.count > 2 ? tilesWithText[2] : Tile(
-                        backgroundColor: .gray,
-                        textLabel: "gray"
-                      ),
-                      action: { handleTileTap(2) }
-                    )
-                    ColorAndTextTile(
-                      tile: tilesWithText.count > 3 ? tilesWithText[3] : Tile(
-                        backgroundColor: .gray,
-                        textLabel: "gray"
-                      ),
-                      action: { handleTileTap(3) }
-                    )
-                  }
-                }
-              }
-              .padding(.bottom, 40)
+              // 2x2 tile grid wrapped in a fixed-size container with the
+              // spark emitter BEHIND the tiles so the burst emanates from
+              // behind the tapped tile.
+              ZStack {
+                #if canImport(UIKit)
+                CRSparkEmitterView(bursts: sparkBursts, clearToken: sparkClearToken)
+                  .frame(width: crBurstAreaSize, height: crBurstAreaSize)
+                  .allowsHitTesting(false)
+                  .zIndex(0)
+                #endif
 
-              Spacer()
+                VStack(spacing: crTileGridSpacing) {
+                  HStack(spacing: crTileGridSpacing) {
+                    activeTile(at: 0)
+                    activeTile(at: 1)
+                  }
+                  HStack(spacing: crTileGridSpacing) {
+                    activeTile(at: 2)
+                    activeTile(at: 3)
+                  }
+                }
+                .zIndex(1)
+              }
+              .padding(.bottom, Theme.Spacing.xl)
             }
-            .padding()
+            .padding(.horizontal, Theme.Spacing.lg)
+            .padding(.top, Theme.Spacing.sm)
 
             // Error flash overlay
             if showingErrorFlash {
@@ -559,10 +637,19 @@ struct LevelGameView: View {
         resumeTimer()
       }
       #endif
+      .onChange(of: showLevelIntro) { _, isShowing in
+        // Wipe in-flight particles between levels so they don't leak
+        // across level transitions (new level OR retry).
+        if isShowing {
+          clearAllSparkBursts()
+        }
+      }
       .onChange(of: levelRun.lastBonusEarned) { newValue in
         if newValue > 0 {
           streakDisplayCount = levelRun.currentStreak
           showStreakAnimation = true
+          // Visual celebration: 4 simultaneous bursts at the 4 tile centers.
+          fireStreakCelebration()
           // Reset the trigger after a short delay
           DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             guard isGameSessionActive else { return }
@@ -587,6 +674,136 @@ struct LevelGameView: View {
     .navigationViewStyle(StackNavigationViewStyle())
     #endif
   }
+
+  // MARK: - Tile rendering + tap burst (purely visual)
+
+  private var targetProgress: Double {
+    let target = max(1, levelRun.getRequiredScore())
+    return min(1.0, max(0.0, Double(levelRun.currentScore) / Double(target)))
+  }
+
+  @ViewBuilder
+  private func activeTile(at index: Int) -> some View {
+    let trigger: (CGPoint) -> Void = { tapLocation in
+      pendingBurstOrigin = tapPositionInCanvas(
+        forTile: index,
+        tapLocation: tapLocation
+      )
+      lastTappedIndex = index
+      handleTileTap(index)
+    }
+    Group {
+      if levelRun.gameType == .colorOnly {
+        ColorTile(
+          color: tiles.count > index ? tiles[index] : .gray,
+          action: trigger
+        )
+      } else {
+        ColorAndTextTile(
+          tile: tilesWithText.count > index ? tilesWithText[index] : Tile(
+            backgroundColor: .gray,
+            textLabel: "gray"
+          ),
+          action: trigger
+        )
+      }
+    }
+    .onChange(of: levelRun.levelCorrectAnswers) { _, _ in
+      // Fired after handleTileTap incremented levelCorrectAnswers (correct
+      // tap path). Use the tap location we captured at gesture time.
+      guard let idx = lastTappedIndex, idx == index,
+            let origin = pendingBurstOrigin else { return }
+      let count = particleCountForCurrentStreak()
+      fireSparkBurst(at: origin, color: currentTileColor(at: idx), particleCount: count)
+      pendingBurstOrigin = nil
+    }
+  }
+
+  private func fireSparkBurst(at origin: CGPoint, color: Color, particleCount: Int) {
+    sparkCounter += 1
+    let spec = CRSparkBurstSpec(
+      id: sparkCounter,
+      origin: origin,
+      baseColor: color,
+      particleCount: particleCount
+    )
+    sparkBursts.append(spec)
+    // Keep the queue bounded — older specs are already fired and pruned by id.
+    if sparkBursts.count > 16 {
+      sparkBursts.removeFirst(sparkBursts.count - 16)
+    }
+  }
+
+  /// 1st correct tap = 2, 2nd = 4, ..., capped at 300 (streak ≥ 150).
+  /// Wrong taps reset `levelRun.currentStreak` to 0 in the model so the
+  /// next correct tap restarts at 2.
+  private func particleCountForCurrentStreak() -> Int {
+    let streak = max(1, levelRun.currentStreak)
+    return min(300, streak * 2)
+  }
+
+  /// Wipe all in-flight particles, e.g. between levels. Bumps the clear
+  /// token observed by `CRSparkEmitterView`, which removes its CAEmitterLayer
+  /// sublayers, and empties the pending bursts queue.
+  private func clearAllSparkBursts() {
+    sparkBursts.removeAll()
+    sparkClearToken &+= 1
+  }
+
+  /// Fire four simultaneous bursts (one centered on each of the 4 tiles)
+  /// when a streak bonus is awarded. Each uses one of the four tile colors
+  /// for visual variety. Triggered by `.onChange(of: levelRun.lastBonusEarned)`.
+  private func fireStreakCelebration() {
+    let palette: [Color] = [.red, .blue, .green, .yellow]
+    let count = particleCountForCurrentStreak()
+    for idx in 0..<4 {
+      fireSparkBurst(
+        at: burstOrigin(forTile: idx),
+        color: palette[idx],
+        particleCount: count
+      )
+    }
+  }
+
+  /// Convert a tap location in tile-local coords to the burst canvas's
+  /// coordinate space (the 420×420 frame containing the tile grid).
+  private func tapPositionInCanvas(
+    forTile index: Int,
+    tapLocation: CGPoint
+  ) -> CGPoint {
+    let center = burstOrigin(forTile: index)
+    let tileTopLeft = CGPoint(
+      x: center.x - crTileSide / 2,
+      y: center.y - crTileSide / 2
+    )
+    return CGPoint(
+      x: tileTopLeft.x + tapLocation.x,
+      y: tileTopLeft.y + tapLocation.y
+    )
+  }
+
+  private func burstOrigin(forTile index: Int) -> CGPoint {
+    let col = CGFloat(index % 2)
+    let row = CGFloat(index / 2)
+    return CGPoint(
+      x: crBurstOriginEdgeOffset
+        + col * (crTileSide + crTileGridSpacing)
+        + crTileSide / 2,
+      y: crBurstOriginEdgeOffset
+        + row * (crTileSide + crTileGridSpacing)
+        + crTileSide / 2
+    )
+  }
+
+  private func currentTileColor(at index: Int) -> Color {
+    if levelRun.gameType == .colorOnly {
+      return tiles.count > index ? tiles[index] : .gray
+    } else {
+      return tilesWithText.count > index ? tilesWithText[index].backgroundColor : .gray
+    }
+  }
+
+  // MARK: - Game logic
 
   private func handleTileTap(_ index: Int) {
     guard isGameActive, isGameSessionActive, !isLevelComplete,
@@ -2516,34 +2733,45 @@ struct LevelGameOverView: View {
 
 struct ColorAndTextTile: View {
   let tile: Tile
-  let action: () -> Void
+  let action: (CGPoint) -> Void
 
-  // Helper to determine text color for contrast
   private func textColor(for backgroundColor: Color) -> Color {
-    // Simple luminance-based contrast
-    // Red, blue, green backgrounds -> white text
-    // Yellow background -> black text
-    if backgroundColor == .yellow {
-      return .black
-    }
-    return .white
+    backgroundColor == .yellow ? .black : .white
   }
 
   var body: some View {
-    Button(action: action) {
-      ZStack {
-        RoundedRectangle(cornerRadius: 20)
-          .fill(tile.backgroundColor)
-          .frame(width: 120, height: 120)
-          .shadow(color: .black.opacity(0.2), radius: 5, x: 0, y: 3)
+    let shape = RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous)
+    return ZStack {
+      shape
+        .fill(tile.backgroundColor)
+        .frame(width: 150, height: 150)
+        .overlay(
+          shape
+            .strokeBorder(
+              LinearGradient(
+                stops: [
+                  .init(color: Color.white.opacity(0.55), location: 0.0),
+                  .init(color: Color.white.opacity(0.18), location: 0.45),
+                  .init(color: Color.white.opacity(0.0), location: 0.7),
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+              ),
+              lineWidth: 2
+            )
+        )
 
-        Text(tile.textLabel.uppercased())
-          .font(.system(size: 18, weight: .semibold, design: .rounded))
-          .foregroundColor(textColor(for: tile.backgroundColor))
-          .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 1)
-      }
+      Text(tile.textLabel.uppercased())
+        .font(.crHeadline)
+        .foregroundStyle(textColor(for: tile.backgroundColor))
     }
-    .buttonStyle(PlainButtonStyle())
+    .contentShape(shape)
+    .gesture(
+      SpatialTapGesture()
+        .onEnded { event in
+          action(event.location)
+        }
+    )
   }
 }
 

@@ -41,14 +41,5 @@ extension Theme {
 
     // Game-over wash
     static let gameOverWash = Color(hex: 0x3A0A1A)
-
-    /// Color tokens for the four gameplay tiles. Green and yellow are aliases
-    /// of the corresponding semantic tokens; red and blue are distinct.
-    enum Tile {
-      static let red = Color(hex: 0xE94545)
-      static let blue = Color(hex: 0x2563EB)
-      static let green = Theme.Colors.success
-      static let yellow = Theme.Colors.pro
-    }
   }
 }

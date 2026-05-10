@@ -324,10 +324,10 @@ private struct ModeSwatchGrid: View {
   /// mismatches its tile color to illustrate the gameplay quirk.
   private var tiles: [Tile] {
     [
-      .init(color: Theme.Colors.Tile.red, label: "BLUE"),
-      .init(color: Theme.Colors.Tile.blue, label: "RED"),
-      .init(color: Theme.Colors.Tile.green, label: "GREEN"),
-      .init(color: Theme.Colors.Tile.yellow, label: "RED"),
+      .init(color: .red, label: "BLUE"),
+      .init(color: .blue, label: "RED"),
+      .init(color: .green, label: "GREEN"),
+      .init(color: .yellow, label: "RED"),
     ]
   }
 

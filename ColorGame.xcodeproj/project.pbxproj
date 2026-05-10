@@ -11,6 +11,7 @@
 		C69333AB2ED32AFB0078C8A6 /* .swiftlint.yml in Resources */ = {isa = PBXBuildFile; fileRef = C69333A92ED32AEE0078C8A6 /* .swiftlint.yml */; };
 		C6CE696D2FA7A3F500143086 /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = C6CE696C2FA7A3F500143086 /* GoogleMobileAds */; };
 		C6E57E4D2FA7DCFD00D0E2C9 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = C6E57E4C2FA7DCFD00D0E2C9 /* RevenueCat */; };
+		964736B70C164F11A5A16834 /* Pow in Frameworks */ = {isa = PBXBuildFile; productRef = 018C6627E27247A69A12B14C /* Pow */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -64,6 +65,7 @@
 			files = (
 				C6E57E4D2FA7DCFD00D0E2C9 /* RevenueCat in Frameworks */,
 				C6CE696D2FA7A3F500143086 /* GoogleMobileAds in Frameworks */,
+				964736B70C164F11A5A16834 /* Pow in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -131,6 +133,7 @@
 			packageProductDependencies = (
 				C6CE696C2FA7A3F500143086 /* GoogleMobileAds */,
 				C6E57E4C2FA7DCFD00D0E2C9 /* RevenueCat */,
+				018C6627E27247A69A12B14C /* Pow */,
 			);
 			productName = ColorGame;
 			productReference = BB7594412E86AA890043F341 /* ColorGame.app */;
@@ -218,6 +221,7 @@
 			packageReferences = (
 				C6CE696B2FA7A3F500143086 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */,
 				C6E57E4B2FA7DCFC00D0E2C9 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
+				E59AD76149994B4EAC8636A5 /* XCRemoteSwiftPackageReference "Pow" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = BB7594422E86AA890043F341 /* Products */;
@@ -719,6 +723,14 @@
 				minimumVersion = 5.70.0;
 			};
 		};
+		E59AD76149994B4EAC8636A5 /* XCRemoteSwiftPackageReference "Pow" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/EmergeTools/Pow";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -731,6 +743,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = C6E57E4B2FA7DCFC00D0E2C9 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
 			productName = RevenueCat;
+		};
+		018C6627E27247A69A12B14C /* Pow */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E59AD76149994B4EAC8636A5 /* XCRemoteSwiftPackageReference "Pow" */;
+			productName = Pow;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

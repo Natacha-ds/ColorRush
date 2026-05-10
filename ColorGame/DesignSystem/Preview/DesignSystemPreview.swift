@@ -123,10 +123,10 @@ struct DesignSystemPreview: View {
 
   private var tileSwatches: [ColorSwatch] {
     [
-      .init(name: "Tile.red", color: Theme.Colors.Tile.red),
-      .init(name: "Tile.blue", color: Theme.Colors.Tile.blue),
-      .init(name: "Tile.green", color: Theme.Colors.Tile.green),
-      .init(name: "Tile.yellow", color: Theme.Colors.Tile.yellow),
+      .init(name: "system.red", color: .red),
+      .init(name: "system.blue", color: .blue),
+      .init(name: "system.green", color: .green),
+      .init(name: "system.yellow", color: .yellow),
     ]
   }
 
