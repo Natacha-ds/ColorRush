@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		5E47A91B2C5F8D0010A1B2C3 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 5E47A91C2C5F8D0010A1B2C4 /* Sentry */; };
 		964736B70C164F11A5A16834 /* Pow in Frameworks */ = {isa = PBXBuildFile; productRef = 018C6627E27247A69A12B14C /* Pow */; };
 		C65EA5212ED3338600DD0F8E /* .swiftformat in Resources */ = {isa = PBXBuildFile; fileRef = C65EA5202ED3338600DD0F8E /* .swiftformat */; };
 		C69333AB2ED32AFB0078C8A6 /* .swiftlint.yml in Resources */ = {isa = PBXBuildFile; fileRef = C69333A92ED32AEE0078C8A6 /* .swiftlint.yml */; };
@@ -66,6 +67,7 @@
 				C6E57E4D2FA7DCFD00D0E2C9 /* RevenueCat in Frameworks */,
 				C6CE696D2FA7A3F500143086 /* GoogleMobileAds in Frameworks */,
 				964736B70C164F11A5A16834 /* Pow in Frameworks */,
+				5E47A91B2C5F8D0010A1B2C3 /* Sentry in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -134,6 +136,7 @@
 				C6CE696C2FA7A3F500143086 /* GoogleMobileAds */,
 				C6E57E4C2FA7DCFD00D0E2C9 /* RevenueCat */,
 				018C6627E27247A69A12B14C /* Pow */,
+				5E47A91C2C5F8D0010A1B2C4 /* Sentry */,
 			);
 			productName = ColorGame;
 			productReference = BB7594412E86AA890043F341 /* ColorGame.app */;
@@ -222,6 +225,7 @@
 				C6CE696B2FA7A3F500143086 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */,
 				C6E57E4B2FA7DCFC00D0E2C9 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
 				E59AD76149994B4EAC8636A5 /* XCRemoteSwiftPackageReference "Pow" */,
+				5E47A91D2C5F8D0010A1B2C5 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = BB7594422E86AA890043F341 /* Products */;
@@ -731,6 +735,14 @@
 				minimumVersion = 1.0.0;
 			};
 		};
+		5E47A91D2C5F8D0010A1B2C5 /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/getsentry/sentry-cocoa";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 8.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -748,6 +760,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = C6E57E4B2FA7DCFC00D0E2C9 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
 			productName = RevenueCat;
+		};
+		5E47A91C2C5F8D0010A1B2C4 /* Sentry */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5E47A91D2C5F8D0010A1B2C5 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
+			productName = Sentry;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
