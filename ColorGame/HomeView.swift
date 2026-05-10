@@ -22,38 +22,35 @@ struct HomeView: View {
   @State private var isRestoring = false
 
   var body: some View {
-    ZStack {
-      Theme.Colors.background
-        .ignoresSafeArea()
+    VStack(spacing: 0) {
+      bestScoreHeader
+        .padding(.horizontal, Theme.Spacing.xl)
+        .padding(.top, Theme.Spacing.lg)
 
-      VStack(spacing: 0) {
-        bestScoreHeader
+      Spacer(minLength: Theme.Spacing.xxl)
+
+      logo
+
+      Spacer().frame(height: Theme.Spacing.xl)
+
+      tagline
+        .padding(.horizontal, Theme.Spacing.xl)
+
+      Spacer(minLength: Theme.Spacing.xxxl)
+
+      playButton
+
+      Spacer(minLength: Theme.Spacing.xl)
+
+      if !store.hasRemoveAds {
+        iapFooter
           .padding(.horizontal, Theme.Spacing.xl)
-          .padding(.top, Theme.Spacing.lg)
-
-        Spacer(minLength: Theme.Spacing.xxl)
-
-        logo
-
-        Spacer().frame(height: Theme.Spacing.xl)
-
-        tagline
-          .padding(.horizontal, Theme.Spacing.xl)
-
-        Spacer(minLength: Theme.Spacing.xxxl)
-
-        playButton
-
-        Spacer(minLength: Theme.Spacing.xl)
-
-        if !store.hasRemoveAds {
-          iapFooter
-            .padding(.horizontal, Theme.Spacing.xl)
-        }
-
-        Spacer().frame(height: Theme.Spacing.xl)
       }
+
+      Spacer().frame(height: Theme.Spacing.xl)
     }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .background(Theme.Colors.background.ignoresSafeArea())
     .preferredColorScheme(.dark)
     #if !os(macOS)
     .fullScreenCover(isPresented: $isLevelSystemSelectionPresented) {
@@ -97,7 +94,7 @@ struct HomeView: View {
     Image("CRLogo")
       .resizable()
       .scaledToFit()
-      .frame(maxWidth: 280)
+      .frame(maxWidth: 360, maxHeight: 220)
       .accessibilityLabel("Color Rush")
   }
 
@@ -108,6 +105,8 @@ struct HomeView: View {
     )
     .font(.crTitleUpright)
     .multilineTextAlignment(.leading)
+    .lineLimit(nil)
+    .fixedSize(horizontal: false, vertical: true)
     .frame(maxWidth: .infinity, alignment: .leading)
   }
 

@@ -3,16 +3,16 @@ import SwiftUI
 // MARK: - View-layer brand labels
 
 private extension GameType {
-  var brandLabel: String {
+  var brandLabel: LocalizedStringKey {
     switch self {
-    case .colorOnly: "PURE"
+    case .colorOnly: "COLOR"
     case .colorAndText: "COLOR+WORD"
     }
   }
 }
 
 private extension MistakeTolerance {
-  var brandLabel: String {
+  var brandLabel: LocalizedStringKey {
     switch self {
     case .easy: "ROOKIE"
     case .normal: "PRO"
@@ -95,38 +95,36 @@ struct LeaderboardView: View {
   }
 
   var body: some View {
-    ZStack {
-      Theme.Colors.background.ignoresSafeArea()
+    VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
+      Text("RANKS")
+        .font(.crTitle)
+        .textCase(.uppercase)
+        .foregroundStyle(Theme.Colors.textPrimary)
+        .padding(.top, Theme.Spacing.lg)
+        .padding(.horizontal, Theme.Spacing.xl)
 
-      VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
-        Text("RANKS")
-          .font(.crTitle)
-          .textCase(.uppercase)
-          .foregroundStyle(Theme.Colors.textPrimary)
-          .padding(.top, Theme.Spacing.lg)
+      modeSelector
+        .padding(.horizontal, Theme.Spacing.xl)
+
+      difficultySelector
+        .padding(.horizontal, Theme.Spacing.xl)
+
+      if let rankPill {
+        rankPill
           .padding(.horizontal, Theme.Spacing.xl)
-
-        modeSelector
-          .padding(.horizontal, Theme.Spacing.xl)
-
-        difficultySelector
-          .padding(.horizontal, Theme.Spacing.xl)
-
-        if let rankPill {
-          rankPill
-            .padding(.horizontal, Theme.Spacing.xl)
-        }
-
-        scoreList
-          .padding(.horizontal, Theme.Spacing.xl)
-
-        Spacer(minLength: 0)
-
-        globalRankingCTA
-          .padding(.horizontal, Theme.Spacing.xl)
-          .padding(.bottom, Theme.Spacing.lg)
       }
+
+      scoreList
+        .padding(.horizontal, Theme.Spacing.xl)
+
+      Spacer(minLength: 0)
+
+      globalRankingCTA
+        .padding(.horizontal, Theme.Spacing.xl)
+        .padding(.bottom, Theme.Spacing.lg)
     }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .background(Theme.Colors.background.ignoresSafeArea())
     .preferredColorScheme(.dark)
     .task {
       await refreshAll()
@@ -235,10 +233,10 @@ struct LeaderboardView: View {
   private var rankPill: AnyView? {
     guard gameCenter.isAuthenticated,
           let rank = gameCenter.ranks[currentKey] else { return nil }
-    let label = "YOU · RANK #\(rank.rank) OF \(rank.totalPlayers)"
+    let label = String(localized: "YOU · RANK #\(rank.rank) OF \(rank.totalPlayers)")
     return AnyView(
       HStack {
-        CRChip(title: label, tone: .accent)
+        CRChip(verbatim: label, tone: .accent)
         Spacer()
       }
     )

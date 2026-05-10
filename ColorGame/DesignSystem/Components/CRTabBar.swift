@@ -25,7 +25,8 @@ struct CRTabBar: View {
       pill
       Spacer()
     }
-    .padding(.bottom, Theme.Spacing.sm)
+    .padding(.top, Theme.Spacing.sm)
+    .padding(.bottom, Theme.Spacing.md)
   }
 
   private var pill: some View {

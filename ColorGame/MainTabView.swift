@@ -5,15 +5,17 @@ struct MainTabView: View {
   @State private var selectedTab = 0
 
   var body: some View {
-    ZStack {
-      HomeView()
-        .opacity(selectedTab == 0 ? 1 : 0)
-        .allowsHitTesting(selectedTab == 0)
-      LeaderboardView()
-        .opacity(selectedTab == 1 ? 1 : 0)
-        .allowsHitTesting(selectedTab == 1)
-    }
-    .safeAreaInset(edge: .bottom) {
+    VStack(spacing: 0) {
+      ZStack {
+        HomeView()
+          .opacity(selectedTab == 0 ? 1 : 0)
+          .allowsHitTesting(selectedTab == 0)
+        LeaderboardView()
+          .opacity(selectedTab == 1 ? 1 : 0)
+          .allowsHitTesting(selectedTab == 1)
+      }
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
+
       CRTabBar(
         items: [
           CRTabBarItem(
