@@ -53,6 +53,18 @@ enum MistakeTolerance: String, CaseIterable, Identifiable {
     }
   }
 
+  /// Multiplier applied to `LevelConfig.timePerResponse` so the per-tap
+  /// window tightens with difficulty. Easy keeps the baseline, Pro shaves
+  /// 10 %, Insane shaves 20 %. Nil-safe at the call site: only applied
+  /// when the level actually has a timer (levels 1–2 have none).
+  var timeMultiplier: Double {
+    switch self {
+    case .easy: 1.0
+    case .normal: 0.9
+    case .hard: 0.8
+    }
+  }
+
   var description: String {
     switch self {
     case .easy: String(localized: "5 lives")
@@ -257,6 +269,14 @@ class LevelRun: ObservableObject {
 
   var currentLevelConfig: LevelConfig? {
     config.getLevel(currentLevel)
+  }
+
+  /// The current level's per-tap timer **after** the difficulty
+  /// multiplier is applied. Nil when the level has no timer (warm-up
+  /// levels) or no config is loaded.
+  var effectiveTimePerResponse: Double? {
+    guard let base = currentLevelConfig?.timePerResponse else { return nil }
+    return base * mistakeTolerance.timeMultiplier
   }
 
   var canProceedToNextLevel: Bool {

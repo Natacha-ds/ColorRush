@@ -543,7 +543,7 @@ struct LevelGameView: View {
               if let levelConfig = levelRun.currentLevelConfig,
                  levelConfig.hasTimeLimit, !levelConfig.isNonPunitiveRefresh
               {
-                let timePerResponse = levelConfig.timePerResponse ?? 1.0
+                let timePerResponse = levelRun.effectiveTimePerResponse ?? 1.0
                 let roundProgress = max(0.0, min(1.0, roundTimeRemaining / timePerResponse))
                 let isLow = roundTimeRemaining <= timePerResponse * 0.3
                 GeometryReader { rg in
@@ -936,7 +936,8 @@ struct LevelGameView: View {
       "gameType": levelRun.gameType.rawValue,
       "mistakeTolerance": levelRun.mistakeTolerance.rawValue,
       "requiredScore": levelRun.getRequiredScore(),
-      "timePerResponse": levelConfig.timePerResponse as Any,
+      "timePerResponseBase": levelConfig.timePerResponse as Any,
+      "timePerResponseEffective": levelRun.effectiveTimePerResponse as Any,
       "durationSec": levelConfig.durationSeconds,
     ])
 
@@ -1023,7 +1024,7 @@ struct LevelGameView: View {
       if let levelConfig = levelRun.currentLevelConfig,
          levelConfig.hasTimeLimit
       {
-        startRoundTimer(timeLimit: levelConfig.timePerResponse ?? 1.5)
+        startRoundTimer(timeLimit: levelRun.effectiveTimePerResponse ?? 1.5)
       }
     }
     pendingActivation = item
@@ -1068,7 +1069,7 @@ struct LevelGameView: View {
       if let levelConfig = levelRun.currentLevelConfig,
          levelConfig.hasTimeLimit
       {
-        startRoundTimer(timeLimit: levelConfig.timePerResponse ?? 1.5)
+        startRoundTimer(timeLimit: levelRun.effectiveTimePerResponse ?? 1.5)
       }
     }
     pendingActivation = item
