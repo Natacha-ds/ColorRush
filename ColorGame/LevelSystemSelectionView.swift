@@ -132,6 +132,7 @@ struct LevelSystemSelectionView: View {
     let isSelected = selectedGameType == gameType
     let isRecommended = gameType == .colorOnly && shouldRecommendColorOnly
     return Button {
+      SoundService.shared.play(.secondary)
       withAnimation(.easeOut(duration: 0.15)) {
         storedGameTypeRaw = gameType.rawValue
         levelRun.gameType = gameType
@@ -210,6 +211,7 @@ struct LevelSystemSelectionView: View {
     let isSelected = selectedMistakeTolerance == tolerance
     let tone = tolerance.difficultyTone
     return Button {
+      SoundService.shared.play(.secondary)
       withAnimation(.easeOut(duration: 0.15)) {
         selectedMistakeTolerance = tolerance
         levelRun.mistakeTolerance = tolerance

@@ -161,6 +161,7 @@ struct LeaderboardView: View {
   private func modeTab(for gameType: GameType) -> some View {
     let isActive = gameType == selectedGameType
     return Button {
+      SoundService.shared.play(.secondary)
       withAnimation(.easeOut(duration: 0.15)) {
         selectedGameType = gameType
       }
@@ -201,6 +202,7 @@ struct LeaderboardView: View {
   private func difficultyChip(for tolerance: MistakeTolerance) -> some View {
     let isActive = tolerance == selectedMistakeTolerance
     return Button {
+      SoundService.shared.play(.secondary)
       withAnimation(.easeOut(duration: 0.15)) {
         selectedMistakeTolerance = tolerance
       }
@@ -282,6 +284,7 @@ struct LeaderboardView: View {
   private var globalRankingCTA: some View {
     VStack(spacing: Theme.Spacing.xs) {
       Button {
+        SoundService.shared.play(.secondary)
         gameCenter.presentLeaderboard(
           gameType: selectedGameType,
           mistakeTolerance: selectedMistakeTolerance

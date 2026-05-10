@@ -483,6 +483,7 @@ struct LevelGameView: View {
 
                 if levelRun.shouldShowDevTools, !levelRun.isCompleted {
                   Button(action: {
+                    SoundService.shared.play(.secondary)
                     levelRun.skipToNextLevel()
                     startNewLevel()
                   }) {
@@ -646,7 +647,7 @@ struct LevelGameView: View {
           clearAllSparkBursts()
         }
       }
-      .onChange(of: levelRun.lastBonusEarned) { newValue in
+      .onChange(of: levelRun.lastBonusEarned) { _, newValue in
         if newValue > 0 {
           streakDisplayCount = levelRun.currentStreak
           showStreakAnimation = true
@@ -883,7 +884,7 @@ struct LevelGameView: View {
   }
 
   private func checkLevelStatus() {
-    guard let levelConfig = levelRun.currentLevelConfig else { return }
+    guard levelRun.currentLevelConfig != nil else { return }
 
     // Only check for failure conditions during gameplay
     // Level completion is checked when timer runs out
@@ -897,7 +898,7 @@ struct LevelGameView: View {
   }
 
   private func startLevel() {
-    guard let levelConfig = levelRun.currentLevelConfig else { return }
+    guard levelRun.currentLevelConfig != nil else { return }
 
     // Show level intro pop-in first
     showLevelIntro = true
@@ -1157,7 +1158,7 @@ struct LevelGameView: View {
     ]
 
     // Count correct tiles before modifications
-    var correctTilesCount = fallbackGrid.filter { $0 != announcedColor }.count
+    let correctTilesCount = fallbackGrid.filter { $0 != announcedColor }.count
     var positionsToMakeIncorrect: [Int] = []
     for (position, consecutiveCount) in consecutiveCorrectByPosition {
       guard position < fallbackGrid.count else { continue }
@@ -1541,7 +1542,7 @@ struct LevelGameView: View {
     endGameSession()
 
     // Check if level was completed successfully
-    guard let levelConfig = levelRun.currentLevelConfig else {
+    guard levelRun.currentLevelConfig != nil else {
       isLevelFailed = true
       failedReason = .insufficientScore
       return
@@ -1980,7 +1981,10 @@ private struct LevelResultBody<PrimaryButton: View, Icon: View>: View {
         primaryButton
           .padding(.horizontal, Theme.Spacing.xl)
 
-        Button(action: onBackToHome) {
+        Button {
+          SoundService.shared.play(.secondary)
+          onBackToHome()
+        } label: {
           Text("Home")
             .font(.crButtonLabel)
             .textCase(.uppercase)
@@ -2160,7 +2164,10 @@ struct FinalWinView: View {
         // Buttons
         VStack(spacing: 16) {
           // Play Harder button - most visible with color
-          Button(action: onPlayHarder) {
+          Button {
+            SoundService.shared.play(.main)
+            onPlayHarder()
+          } label: {
             Text("Play Harder")
               .font(.system(size: 21, weight: .bold))
               .foregroundColor(.white)
@@ -2182,7 +2189,10 @@ struct FinalWinView: View {
           }
 
           // See Leaderboard button - less visible
-          Button(action: onSeeLeaderboard) {
+          Button {
+            SoundService.shared.play(.secondary)
+            onSeeLeaderboard()
+          } label: {
             Text("See Leaderboard")
               .font(.system(size: 18, weight: .semibold))
               .foregroundColor(.primary)
@@ -2320,7 +2330,10 @@ struct LevelGameOverView: View {
         .buttonStyle(.crDanger)
         .padding(.horizontal, Theme.Spacing.xl)
 
-        Button(action: onBackToHome) {
+        Button {
+          SoundService.shared.play(.secondary)
+          onBackToHome()
+        } label: {
           Text("Back to Home")
             .font(.crButtonLabel)
             .textCase(.uppercase)
@@ -2392,6 +2405,7 @@ struct LevelGameOverView: View {
   // Remove Ads holders short-circuit straight to onReward inside
   // showRewardedAdIfReady — no ad shown.
   private func handleContinueTap() {
+    SoundService.shared.play(.main)
     levelRun.markReviveAttempted()
     ads.showRewardedAdIfReady(
       onReward: {

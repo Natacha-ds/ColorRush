@@ -26,5 +26,6 @@ struct PrimaryCircularButtonStyle: ButtonStyle {
       .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
       .opacity(configuration.isPressed ? 0.92 : 1.0)
       .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+      .clickSound(.main, isPressed: configuration.isPressed)
   }
 }

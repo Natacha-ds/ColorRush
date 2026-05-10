@@ -190,6 +190,7 @@ struct HomeView: View {
 
   private func triggerPurchase() {
     guard !isPurchasing else { return }
+    SoundService.shared.play(.secondary)
     isPurchasing = true
     Task {
       defer { isPurchasing = false }
@@ -203,6 +204,7 @@ struct HomeView: View {
 
   private func triggerRestore() {
     guard !isRestoring else { return }
+    SoundService.shared.play(.secondary)
     isRestoring = true
     Task {
       defer { isRestoring = false }
