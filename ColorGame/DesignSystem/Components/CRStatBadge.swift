@@ -24,7 +24,7 @@ struct CRStatBadge: View {
     }
   }
 
-  let label: String
+  let label: LocalizedStringKey
   let value: String
   var tone: Tone = .neutral
 
@@ -34,7 +34,7 @@ struct CRStatBadge: View {
         .font(.crLabel)
         .textCase(.uppercase)
         .foregroundStyle(Theme.Colors.textSecondary)
-      Text(value)
+      Text(verbatim: value)
         .font(.crTitle)
         .foregroundStyle(tone.color)
     }

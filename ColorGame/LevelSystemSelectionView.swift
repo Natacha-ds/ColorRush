@@ -3,16 +3,16 @@ import SwiftUI
 // MARK: - View-layer brand labels & tones
 
 private extension GameType {
-  var brandLabel: String {
+  var brandLabel: LocalizedStringKey {
     switch self {
-    case .colorOnly: "PURE"
+    case .colorOnly: "COLOR"
     case .colorAndText: "COLOR+WORD"
     }
   }
 }
 
 private extension MistakeTolerance {
-  var brandLabel: String {
+  var brandLabel: LocalizedStringKey {
     switch self {
     case .easy: "ROOKIE"
     case .normal: "PRO"
@@ -180,14 +180,14 @@ struct LevelSystemSelectionView: View {
     .buttonStyle(.plain)
   }
 
-  private func modeTitle(for gameType: GameType) -> String {
+  private func modeTitle(for gameType: GameType) -> LocalizedStringKey {
     switch gameType {
     case .colorOnly: "Color ONLY"
     case .colorAndText: "Color and Text"
     }
   }
 
-  private func modeDescription(for gameType: GameType) -> String {
+  private func modeDescription(for gameType: GameType) -> LocalizedStringKey {
     switch gameType {
     case .colorOnly:
       "A color is called. Tap any square that's not that color."
@@ -251,7 +251,7 @@ struct LevelSystemSelectionView: View {
     .buttonStyle(.plain)
   }
 
-  private func difficultyDescription(for tolerance: MistakeTolerance) -> String {
+  private func difficultyDescription(for tolerance: MistakeTolerance) -> LocalizedStringKey {
     switch tolerance {
     case .easy: "5 lives - good to start"
     case .normal: "3 lives - the real deal"
@@ -317,7 +317,7 @@ private struct ModeSwatchGrid: View {
   private struct Tile: Identifiable {
     let id = UUID()
     let color: Color
-    let label: String
+    let label: LocalizedStringKey
   }
 
   /// Tiles for the Color and Text variant — each label intentionally

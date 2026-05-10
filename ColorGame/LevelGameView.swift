@@ -516,21 +516,20 @@ struct LevelGameView: View {
               Spacer(minLength: Theme.Spacing.lg)
 
               // LEVEL XX title
-              Text(String(format: "LEVEL %02d", levelRun.currentLevel))
+              Text("LEVEL \(levelRun.currentLevel)")
                 .font(.crDisplay)
                 .textCase(.uppercase)
                 .foregroundStyle(Theme.Colors.textPrimary)
 
-              // Hourglass + countdown
+              // Hourglass + countdown (number only, large, white — turns danger under 5s)
               HStack(spacing: Theme.Spacing.sm) {
                 Image(systemName: "hourglass")
-                  .font(.system(size: 16, weight: .bold))
+                  .font(.system(size: 22, weight: .bold))
                   .foregroundStyle(Theme.Colors.accentSecondary)
-                Text("\(Int(timeRemaining.rounded(.up))) SEC LEFT")
-                  .font(.crLabel)
-                  .textCase(.uppercase)
+                Text(verbatim: "\(Int(timeRemaining.rounded(.up)))")
+                  .font(.crTitle)
                   .foregroundStyle(
-                    timeRemaining <= 5 ? Theme.Colors.danger : Theme.Colors.textSecondary
+                    timeRemaining <= 5 ? Theme.Colors.danger : Theme.Colors.textPrimary
                   )
               }
 
@@ -1679,12 +1678,11 @@ struct LevelIntroView: View {
 
   @State private var progress: Double = 1.0
 
-  private var subtitle: String {
-    let levelStr = String(format: "Level %02d", levelRun.currentLevel)
+  private var subtitle: LocalizedStringKey {
     if levelRun.currentLevel == 1 || levelRun.currentLevel == 2 {
-      return "\(levelStr) - Warm up"
+      return "Level \(levelRun.currentLevel) - Warm up"
     }
-    return levelStr
+    return "Level \(levelRun.currentLevel)"
   }
 
   private var formattedTime: String {
@@ -1878,9 +1876,9 @@ private struct LevelResultBody<PrimaryButton: View, Icon: View>: View {
   let remainingLives: Int
   let totalLives: Int
   let icon: Icon
-  let headline: String
+  let headline: LocalizedStringKey
   let headlineColor: Color
-  let subtitle: String
+  let subtitle: LocalizedStringKey
   let dividerColor: Color
   let levelScore: Int
   let requiredScore: Int
@@ -2024,7 +2022,7 @@ struct LevelCompleteView: View {
         .foregroundStyle(Theme.Colors.success),
       headline: "Amazing",
       headlineColor: Theme.Colors.success,
-      subtitle: String(format: "Level %02d - Succeed", levelRun.currentLevel),
+      subtitle: "Level \(levelRun.currentLevel) - Succeed",
       dividerColor: Theme.Colors.success,
       levelScore: finalLevelScore,
       requiredScore: levelRun.getRequiredScore(),
@@ -2078,7 +2076,7 @@ struct LevelFailedView: View {
         .foregroundStyle(Theme.Colors.warning),
       headline: "Too slow",
       headlineColor: Theme.Colors.textPrimary,
-      subtitle: String(format: "Level %02d - Failed", levelRun.currentLevel),
+      subtitle: "Level \(levelRun.currentLevel) - Failed",
       dividerColor: Theme.Colors.warning,
       levelScore: finalLevelScore,
       requiredScore: levelRun.getRequiredScore(),
@@ -2440,7 +2438,7 @@ struct ColorAndTextTile: View {
             )
         )
 
-      Text(tile.textLabel.uppercased())
+      Text(LocalizedStringKey(tile.textLabel.uppercased()))
         .font(.crHeadline)
         .foregroundStyle(textColor(for: tile.backgroundColor))
     }

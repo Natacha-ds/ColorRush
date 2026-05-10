@@ -6,8 +6,8 @@
 import SwiftUI
 
 struct CRSectionHeader: View {
-  let title: String
-  var step: String?
+  let title: LocalizedStringKey
+  var step: LocalizedStringKey?
   var onBack: (() -> Void)?
 
   var body: some View {

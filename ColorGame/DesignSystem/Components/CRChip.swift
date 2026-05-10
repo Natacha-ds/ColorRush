@@ -34,9 +34,26 @@ struct CRChip: View {
     }
   }
 
-  let title: String
+  private enum Content {
+    case localized(LocalizedStringKey)
+    case verbatim(String)
+  }
+
+  private let content: Content
   var icon: Image?
   var tone: Tone = .neutral
+
+  init(title: LocalizedStringKey, icon: Image? = nil, tone: Tone = .neutral) {
+    self.content = .localized(title)
+    self.icon = icon
+    self.tone = tone
+  }
+
+  init(verbatim: String, icon: Image? = nil, tone: Tone = .neutral) {
+    self.content = .verbatim(verbatim)
+    self.icon = icon
+    self.tone = tone
+  }
 
   var body: some View {
     HStack(spacing: Theme.Spacing.xs) {
@@ -44,9 +61,16 @@ struct CRChip: View {
         icon
           .renderingMode(.template)
       }
-      Text(title)
-        .font(.crPill)
-        .textCase(.uppercase)
+      Group {
+        switch content {
+        case .localized(let key):
+          Text(key)
+        case .verbatim(let value):
+          Text(verbatim: value)
+        }
+      }
+      .font(.crPill)
+      .textCase(.uppercase)
     }
     .foregroundStyle(tone.foreground)
     .padding(.vertical, Theme.Spacing.xs + 2)
