@@ -315,8 +315,7 @@ struct LevelGameView: View {
                 }
               },
               onBackToHome: {
-                let totalScore = levelRun.globalScore + levelRun
-                  .levelPositivePoints
+                let totalScore = levelRun.globalScore + levelRun.currentScore
                 if totalScore > 0 {
                   LeaderboardStore.shared.addScore(
                     totalScore,
@@ -359,8 +358,7 @@ struct LevelGameView: View {
               onBackToHome: {
                 // Save score to leaderboard if positive when run ends (game
                 // over)
-                let totalScore = levelRun.globalScore + levelRun
-                  .levelPositivePoints
+                let totalScore = levelRun.globalScore + levelRun.currentScore
                 if totalScore > 0 {
                   LeaderboardStore.shared.addScore(
                     totalScore,
@@ -395,8 +393,7 @@ struct LevelGameView: View {
               },
               onBackToHome: {
                 // Save score to leaderboard if positive when run ends
-                let totalScore = levelRun.globalScore + levelRun
-                  .levelPositivePoints
+                let totalScore = levelRun.globalScore + levelRun.currentScore
                 if totalScore > 0 {
                   LeaderboardStore.shared.addScore(
                     totalScore,
@@ -428,8 +425,7 @@ struct LevelGameView: View {
               HStack(alignment: .top, spacing: Theme.Spacing.md) {
                 Button(action: {
                   endGameSession()
-                  let totalScore = levelRun.globalScore + levelRun
-                    .levelPositivePoints
+                  let totalScore = levelRun.globalScore + levelRun.currentScore
                   if totalScore > 0 {
                     LeaderboardStore.shared.addScore(
                       totalScore,
@@ -2102,7 +2098,7 @@ struct LevelCompleteView: View {
   }
 
   private var totalScoreWithCurrentLevel: Int {
-    levelRun.globalScore + levelRun.levelPositivePoints
+    levelRun.globalScore + levelRun.currentScore
   }
 
   var body: some View {
@@ -2152,7 +2148,7 @@ struct LevelFailedView: View {
   let onBackToHome: () -> Void
 
   private var totalScoreWithCurrentLevel: Int {
-    levelRun.globalScore + levelRun.levelPositivePoints
+    levelRun.globalScore + levelRun.currentScore
   }
 
   private var finalLevelScore: Int {
@@ -2204,7 +2200,7 @@ struct FinalWinView: View {
 
   // Total score including current level's positive points.
   private var totalScoreWithCurrentLevel: Int {
-    levelRun.globalScore + levelRun.levelPositivePoints
+    levelRun.globalScore + levelRun.currentScore
   }
 
   var body: some View {
@@ -2338,7 +2334,7 @@ struct LevelGameOverView: View {
   }
 
   private var totalScoreWithCurrentLevel: Int {
-    levelRun.globalScore + levelRun.levelPositivePoints
+    levelRun.globalScore + levelRun.currentScore
   }
 
   var body: some View {

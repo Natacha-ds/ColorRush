@@ -362,16 +362,13 @@ class LevelRun: ObservableObject {
   }
 
   func completeLevel() {
-    guard let levelConfig = currentLevelConfig else { return }
+    guard currentLevelConfig != nil else { return }
 
-    // Add level's positive points to globalScore only when level completes
-    // successfully
-    // Note: levelPositivePoints already includes streak bonuses, so we don't
-    // add levelStreakBonuses separately
-    globalScore += levelPositivePoints
+    // Add the level's *net* score (positive points minus clamped penalties)
+    // to the run total. Source of truth: currentScore. Penalties are part of
+    // currentScore (clamped at 0) so they're naturally reflected.
+    globalScore += currentScore
 
-    // Store the level score (currentScore is already the level score since we
-    // reset it to 0)
     levelScores[currentLevel] = currentScore
 
     completedLevels.append(currentLevel)
@@ -413,23 +410,19 @@ class LevelRun: ObservableObject {
   }
 
   func resetLevelStats() {
-    // Remove penalties from failed attempt from globalScore
-    globalScore += levelPenalties // Add back the penalties that were subtracted
-
+    // No globalScore refund needed: globalScore is only mutated on
+    // completeLevel(), so a failed attempt never touched it.
     levelWrongTaps = 0
     levelTimeouts = 0
     levelCorrectAnswers = 0
-    currentScore = 0 // Reset level score to 0 when retrying
-    levelPositivePoints = 0 // Reset positive points tracker when retrying
-    levelBasePoints = 0 // Reset base points tracker when retrying
-    levelPenalties = 0 // Reset penalties tracker
-    currentStreak = 0 // Reset streak when retrying
-    levelStreakBonuses = 0 // Reset streak bonuses when retrying
-    lastBonusEarned = 0 // Reset bonus animation trigger
+    currentScore = 0
+    levelPositivePoints = 0
+    levelBasePoints = 0
+    levelPenalties = 0
+    currentStreak = 0
+    levelStreakBonuses = 0
+    lastBonusEarned = 0
     // Note: livesLost is NOT reset here (run-wide)
-    // Note: Positive points from failed attempt are discarded (never added to
-    // globalScore)
-    // Note: Penalties from failed attempt are now removed from globalScore
   }
 
   func addCorrectAnswer() {
@@ -473,12 +466,12 @@ class LevelRun: ObservableObject {
   func addWrongAnswer() {
     currentStreak = 0
 
-    // Wrong answer costs points (not lives). Scores floor at 0; track only the
-    // amount actually subtracted from globalScore so retry refunds stay correct.
+    // Wrong answer costs points (not lives). Score floors at 0. Track the
+    // amount actually subtracted (post-clamp) so the run total reflects
+    // forgiven penalties when the level score was already 0.
+    let oldCurrent = currentScore
     currentScore = max(0, currentScore - 10)
-    let oldGlobal = globalScore
-    globalScore = max(0, globalScore - 10)
-    levelPenalties += oldGlobal - globalScore
+    levelPenalties += oldCurrent - currentScore
 
     levelWrongTaps += 1
   }
@@ -486,12 +479,9 @@ class LevelRun: ObservableObject {
   func addTimeout() {
     currentStreak = 0
 
-    // Timeout costs points (not lives). Same clamping/refund-tracking pattern
-    // as addWrongAnswer.
+    let oldCurrent = currentScore
     currentScore = max(0, currentScore - 5)
-    let oldGlobal = globalScore
-    globalScore = max(0, globalScore - 5)
-    levelPenalties += oldGlobal - globalScore
+    levelPenalties += oldCurrent - currentScore
 
     timeouts += 1
     levelTimeouts += 1
