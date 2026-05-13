@@ -2538,6 +2538,10 @@ struct ColorAndTextTile: View {
   let tile: Tile
   let action: (CGPoint) -> Void
 
+  /// Mirrors ColorTile's press-feedback state. See ColorTile for the
+  /// rationale on @GestureState + zero-duration LongPressGesture.
+  @GestureState private var isPressed = false
+
   private func textColor(for backgroundColor: Color) -> Color {
     backgroundColor == .yellow ? .black : .white
   }
@@ -2568,11 +2572,19 @@ struct ColorAndTextTile: View {
         .font(.crHeadline)
         .foregroundStyle(textColor(for: tile.backgroundColor))
     }
+    .scaleEffect(isPressed ? 0.92 : 1.0)
+    .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isPressed)
     .contentShape(shape)
     .gesture(
       SpatialTapGesture()
         .onEnded { event in
           action(event.location)
+        }
+    )
+    .simultaneousGesture(
+      LongPressGesture(minimumDuration: 0)
+        .updating($isPressed) { _, state, _ in
+          state = true
         }
     )
   }
