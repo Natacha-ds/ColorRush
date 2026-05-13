@@ -4,11 +4,11 @@ struct ColorTile: View {
   let color: Color
   let action: (CGPoint) -> Void
 
-  /// Press-down state. Driven by a zero-duration LongPressGesture so the
-  /// tile springs back automatically the instant the finger lifts, even if
-  /// the user drags off-tile mid-press. SpatialTapGesture stays alongside
-  /// to keep capturing the exact tap location for the particle burst.
-  @GestureState private var isPressed = false
+  /// Press-down state, driven by a DragGesture with zero minimum distance:
+  /// onChanged fires on touch-down and keeps the state true while the finger
+  /// is down; onEnded fires on touch-up. SpatialTapGesture stays alongside
+  /// to capture the exact tap location for the particle burst.
+  @State private var isPressed = false
 
   var body: some View {
     let shape = RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous)
@@ -30,8 +30,8 @@ struct ColorTile: View {
             lineWidth: 2
           )
       )
-      .scaleEffect(isPressed ? 0.92 : 1.0)
-      .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isPressed)
+      .scaleEffect(isPressed ? 0.88 : 1.0)
+      .animation(.spring(response: 0.28, dampingFraction: 0.65), value: isPressed)
       .contentShape(shape)
       .gesture(
         SpatialTapGesture()
@@ -40,9 +40,12 @@ struct ColorTile: View {
           }
       )
       .simultaneousGesture(
-        LongPressGesture(minimumDuration: 0)
-          .updating($isPressed) { _, state, _ in
-            state = true
+        DragGesture(minimumDistance: 0)
+          .onChanged { _ in
+            if !isPressed { isPressed = true }
+          }
+          .onEnded { _ in
+            isPressed = false
           }
       )
   }
