@@ -3,7 +3,6 @@
 //  ColorRush
 //
 //  Custom bottom navigation chrome shared by Home and Leaderboard.
-//  Uses iOS 26 Liquid Glass effect for the pill background.
 //
 
 import SwiftUI
@@ -46,9 +45,13 @@ struct CRTabBar: View {
     }
     .padding(.horizontal, Theme.Spacing.lg)
     .padding(.vertical, Theme.Spacing.xs)
-    .glassEffect(
-      .regular.tint(Theme.Colors.surfaceElevated.opacity(0.5)),
-      in: Capsule(style: .continuous)
-    )
+    .background {
+      Capsule(style: .continuous)
+        .fill(.ultraThinMaterial)
+        .overlay(
+          Capsule(style: .continuous)
+            .fill(Theme.Colors.surfaceElevated.opacity(0.5))
+        )
+    }
   }
 }
