@@ -1,25 +1,8 @@
 import SwiftUI
 
-// MARK: - View-layer brand labels & tones
-
-private extension GameType {
-  var brandLabel: LocalizedStringKey {
-    switch self {
-    case .colorOnly: "COLOR"
-    case .colorAndText: "COLOR+WORD"
-    }
-  }
-}
+// MARK: - View-layer tones
 
 private extension MistakeTolerance {
-  var brandLabel: LocalizedStringKey {
-    switch self {
-    case .easy: "ROOKIE"
-    case .normal: "PRO"
-    case .hard: "MASTER"
-    }
-  }
-
   var difficultyTone: Color {
     switch self {
     case .easy: Theme.Colors.success

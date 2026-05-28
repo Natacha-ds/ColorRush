@@ -20,7 +20,7 @@ final class SpeechService {
   }
 
   private func configureAudioSession() {
-    #if os(iOS)
+    #if os(iOS) && !targetEnvironment(simulator)
     do {
       // .playback (vs .ambient) so the called-color voice prompt — which is
       // mechanically required to play — keeps playing even when the silent

@@ -1,26 +1,5 @@
 import SwiftUI
 
-// MARK: - View-layer brand labels
-
-private extension GameType {
-  var brandLabel: LocalizedStringKey {
-    switch self {
-    case .colorOnly: "COLOR"
-    case .colorAndText: "COLOR+WORD"
-    }
-  }
-}
-
-private extension MistakeTolerance {
-  var brandLabel: LocalizedStringKey {
-    switch self {
-    case .easy: "ROOKIE"
-    case .normal: "PRO"
-    case .hard: "INSANE"
-    }
-  }
-}
-
 // MARK: - Display row union
 
 private enum DisplayRow: Identifiable {
@@ -118,6 +97,10 @@ struct LeaderboardView: View {
         .padding(.horizontal, Theme.Spacing.xl)
 
       Spacer(minLength: 0)
+
+      shareMyBestButton
+        .frame(maxWidth: .infinity, alignment: .center)
+        .padding(.horizontal, Theme.Spacing.xl)
 
       globalRankingCTA
         .padding(.horizontal, Theme.Spacing.xl)
@@ -286,6 +269,46 @@ struct LeaderboardView: View {
         .foregroundStyle(Theme.Colors.textSecondary)
         .multilineTextAlignment(.center)
     }
+  }
+
+  // MARK: Share my best CTA
+
+  private var localBestScore: Int {
+    leaderboardStore
+      .getScores(
+        gameType: selectedGameType,
+        mistakeTolerance: selectedMistakeTolerance
+      )
+      .first?.score ?? 0
+  }
+
+  private var shareMyBestButton: some View {
+    let best = localBestScore
+    let disabled = best <= 0
+    return ScoreShareLink(
+      score: best,
+      gameType: selectedGameType,
+      mistakeTolerance: selectedMistakeTolerance,
+      source: .leaderboard,
+      accessibilityLabel: "Share my best score for the current mode and difficulty"
+    ) {
+      HStack(spacing: Theme.Spacing.sm) {
+        Image(systemName: "square.and.arrow.up")
+          .font(.system(size: 14, weight: .bold))
+        Text("SHARE MY BEST")
+          .font(.crButtonLabel)
+          .textCase(.uppercase)
+      }
+      .foregroundStyle(Theme.Colors.logoWhite)
+      .padding(.vertical, Theme.Spacing.md)
+      .padding(.horizontal, Theme.Spacing.xl)
+      .background(
+        Capsule(style: .continuous)
+          .fill(Theme.Gradient.primary)
+      )
+    }
+    .disabled(disabled)
+    .opacity(disabled ? 0.5 : 1.0)
   }
 
   // MARK: Global Ranking CTA

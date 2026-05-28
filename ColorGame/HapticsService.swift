@@ -20,13 +20,13 @@ class HapticsService {
   private init() {}
 
   func lightImpact() {
-    #if canImport(UIKit)
+    #if canImport(UIKit) && !targetEnvironment(simulator)
       lightGenerator.impactOccurred()
     #endif
   }
 
   func heavyImpact() {
-    #if canImport(UIKit)
+    #if canImport(UIKit) && !targetEnvironment(simulator)
       heavyGenerator.impactOccurred()
     #endif
   }

@@ -860,19 +860,11 @@ struct LevelGameView: View {
       consecutiveCorrectByPosition[index] = 0
     }
 
-    print(
-      "Tile tapped: index \(index), \(colorName(for: tappedBackgroundColor)), Announced: \(colorName(for: announcedColor)), Correct: \(isCorrect), Consecutive correct for this position: \(consecutiveCorrectByPosition[index] ?? 0)"
-    )
-
     if isCorrect {
-      // Correct tap
       levelRun.addCorrectAnswer()
-      print("Score after correct: \(levelRun.currentScore)")
       hapticsService.lightImpact()
     } else {
-      // Incorrect tap
       levelRun.addWrongAnswer()
-      print("Score after incorrect: \(levelRun.currentScore)")
       hapticsService.heavyImpact()
       showErrorFlash()
     }
@@ -1520,9 +1512,6 @@ struct LevelGameView: View {
     // Don't check isGameActive here because it might be false when timer
     // expires
     guard isGameSessionActive, !isLevelComplete, !isLevelFailed else {
-      print(
-        "Timeout blocked: isGameSessionActive=\(isGameSessionActive), isLevelComplete=\(isLevelComplete), isLevelFailed=\(isLevelFailed)"
-      )
       return
     }
 
@@ -1536,9 +1525,7 @@ struct LevelGameView: View {
       refreshBoardOnly()
     } else {
       // Regular timeout: apply penalty
-      print("Applying timeout penalty: -5 points")
       levelRun.addTimeout()
-      print("Score after timeout: \(levelRun.currentScore)")
       hapticsService.heavyImpact()
       showErrorFlash()
 
@@ -2424,6 +2411,29 @@ struct LevelGameOverView: View {
         }
         .buttonStyle(.crDanger)
         .padding(.horizontal, Theme.Spacing.xl)
+
+        ScoreShareLink(
+          score: totalScoreWithCurrentLevel,
+          gameType: levelRun.gameType,
+          mistakeTolerance: levelRun.mistakeTolerance,
+          source: .gameOver,
+          accessibilityLabel: "Share my run score"
+        ) {
+          HStack(spacing: Theme.Spacing.sm) {
+            Image(systemName: "square.and.arrow.up")
+              .font(.system(size: 14, weight: .bold))
+            Text("SHARE")
+              .font(.crButtonLabel)
+              .textCase(.uppercase)
+          }
+          .foregroundStyle(Theme.Colors.textPrimary)
+          .padding(.vertical, Theme.Spacing.md)
+          .padding(.horizontal, Theme.Spacing.xl)
+          .background(
+            Capsule(style: .continuous)
+              .fill(Theme.Colors.surfaceElevated)
+          )
+        }
 
         Button {
           SoundService.shared.play(.secondary)
