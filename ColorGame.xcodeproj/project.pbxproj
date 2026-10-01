@@ -123,6 +123,7 @@
 				BB75943F2E86AA890043F341 /* Resources */,
 				C69333A82ED3299B0078C8A6 /* SwiftLint */,
 				C69333AC2ED330B90078C8A6 /* SwiftFormat */,
+				C62D1391306E7941002F0DEB /* Upload dSYMs to Sentry */,
 			);
 			buildRules = (
 			);
@@ -266,6 +267,25 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
+		C62D1391306E7941002F0DEB /* Upload dSYMs to Sentry */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF/${EXECUTABLE_NAME}",
+			);
+			name = "Upload dSYMs to Sentry";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Type a script or drag a script file from your workspace to insert its path.\n\"${SRCROOT}/scripts/upload-dsyms.sh\"\n";
+		};
 		C69333A82ED3299B0078C8A6 /* SwiftLint */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
