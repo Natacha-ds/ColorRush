@@ -109,9 +109,6 @@ final class LogService {
     properties["$os_version"] = Self.osVersion
     properties["language"] = Locale.preferredLanguages.first ?? "??"
     properties["level"] = level
-    // No person profile: the install id is enough for funnels and retention,
-    // and nothing more than necessary is stored.
-    properties["$process_person_profile"] = false
 
     let body: [String: Any] = [
       "api_key": Self.apiKey,
