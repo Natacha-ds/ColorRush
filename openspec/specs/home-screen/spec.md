@@ -109,5 +109,5 @@ The Home screen SHALL render a gear icon button (`Image(systemName: "gearshape.f
 
 #### Scenario: Legal link works from the sheet
 - **WHEN** the user taps "Legal" in the Settings sheet
-- **THEN** the device opens `https://nicode.bichu.fr/?lang={en|fr}#privacy` for the user's preferred localization, identical to the prior `MainTabView` legal footer behavior
+- **THEN** the device opens `https://tonic-studio.com/{en|fr}/privacy` for the user's preferred localization, identical to the prior `MainTabView` legal footer behavior
 

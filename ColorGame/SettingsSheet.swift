@@ -139,7 +139,7 @@ struct SettingsSheet: View {
     let locale = Bundle.main.preferredLocalizations.first ?? "en"
     let normalized = locale.hasPrefix("fr") ? "fr" : "en"
     LogService.shared.log("settings_legal_pressed", ["locale": normalized])
-    if let url = URL(string: "https://nicode.bichu.fr/?lang=\(normalized)#privacy") {
+    if let url = URL(string: "https://tonic-studio.com/\(normalized)/privacy") {
       openURL(url)
     }
   }
