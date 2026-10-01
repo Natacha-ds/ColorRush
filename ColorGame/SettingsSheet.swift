@@ -108,6 +108,16 @@ struct SettingsSheet: View {
           .frame(maxWidth: .infinity, alignment: .leading)
           .padding(.vertical, Theme.Spacing.md)
       }
+
+      // Selectable so players can copy it into an email when they exercise
+      // their rights over their usage data (access, erasure).
+      if let sessionId = LogService.shared.sessionId {
+        Text("Analytics · \(sessionId)")
+          .font(.crCaptionUpright)
+          .foregroundStyle(Theme.Colors.textSecondary)
+          .textSelection(.enabled)
+          .padding(.top, Theme.Spacing.sm)
+      }
     }
   }
 
