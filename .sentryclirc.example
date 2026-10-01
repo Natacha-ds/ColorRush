@@ -1,0 +1,6 @@
+# Copie ce fichier en .sentryclirc (gitignoré) et colle ton organization
+# auth token Sentry. Il est lu automatiquement par sentry-cli.
+#
+# Token : https://tonic-studio.sentry.io/settings/auth-tokens/
+[auth]
+token=sntrys_REMPLACER

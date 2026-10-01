@@ -21,3 +21,6 @@ Pods/
 
 # Claude Code (local config only — tooling is versioned)
 .claude/settings.local.json
+
+# Sentry (auth token, local only)
+.sentryclirc
