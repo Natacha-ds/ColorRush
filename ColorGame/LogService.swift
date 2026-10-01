@@ -4,8 +4,10 @@ import Foundation
 #endif
 
 /// Lightweight event logger.
-/// - Persists a stable per-install `sessionId` in UserDefaults so events can
-///   be stitched together across launches.
+/// - Persists a per-install `sessionId` in UserDefaults so events can be
+///   stitched together across launches. The id lives 13 months at most: the
+///   CNIL caps an audience-measurement tracker exempt from consent at 13 months,
+///   with no extension on each visit, so it is renewed, never extended.
 /// - In RELEASE builds, posts each event fire-and-forget to PostHog. In DEBUG
 ///   builds, the network call is skipped entirely and the payload is printed
 ///   to the console — keeps local dev free of noise on the prod event stream.
@@ -13,6 +15,8 @@ final class LogService {
   static let shared = LogService()
 
   private static let sessionKey = "cr.session_id"
+  private static let sessionCreatedAtKey = "cr.session_created_at"
+  private static let sessionLifetimeMonths = 13
   /// PostHog project key: public by design, meant to ship in the client.
   private static let apiKey = "phc_AsSidN2fjkebi7zFjtwYVUhuHdWZfkpWpbHsRzyVsH3c"
   private static let endpoint = URL(string: "https://eu.i.posthog.com/i/v0/e/")!
@@ -29,19 +33,35 @@ final class LogService {
     self.urlSession = URLSession(configuration: config)
   }
 
-  /// Loads or generates the session id. Should be called once at app launch.
+  /// Loads, or generates, the session id. Should be called once at app launch.
   /// Returns whether this is the first launch (no prior session id).
   @discardableResult
   func bootstrap() -> Bool {
     let defaults = UserDefaults.standard
-    if let stored = defaults.string(forKey: Self.sessionKey) {
+    let now = Date()
+    let stored = defaults.string(forKey: Self.sessionKey)
+    let createdAt = defaults.object(forKey: Self.sessionCreatedAtKey) as? Date
+
+    if let stored, let createdAt, !Self.isExpired(createdAt: createdAt, now: now) {
       sessionId = stored
       return false
     }
+
+    // An id with no creation date predates the rotation: its age is unknown,
+    // so it is renewed like an expired one. That is not a first launch.
     let generated = "cr_\(Self.randomToken(length: 12))"
     defaults.set(generated, forKey: Self.sessionKey)
+    defaults.set(now, forKey: Self.sessionCreatedAtKey)
     sessionId = generated
-    return true
+    return stored == nil
+  }
+
+  private static func isExpired(createdAt: Date, now: Date) -> Bool {
+    guard
+      let expiresAt = Calendar(identifier: .gregorian).date(
+        byAdding: .month, value: sessionLifetimeMonths, to: createdAt)
+    else { return true }
+    return now >= expiresAt
   }
 
   /// Standard event log. Payload values must be JSON-serialisable.
