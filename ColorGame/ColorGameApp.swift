@@ -39,7 +39,7 @@ struct ColorRushApp: App {
     #else
       SentrySDK.start { options in
         options.dsn =
-          "https://cc4b1c5ab695783356bfe23abbec1499@o4510124195708928.ingest.de.sentry.io/4511366458769488"
+          "https://cc4b1c5ab695783356bfe23abbec1499@o4512180568260608.ingest.de.sentry.io/4511366458769488"
         options.environment = "production"
         options.enableAutoSessionTracking = false
         options.enableAppHangTracking = false
