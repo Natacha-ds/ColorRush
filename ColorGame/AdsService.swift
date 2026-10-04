@@ -17,8 +17,8 @@ final class AdsService: NSObject, ObservableObject {
     // Google's documented test rewarded ID — same guarantee.
     private let rewardedAdUnitID = "ca-app-pub-3940256099942544/1712485313"
   #else
-    private let interstitialAdUnitID = "ca-app-pub-9259578521352937/6262225438"
-    private let rewardedAdUnitID = "ca-app-pub-9259578521352937/2792777342"
+    private let interstitialAdUnitID = "ca-app-pub-5563572591835194/9901393323"
+    private let rewardedAdUnitID = "ca-app-pub-5563572591835194/6317371533"
   #endif
 
   /// Show an interstitial at most once every `frequency` levels played
