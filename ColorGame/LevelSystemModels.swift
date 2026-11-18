@@ -6,8 +6,12 @@ import Foundation
 enum GameType: String, CaseIterable, Identifiable {
   case colorOnly
   case colorAndText
+  case colorMatch
 
   var id: String { rawValue }
+
+  /// Color Match has a single bucket: no difficulty / lives step.
+  var usesDifficulty: Bool { self != .colorMatch }
 
   var displayName: String {
     switch self {
@@ -15,6 +19,8 @@ enum GameType: String, CaseIterable, Identifiable {
       String(localized: "🎨 Color Only")
     case .colorAndText:
       String(localized: "🎯 Color + Text")
+    case .colorMatch:
+      String(localized: "⚡️ Color Match")
     }
   }
 
@@ -24,6 +30,8 @@ enum GameType: String, CaseIterable, Identifiable {
       String(localized: "Match colors only")
     case .colorAndText:
       String(localized: "Match colors and text labels")
+    case .colorMatch:
+      String(localized: "Same color or not? Answer before time runs out")
     }
   }
 }

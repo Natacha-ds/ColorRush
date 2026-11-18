@@ -3,7 +3,7 @@ import SwiftUI
 struct ShareableScoreBadge: View {
   let score: Int
   let gameType: GameType
-  let mistakeTolerance: MistakeTolerance
+  let mistakeTolerance: MistakeTolerance?
 
   private static let badgeSize: CGFloat = 1080
 
@@ -12,6 +12,7 @@ struct ShareableScoreBadge: View {
     case .easy: Theme.Colors.success
     case .normal: Theme.Colors.pro
     case .hard: Theme.Colors.danger
+    case nil: Theme.Colors.accentSecondary
     }
   }
 
@@ -37,7 +38,7 @@ struct ShareableScoreBadge: View {
 
         Spacer().frame(height: 36)
 
-        Text("DON'T TAP THE ANNOUNCED COLOR")
+        Text(gameType == .colorMatch ? "SAME COLOR OR NOT?" : "DON'T TAP THE ANNOUNCED COLOR")
           .font(Font.custom(CRFontName.boldItalic, size: 42))
           .foregroundStyle(Theme.Colors.textSecondary)
           .tracking(2)
@@ -46,11 +47,18 @@ struct ShareableScoreBadge: View {
 
         Spacer().frame(height: 36)
 
-        HStack(spacing: 22) {
-          tileSwatch(.red, forbidden: true)
-          tileSwatch(.blue, forbidden: false)
-          tileSwatch(.green, forbidden: false)
-          tileSwatch(.yellow, forbidden: false)
+        if gameType == .colorMatch {
+          HStack(spacing: 40) {
+            answerSwatch(systemImage: "xmark", tint: Theme.Colors.danger)
+            answerSwatch(systemImage: "checkmark", tint: Theme.Colors.success)
+          }
+        } else {
+          HStack(spacing: 22) {
+            tileSwatch(.red, forbidden: true)
+            tileSwatch(.blue, forbidden: false)
+            tileSwatch(.green, forbidden: false)
+            tileSwatch(.yellow, forbidden: false)
+          }
         }
 
         Spacer()
@@ -67,10 +75,12 @@ struct ShareableScoreBadge: View {
         HStack(spacing: 24) {
           Text(gameType.brandLabel)
             .foregroundStyle(Theme.Colors.logoWhite)
-          Text(verbatim: "·")
-            .foregroundStyle(difficultyTone)
-          Text(mistakeTolerance.brandLabel)
-            .foregroundStyle(difficultyTone)
+          if let mistakeTolerance {
+            Text(verbatim: "·")
+              .foregroundStyle(difficultyTone)
+            Text(mistakeTolerance.brandLabel)
+              .foregroundStyle(difficultyTone)
+          }
         }
         .font(Font.custom(CRFontName.boldItalic, size: 64))
         .tracking(3)
@@ -92,6 +102,17 @@ struct ShareableScoreBadge: View {
       }
     }
     .frame(width: Self.badgeSize, height: Self.badgeSize)
+  }
+
+  private func answerSwatch(systemImage: String, tint: Color) -> some View {
+    RoundedRectangle(cornerRadius: 26, style: .continuous)
+      .fill(tint)
+      .frame(width: 130, height: 130)
+      .overlay(
+        Image(systemName: systemImage)
+          .font(.system(size: 76, weight: .black))
+          .foregroundStyle(Theme.Colors.logoWhite)
+      )
   }
 
   private func tileSwatch(_ color: Color, forbidden: Bool) -> some View {

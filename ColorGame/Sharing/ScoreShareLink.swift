@@ -11,7 +11,7 @@ private let shareAppStoreURL = "https://apps.apple.com/app/id6766084527"
 struct ScoreShareLink<Label: View>: View {
   let score: Int
   let gameType: GameType
-  let mistakeTolerance: MistakeTolerance
+  let mistakeTolerance: MistakeTolerance?
   let source: ShareSource
   let accessibilityLabel: LocalizedStringKey
   @ViewBuilder var label: () -> Label
@@ -54,7 +54,7 @@ struct ScoreShareLink<Label: View>: View {
       "source": source.rawValue,
       "score": score,
       "gameType": gameType.rawValue,
-      "mistakeTolerance": mistakeTolerance.rawValue,
+      "mistakeTolerance": mistakeTolerance?.rawValue ?? "none",
     ])
   }
 }

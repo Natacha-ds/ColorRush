@@ -56,7 +56,7 @@ final class GameCenterService: NSObject, ObservableObject {
   func submitScore(
     _ score: Int,
     gameType: GameType,
-    mistakeTolerance: MistakeTolerance
+    mistakeTolerance: MistakeTolerance?
   ) {
     guard isAuthenticated else { return }
     let id = Self.leaderboardID(
@@ -79,7 +79,7 @@ final class GameCenterService: NSObject, ObservableObject {
       }
       LogService.shared.log("gamecenter_score_submitted", [
         "gameType": gameType.rawValue,
-        "mistakeTolerance": mistakeTolerance.rawValue,
+        "mistakeTolerance": mistakeTolerance?.rawValue ?? "none",
         "score": score,
       ])
       // Refresh the player's rank for this bucket so the inline pill in
@@ -100,7 +100,7 @@ final class GameCenterService: NSObject, ObservableObject {
   /// Silent no-op when not authenticated; errors are logged.
   func refreshRank(
     for gameType: GameType,
-    mistakeTolerance: MistakeTolerance
+    mistakeTolerance: MistakeTolerance?
   ) async {
     guard isAuthenticated else { return }
     let id = Self.leaderboardID(
@@ -144,7 +144,7 @@ final class GameCenterService: NSObject, ObservableObject {
   /// not authenticated; errors are logged. Empty leaderboards write `[]`.
   func refreshTopEntries(
     for gameType: GameType,
-    mistakeTolerance: MistakeTolerance,
+    mistakeTolerance: MistakeTolerance?,
     limit: Int = 5
   ) async {
     guard isAuthenticated else { return }
@@ -190,7 +190,7 @@ final class GameCenterService: NSObject, ObservableObject {
   /// scope. No-op when not authenticated.
   func presentLeaderboard(
     gameType: GameType,
-    mistakeTolerance: MistakeTolerance
+    mistakeTolerance: MistakeTolerance?
   ) {
     guard isAuthenticated else { return }
     guard let rootVC = currentRootViewController() else { return }
@@ -212,9 +212,14 @@ final class GameCenterService: NSObject, ObservableObject {
 
   private static func leaderboardID(
     for gameType: GameType,
-    mistakeTolerance: MistakeTolerance
+    mistakeTolerance: MistakeTolerance?
   ) -> String {
     switch (gameType, mistakeTolerance) {
+    case (.colorMatch, _):
+      return "tonic.colorrush.leaderboard.colormatch"
+    case (_, nil):
+      // Difficulty-based modes always carry a tolerance; fall back to easy.
+      return leaderboardID(for: gameType, mistakeTolerance: .easy)
     case (.colorOnly, .easy):
       return "tonic.colorrush.leaderboard.coloronly_easy"
     case (.colorOnly, .normal):

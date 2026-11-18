@@ -5,6 +5,7 @@ extension GameType {
     switch self {
     case .colorOnly: "COLOR"
     case .colorAndText: "COLOR+WORD"
+    case .colorMatch: "MATCH"
     }
   }
 }

@@ -92,22 +92,87 @@ struct LevelSystemSelectionView: View {
     }
     #if !os(macOS)
     .fullScreenCover(isPresented: $isGameViewPresented) {
-      LevelGameView(levelRun: levelRun)
+      gameDestination
     }
     #else
     .sheet(isPresented: $isGameViewPresented) {
-      LevelGameView(levelRun: levelRun)
+      gameDestination
     }
     #endif
+  }
+
+  @ViewBuilder
+  private var gameDestination: some View {
+    if selectedGameType == .colorMatch {
+      ColorMatchGameView()
+    } else {
+      LevelGameView(levelRun: levelRun)
+    }
   }
 
   // MARK: Step 1 — Pick a Mode
 
   private var gameTypeSelectionView: some View {
-    VStack(spacing: Theme.Spacing.md) {
-      ForEach(GameType.allCases) { gameType in
-        modeCard(for: gameType)
+    ScrollView {
+      VStack(spacing: Theme.Spacing.md) {
+        ForEach(GameType.allCases) { gameType in
+          modeCard(for: gameType)
+        }
+        rulesPanel
+          .padding(.top, Theme.Spacing.sm)
       }
+      .padding(.top, Theme.Spacing.sm)
+    }
+    .scrollIndicators(.hidden)
+  }
+
+  // MARK: Rules panel
+
+  private var rulesPanel: some View {
+    VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+      Text("How to play")
+        .font(.crLabel)
+        .textCase(.uppercase)
+        .foregroundStyle(Theme.Colors.accentSecondary)
+      ForEach(Array(rules(for: selectedGameType).enumerated()), id: \.offset) { _, line in
+        HStack(alignment: .top, spacing: Theme.Spacing.sm) {
+          Text(verbatim: "•")
+            .font(.crBody)
+            .foregroundStyle(Theme.Colors.textSecondary)
+          Text(line)
+            .font(.crBody)
+            .foregroundStyle(Theme.Colors.textPrimary)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+      }
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .padding(Theme.Spacing.lg)
+    .background(
+      RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
+        .fill(Theme.Colors.surface)
+    )
+    .overlay(
+      RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
+        .strokeBorder(Theme.Colors.border, lineWidth: 1)
+    )
+    .id(selectedGameType)
+    .transition(.opacity)
+    .accessibilityElement(children: .combine)
+  }
+
+  private func rules(for gameType: GameType) -> [LocalizedStringKey] {
+    switch gameType {
+    case .colorOnly:
+      ["A color is called. Tap any square that's not that color."]
+    case .colorAndText:
+      ["Each square has a color and a word. Tap only when neither matches the called color."]
+    case .colorMatch:
+      [
+        "A color name is written over a colored background.",
+        "Tap ✓ if the background is the color written, ✗ if it's another color.",
+        "The timer gets faster with every card. One mistake and it's over.",
+      ]
     }
   }
 
@@ -123,17 +188,19 @@ struct LevelSystemSelectionView: View {
       }
     } label: {
       HStack(alignment: .center, spacing: Theme.Spacing.md) {
-        ModeSwatchGrid(showsLabels: gameType == .colorAndText)
-          .frame(width: 76, height: 76)
+        Group {
+          if gameType == .colorMatch {
+            MatchSwatch()
+          } else {
+            ModeSwatchGrid(showsLabels: gameType == .colorAndText)
+          }
+        }
+        .frame(width: 76, height: 76)
 
         VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
           Text(modeTitle(for: gameType))
             .font(.crHeadline)
             .foregroundStyle(Theme.Colors.textPrimary)
-          Text(modeDescription(for: gameType))
-            .font(.crBody)
-            .foregroundStyle(Theme.Colors.textSecondary)
-            .fixedSize(horizontal: false, vertical: true)
         }
         Spacer(minLength: 0)
       }
@@ -169,15 +236,7 @@ struct LevelSystemSelectionView: View {
     switch gameType {
     case .colorOnly: "Color ONLY"
     case .colorAndText: "Color and Text"
-    }
-  }
-
-  private func modeDescription(for gameType: GameType) -> LocalizedStringKey {
-    switch gameType {
-    case .colorOnly:
-      "A color is called. Tap any square that's not that color."
-    case .colorAndText:
-      "Each square has a color and a word. Tap only when neither matches the called color."
+    case .colorMatch: "Color Match"
     }
   }
 
@@ -254,8 +313,13 @@ struct LevelSystemSelectionView: View {
   private var ctaButton: some View {
     switch currentStep {
     case .gameType:
-      Button("Continue") {
-        advanceToDifficulty()
+      Button("Play") {
+        SoundService.shared.play(.main)
+        if selectedGameType.usesDifficulty {
+          advanceToDifficulty()
+        } else {
+          startColorMatch()
+        }
       }
       .buttonStyle(.crPrimary)
     case .mistakeTolerance:
@@ -291,6 +355,11 @@ struct LevelSystemSelectionView: View {
         levelRun.mistakeTolerance = .easy
       }
     }
+  }
+
+  private func startColorMatch() {
+    // run_started is logged by ColorMatchGameView (it also fires on retry).
+    isGameViewPresented = true
   }
 
   private func startLevelRun() {
@@ -348,6 +417,31 @@ private struct ModeSwatchGrid: View {
         .aspectRatio(1, contentMode: .fit)
       }
     }
+  }
+}
+
+// MARK: - Color Match swatch
+
+/// Mini card preview: a color name over a colored background with ✓ / ✗.
+private struct MatchSwatch: View {
+  var body: some View {
+    ZStack {
+      RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)
+        .fill(MatchColor.orange.color)
+      VStack(spacing: 4) {
+        Text("PINK")
+          .font(.crPill)
+          .foregroundStyle(Theme.Colors.textPrimary)
+        HStack(spacing: 6) {
+          Image(systemName: "xmark")
+            .foregroundStyle(Theme.Colors.danger)
+          Image(systemName: "checkmark")
+            .foregroundStyle(Theme.Colors.success)
+        }
+        .font(.system(size: 13, weight: .black))
+      }
+    }
+    .accessibilityHidden(true)
   }
 }
 

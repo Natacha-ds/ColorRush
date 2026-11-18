@@ -3,10 +3,21 @@ import Foundation
 
 struct LeaderboardKey: Hashable {
   let gameType: GameType
-  let mistakeTolerance: MistakeTolerance
+  /// nil for modes without a difficulty step (Color Match).
+  let mistakeTolerance: MistakeTolerance?
 
   var storageKey: String {
-    "leaderboard.\(gameType.rawValue).\(mistakeTolerance.rawValue)"
+    guard let mistakeTolerance else { return "leaderboard.\(gameType.rawValue)" }
+    return "leaderboard.\(gameType.rawValue).\(mistakeTolerance.rawValue)"
+  }
+
+  /// All buckets that exist in the app.
+  static var all: [LeaderboardKey] {
+    GameType.allCases.flatMap { gameType -> [LeaderboardKey] in
+      gameType.usesDifficulty
+        ? MistakeTolerance.allCases.map { LeaderboardKey(gameType: gameType, mistakeTolerance: $0) }
+        : [LeaderboardKey(gameType: gameType, mistakeTolerance: nil)]
+    }
   }
 }
 
@@ -34,14 +45,8 @@ class LeaderboardStore: ObservableObject {
 
   func resetLeaderboard() {
     // Clear all current-schema keys.
-    for gameType in GameType.allCases {
-      for tolerance in MistakeTolerance.allCases {
-        let key = LeaderboardKey(
-          gameType: gameType,
-          mistakeTolerance: tolerance
-        )
-        userDefaults.removeObject(forKey: key.storageKey)
-      }
+    for key in LeaderboardKey.all {
+      userDefaults.removeObject(forKey: key.storageKey)
     }
     // Clear legacy v1 keys so they don't linger in UserDefaults.
     userDefaults.removeObject(forKey: legacyEasyKey)
@@ -53,14 +58,8 @@ class LeaderboardStore: ObservableObject {
 
   private func loadScores() {
     var loaded: [LeaderboardKey: [ScoreEntry]] = [:]
-    for gameType in GameType.allCases {
-      for tolerance in MistakeTolerance.allCases {
-        let key = LeaderboardKey(
-          gameType: gameType,
-          mistakeTolerance: tolerance
-        )
-        loaded[key] = loadScores(forKey: key.storageKey)
-      }
+    for key in LeaderboardKey.all {
+      loaded[key] = loadScores(forKey: key.storageKey)
     }
     scoresByKey = loaded
   }
@@ -86,7 +85,7 @@ class LeaderboardStore: ObservableObject {
   func addScore(
     _ score: Int,
     gameType: GameType,
-    mistakeTolerance: MistakeTolerance
+    mistakeTolerance: MistakeTolerance?
   ) {
     let key = LeaderboardKey(
       gameType: gameType,
@@ -101,7 +100,7 @@ class LeaderboardStore: ObservableObject {
 
   func getScores(
     gameType: GameType,
-    mistakeTolerance: MistakeTolerance
+    mistakeTolerance: MistakeTolerance?
   ) -> [ScoreEntry] {
     let key = LeaderboardKey(
       gameType: gameType,

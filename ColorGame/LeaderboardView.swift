@@ -50,10 +50,15 @@ struct LeaderboardView: View {
   @State private var selectedGameType: GameType = .colorOnly
   @State private var selectedMistakeTolerance: MistakeTolerance = .easy
 
+  /// nil for modes without a difficulty filter (Color Match).
+  private var effectiveTolerance: MistakeTolerance? {
+    selectedGameType.usesDifficulty ? selectedMistakeTolerance : nil
+  }
+
   private var currentKey: LeaderboardKey {
     LeaderboardKey(
       gameType: selectedGameType,
-      mistakeTolerance: selectedMistakeTolerance
+      mistakeTolerance: effectiveTolerance
     )
   }
 
@@ -66,7 +71,7 @@ struct LeaderboardView: View {
     }
     let localScores = leaderboardStore.getScores(
       gameType: selectedGameType,
-      mistakeTolerance: selectedMistakeTolerance
+      mistakeTolerance: effectiveTolerance
     )
     return localScores.enumerated().map { index, entry in
       .local(rank: index + 1, score: entry.score)
@@ -85,8 +90,10 @@ struct LeaderboardView: View {
       modeSelector
         .padding(.horizontal, Theme.Spacing.xl)
 
-      difficultySelector
-        .padding(.horizontal, Theme.Spacing.xl)
+      if selectedGameType.usesDifficulty {
+        difficultySelector
+          .padding(.horizontal, Theme.Spacing.xl)
+      }
 
       if let rankPill {
         rankPill
@@ -277,7 +284,7 @@ struct LeaderboardView: View {
     leaderboardStore
       .getScores(
         gameType: selectedGameType,
-        mistakeTolerance: selectedMistakeTolerance
+        mistakeTolerance: effectiveTolerance
       )
       .first?.score ?? 0
   }
@@ -288,7 +295,7 @@ struct LeaderboardView: View {
     return ScoreShareLink(
       score: best,
       gameType: selectedGameType,
-      mistakeTolerance: selectedMistakeTolerance,
+      mistakeTolerance: effectiveTolerance,
       source: .leaderboard,
       accessibilityLabel: "Share my best score for the current mode and difficulty"
     ) {
@@ -319,12 +326,12 @@ struct LeaderboardView: View {
         SoundService.shared.play(.secondary)
         LogService.shared.log("leaderboard_global_ranking_pressed", [
           "gameType": selectedGameType.rawValue,
-          "mistakeTolerance": selectedMistakeTolerance.rawValue,
+          "mistakeTolerance": effectiveTolerance?.rawValue ?? "none",
           "gcAuthenticated": gameCenter.isAuthenticated,
         ])
         gameCenter.presentLeaderboard(
           gameType: selectedGameType,
-          mistakeTolerance: selectedMistakeTolerance
+          mistakeTolerance: effectiveTolerance
         )
       } label: {
         HStack(spacing: Theme.Spacing.sm) {
@@ -361,11 +368,11 @@ struct LeaderboardView: View {
   private func refreshAll() async {
     await gameCenter.refreshRank(
       for: selectedGameType,
-      mistakeTolerance: selectedMistakeTolerance
+      mistakeTolerance: effectiveTolerance
     )
     await gameCenter.refreshTopEntries(
       for: selectedGameType,
-      mistakeTolerance: selectedMistakeTolerance
+      mistakeTolerance: effectiveTolerance
     )
   }
 }
